@@ -416,9 +416,9 @@ args.dataset_cache="./dataset_cache"
 tokenizer =  OpenAIGPTTokenizer.from_pretrained("openai-gpt")
 
 
-
+#"./train_v2.1.json.gz"
 print("getting dataset")
-h = get_dataset_ms(tokenizer = tokenizer, dataset_path ="./train_v2.1.json.gz", dataset_cache="./dataset_cache", mode = "train")
+h = get_dataset_ms(tokenizer = tokenizer, dataset_path = None, dataset_cache="./dataset_cache", mode = "train")
 
 print(len(h["query"]))
 
