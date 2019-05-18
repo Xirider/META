@@ -5,3 +5,7 @@ dataset_cache*
 runs/
 ParlAI/
 __pycache__
+dataset_cache_OpenAIGPTTokenizer
+dataset_cache_msmarco_trainOpenAIGPTTokenizer
+dataset_cache_msmarco_trainOpenAIGPTTokenizer_backup
+*.gz
