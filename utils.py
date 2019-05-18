@@ -29,7 +29,7 @@ PADDED_INPUTS = ["input_ids", "lm_labels", "token_type_ids"]
 MODEL_INPUTS = ["input_ids", "mc_token_ids", "lm_labels", "mc_labels", "token_type_ids"]
 SPECIAL_TOKENS = ["<paragraph>", "<question>", "<answer>", "<eos>", "<clas>", "<emb_para>",  "<emb_question>",  "<emb_answer>", "<pad>"]
 # missing tokens
-
+textcounter = 0
 
 def download_pretrained_model():
     """ Download and extract finetuned model from S3 """
@@ -84,7 +84,7 @@ def get_dataset_ms(tokenizer, dataset_path, dataset_cache=None, mode = "train"):
 
         
         logger.info("Tokenize and encode the dataset")
-        textcounter = 0
+
 
         def tokenize(obj):
             global textcounter
@@ -105,8 +105,8 @@ def get_dataset_ms(tokenizer, dataset_path, dataset_cache=None, mode = "train"):
             if isinstance(obj, int):
                 return obj
             return list(tokenize(o) for o in obj)
-            
-        textcounter = 0
+
+        
         dataset = tokenize(dataset)
         if dataset_cache:
             torch.save(dataset, dataset_cache)
