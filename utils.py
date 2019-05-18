@@ -84,7 +84,7 @@ def get_dataset_ms(tokenizer, dataset_path, dataset_cache=None, mode = "train"):
 
         
         logger.info("Tokenize and encode the dataset")
-        textcounter = 0
+        global textcounter = 0
         def tokenize(obj):
             if isinstance(obj, str):
                 toks = tokenizer.tokenize(obj)
