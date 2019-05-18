@@ -84,8 +84,9 @@ def get_dataset_ms(tokenizer, dataset_path, dataset_cache=None, mode = "train"):
 
         
         logger.info("Tokenize and encode the dataset")
-        global textcounter = 0
+        
         def tokenize(obj):
+            global textcounter
             if isinstance(obj, str):
                 toks = tokenizer.tokenize(obj)
                 if len(toks) > tokenizer.max_len:
@@ -103,6 +104,7 @@ def get_dataset_ms(tokenizer, dataset_path, dataset_cache=None, mode = "train"):
             if isinstance(obj, int):
                 return obj
             return list(tokenize(o) for o in obj)
+        textcounter = 0
         dataset = tokenize(dataset)
         if dataset_cache:
             torch.save(dataset, dataset_cache)
