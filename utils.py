@@ -84,13 +84,16 @@ def get_dataset_ms(tokenizer, dataset_path, dataset_cache=None, mode = "train"):
 
         
         logger.info("Tokenize and encode the dataset")
+        textcounter = 0
         def tokenize(obj):
             if isinstance(obj, str):
-                print(obj)
                 toks = tokenizer.tokenize(obj)
                 if len(toks) > tokenizer.max_len:
-                    toks = toks[0:tokenizer.max_len].copy()
-                
+                    toks = toks[- tokenizer.max_len:].copy()
+                textcounter += 1
+                if textcounter % 10000 == 0:
+                    print(textcounter)
+                    print(obj)
                 return tokenizer.convert_tokens_to_ids(toks)
                 # except:
                 #     import pdb; pdb.set_trace()
@@ -230,7 +233,7 @@ def build_input_from_segments_ms(query, context1, context2, answer1, tokenizer, 
     # instance["lm_labels"] = [-1] * len(instance["input_ids"])
     # if lm_labels:
     #     instance["lm_labels"] = ([-1] * sum(len(s) for s in sequence[:-1])) + [-1] + sequence[-1][1:]
-
+    import pdb; pdb.set_trace()
     return input_ids, token_type_ids, mc_token_ids, lm_labels
 
 def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebuild=False):
@@ -284,7 +287,7 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
 
         answer1 = ms["answers"][istr]
 
-        build_input_from_segments_ms(query, context1, context2, answer1, tokenizer, with_eos=True)
+        input_ids, token_type_ids, mc_token_ids, lm_labels = build_input_from_segments_ms(query, context1, context2, answer1, tokenizer, with_eos=True)
 
 
 
