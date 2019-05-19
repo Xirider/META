@@ -136,7 +136,7 @@ def pad_data(data, maxlen, padding=0):
     # need to change: index 0 and 1 for each example and pad it
     out = []
     for x in data:
-        x = [x + [padding] * (maxlen - len(x))]
+        x = x + [padding] * (maxlen - len(x))
         out.append(x)
     assert(len(out) == 2)
     return out
