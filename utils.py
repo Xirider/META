@@ -270,7 +270,7 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
     # logger.info(f"Number of question pairs: {half_questions}")
 
     datadict = defaultdict(list)
-
+    import pdb; pdb.set_trace()
     for i in range(number_questions):
         istr = str(i)
 
@@ -417,7 +417,7 @@ from argparse import ArgumentParser
 parser = ArgumentParser()
 args = parser.parse_args()
 
-args.dataset_path = "./train_v2.1.json.gz"
+args.dataset_path = None
 args.dataset_cache="./dataset_cache"
 
 tokenizer =  OpenAIGPTTokenizer.from_pretrained("openai-gpt")
@@ -425,8 +425,8 @@ tokenizer =  OpenAIGPTTokenizer.from_pretrained("openai-gpt")
 
 #"./train_v2.1.json.gz"
 print("getting dataset")
-h = get_dataset_ms(tokenizer = tokenizer, dataset_path = None, dataset_cache="./dataset_cache", mode = "train")
+# h = get_dataset_ms(tokenizer = tokenizer, dataset_path = None, dataset_cache="./dataset_cache", mode = "train")
 
-print(len(h["query"]))
+# print(len(h["query"]))
 
-#b = get_data_loaders_ms(args, tokenizer, mode = "train")
+get_data_loaders_ms(args, tokenizer, mode = "train")
