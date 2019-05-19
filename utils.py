@@ -304,7 +304,12 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
         for ids, pas in enumerate(passages_obj):
             if pas["is_selected"] == 1:
                 pos_passage_list.append(ids)
-        pos_pass = passages_obj[random.randint(0, len(pos_passage_list))]
+
+        #pos_pass = passages_obj[random.randint(0, len(pos_passage_list))]
+        pos_pass = passages_obj[random.choice(pos_passage_list)]
+
+        assert (pos_pass["is_selected"] == 1)
+
         neg_pass_list = [x for x in range(number_passages) if x not in pos_passage_list]
         neg_pass = passages_obj[random.choice(neg_pass_list)]
         
