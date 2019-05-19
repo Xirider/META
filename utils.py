@@ -75,6 +75,7 @@ def get_dataset_ms(tokenizer, dataset_path, dataset_cache=None, mode = "train"):
     if dataset_cache and os.path.isfile(dataset_cache):
         logger.info("Load tokenized dataset from cache at %s", dataset_cache)
         dataset = torch.load(dataset_cache)
+        print("dataset loaded")
     else:
         logger.info("Download dataset from %s", dataset_path)
         ms_marco_file = cached_path(dataset_path)
@@ -106,10 +107,11 @@ def get_dataset_ms(tokenizer, dataset_path, dataset_cache=None, mode = "train"):
                 return obj
             return list(tokenize(o) for o in obj)
 
-        
+
         dataset = tokenize(dataset)
         if dataset_cache:
             torch.save(dataset, dataset_cache)
+            print("dataset saved")
     return dataset
 
 
