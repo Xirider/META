@@ -337,7 +337,10 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
         assert (pos_pass["is_selected"] == 1)
 
         neg_pass_list = [x for x in range(number_passages) if x not in pos_passage_list]
-        neg_pass = passages_obj[random.choice(neg_pass_list)]
+        try:
+            neg_pass = passages_obj[random.choice(neg_pass_list)]
+        except:
+            import pdb; pdb.set_trace()
         
         context1 = pos_pass["passage_text"]
         context2 = neg_pass["passage_text"]
