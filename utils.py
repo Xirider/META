@@ -318,6 +318,7 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
 
     datadict = defaultdict(list)
     #for i in range(number_questions):
+    qcounter = 0
     for i in ms["query"]:
         istr = str(i)
 
@@ -352,6 +353,9 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
         datadict["mc_labels"].append(mc_labels)
         datadict["token_type_ids"].append(token_type_ids)
         
+        qcounter += 1
+        if qcounter % 10000:
+            print(f"Input lists building step: {qcounter}")
 
     tensor_dataset = []
 
