@@ -208,7 +208,7 @@ def build_input_from_segments_ms(query, context1, context2, answer1, tokenizer, 
     neg_para = [[para] + context2 + [ques] + query + [answ] + [clas] + answer1 + [eos] ]
 
 
-    input_ids = [list(chain(*pos_para)) , list(chain(*pos_para)) ]
+    input_ids = [list(chain(*pos_para)) , list(chain(*neg_para)) ]
 
     token_type_ids_pos = [(1 + lencontext1)* [emb_para] + (3 + lenquery) * [emb_question] + (1 + lenanswer1) * [emb_answer] ]
     token_type_ids_neg = [(1 + lencontext2)* [emb_para] + (3 + lenquery) * [emb_question] + (1 + lenanswer1) * [emb_answer] ]
@@ -218,12 +218,12 @@ def build_input_from_segments_ms(query, context1, context2, answer1, tokenizer, 
     mc_token_ids = [position_cls_pos, position_cls_neg]
 
     lm_labels_pos =  (lenquery + lencontext1 + 3) * [-1]  +  [clas] + answer1 + [eos]
-    lm_labels_neg = (lenquery + lencontext1 + lenanswer1 +  5) * [-1]
+    lm_labels_neg = (lenquery + lencontext2 + lenanswer1 +  5) * [-1]
 
     lm_labels = [lm_labels_pos, lm_labels_neg]
 
-    assert (len(lm_labels_pos == len(input_ids[0])))
-    assert (len(lm_labels_neg == len(input_ids[1])))
+    assert (len(lm_labels_pos) == len(input_ids[0]))
+    assert (len(lm_labels_neg) == len(input_ids[1]))
     assert (input_ids[0][position_cls_pos] == clas)
     assert (input_ids[1][position_cls_neg] == clas)
 
