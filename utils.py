@@ -110,7 +110,7 @@ def get_dataset_ms(tokenizer, dataset_path, dataset_cache=None, mode = "train"):
 
         dataset = tokenize(dataset)
         if dataset_cache:
-            torch.save(dataset, dataset_cache)
+            torch.save(dataset, dataset_cache, pickle_protocol=4)
             print("dataset saved")
     return dataset
 
@@ -245,23 +245,43 @@ def build_input_from_segments_ms(query, context1, context2, answer1, tokenizer, 
 def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebuild=False):
     """ Prepare the dataset for training and evaluation """
 
-    ms = get_dataset_ms(tokenizer, args.dataset_path, args.dataset_cache, mode = mode)
 
-    # remove no-answer questions
-    nq = len(ms["query"])
+    dataset_cache = args.dataset_cache
 
-    noanswtoks = tokenizer.convert_tokens_to_ids(tokenizer.tokenize("No Answer present."))
+    dataset_cache = dataset_cache + '_' + "msmarco_" + mode + type(tokenizer).__name__  # Do avoid using GPT cache for GPT-2 and vice-versa
+    dataset_cache_e = dataset_cache + "_after_rem_paras"
 
-    removed_counter = 0
-    for i in range(nq):
-        istr = str(i)
-        if ms["answers"][istr] == noanswtoks:
-            for elem in ms:
-                del ms[elem][istr]
-            removed_counter += 1
+    if dataset_cache_e and os.path.isfile(dataset_cache_e):
+        logger.info("Load few paragraph dataset from cache at %s", dataset_cache_e)
+        ms = torch.load(dataset_cache_e)
+        print("dataset loaded")
 
-    logger.info(f"Previous dataset size: {nq}")
-    logger.info(f"Datapoints removed: {removed_counter}")
+    else:
+
+        ms = get_dataset_ms(tokenizer, args.dataset_path, args.dataset_cache, mode = mode)
+
+        # remove no-answer questions
+        nq = len(ms["query"])
+
+        noanswtoks = tokenizer.convert_tokens_to_ids(tokenizer.tokenize("No Answer present."))
+
+        removed_counter = 0
+        for i in range(nq):
+            istr = str(i)
+            if ms["answers"][istr] == [noanswtoks]:
+                for elem in ms:
+                    del ms[elem][istr]
+                removed_counter += 1
+            if i % 10000 == 0:
+                print(f"Removing paragraphs step: {i}")
+
+        logger.info(f"Previous dataset size: {nq}")
+        logger.info(f"Datapoints removed: {removed_counter}")
+
+        if dataset_cache_e:
+            torch.save(ms, dataset_cache_e, pickle_protocol=4)
+            print("removed paragraph dataset saved")
+
     nq = len(ms["query"])
     logger.info(f"New dataset size after removing No-Answers: {nq}")
 
