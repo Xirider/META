@@ -123,6 +123,24 @@ def pad_dataset(dataset, padding=0):
         dataset[name] = [x + [padding if name != "lm_labels" else -1] * (max_l - len(x)) for x in dataset[name]]
     return dataset
 
+def pad_dataset_ms(dataset, padding=0):
+    """ Pad the dataset. This could be optimized by defining a Dataset class and padd only batches but this is simpler. """
+    # need to change: index 0 and 1 for each example and pad it
+    max_l = max(len(x) for x in dataset["input_ids"])
+    for name in PADDED_INPUTS:
+        dataset[name] = [x + [padding if name != "lm_labels" else -1] * (max_l - len(x)) for x in dataset[name]]
+    return dataset
+
+def pad_data(data, maxlen, padding=0):
+    """ Pad the dataset. This could be optimized by defining a Dataset class and padd only batches but this is simpler. """
+    # need to change: index 0 and 1 for each example and pad it
+    out = []
+    for x in data:
+        x = [x + [padding] * (maxlen - len(x))]
+        out.append(x)
+    assert(len(out) == 2)
+    return out
+
 def get_dataset_personalities(tokenizer, dataset_path, dataset_cache=None):
     """ Get personalities from PERSONACHAT """
     dataset_path = dataset_path or PERSONACHAT_URL
@@ -178,7 +196,7 @@ def build_input_from_segments_ms(query, context1, context2, answer1, tokenizer, 
 
     
 
-    para, ques, answ, eos, clas, emb_para, emb_question, emb_answer  = tokenizer.convert_tokens_to_ids(SPECIAL_TOKENS[:-1])
+    para, ques, answ, eos, clas, emb_para, emb_question, emb_answer, pad = tokenizer.convert_tokens_to_ids(SPECIAL_TOKENS)
 
     lenquery = len(query)
     lencontext1 = len(context1)
@@ -227,6 +245,14 @@ def build_input_from_segments_ms(query, context1, context2, answer1, tokenizer, 
     assert (input_ids[0][position_cls_pos] == clas)
     assert (input_ids[1][position_cls_neg] == clas)
 
+    mc_label = [0]
+    maxlen = tokenizer.max_len
+
+    input_ids = pad_data(input_ids, maxlen=maxlen, padding = pad )
+    token_type_ids = pad_data(token_type_ids, maxlen=maxlen, padding = pad )
+    lm_labels = pad_data(lm_labels, maxlen=maxlen, padding = -1 )
+
+    assert (len(input_ids[1]) == maxlen)
 
 
     # instance = {}
@@ -239,8 +265,8 @@ def build_input_from_segments_ms(query, context1, context2, answer1, tokenizer, 
     # instance["lm_labels"] = [-1] * len(instance["input_ids"])
     # if lm_labels:
     #     instance["lm_labels"] = ([-1] * sum(len(s) for s in sequence[:-1])) + [-1] + sequence[-1][1:]
-    import pdb; pdb.set_trace()
-    return input_ids, token_type_ids, mc_token_ids, lm_labels
+
+    return input_ids, token_type_ids, mc_token_ids, lm_labels, mc_label
 
 def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebuild=False):
     """ Prepare the dataset for training and evaluation """
@@ -292,8 +318,8 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
     # logger.info(f"Number of question pairs: {half_questions}")
 
     datadict = defaultdict(list)
-    import pdb; pdb.set_trace()
-    for i in range(number_questions):
+    #for i in range(number_questions):
+    for i in ms["query"]:
         istr = str(i)
 
         
@@ -318,65 +344,30 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
 
         answer1 = ms["answers"][istr][0]
 
-        input_ids, token_type_ids, mc_token_ids, lm_labels = build_input_from_segments_ms(query, context1, context2, answer1, tokenizer, with_eos=True)
+        input_ids, token_type_ids, mc_token_ids, lm_labels, mc_labels = build_input_from_segments_ms(query, context1, 
+                                                                        context2, answer1, tokenizer, with_eos=True)
 
+        datadict["input_ids"].append(input_ids)
+        datadict["mc_token_ids"].append(mc_token_ids)
+        datadict["lm_labels"].append(lm_labels)
+        datadict["mc_labels"].append(mc_labels)
+        datadict["token_type_ids"].append(token_type_ids)
+        import pdb; pdb.set_trace()
 
+    tensor_dataset = []
 
-        #datadict["answers"].append()
+    for input_type in MODEL_INPUTS:
+        tensor = torch.tensor(datadict[input_type])
+        
+        tensor_dataset.append(tensor)
 
+    tdataset = TensorDataset(*tensor_dataset)
+    sampler = torch.utils.data.distributed.DistributedSampler(tdataset) if args.distributed else None
+    loader = DataLoader(tdataset, sampler=sampler, batch_size=args.train_batch_size, shuffle=(not args.distributed))
 
-        #ms["answers"][istr]
+    logger.info("Msmarco dataset (Batch, Candidates, Seq length): {}".format(tdataset.tensors[0].shape))
 
-
-
-
-
-
-
-
-
-
-    MODEL_INPUTS = ["input_ids", "mc_token_ids", "lm_labels", "mc_labels", "token_type_ids"]
-
-    datasets = {"train": defaultdict(list), "valid": defaultdict(list)}
-    for dataset_name, dataset in personachat.items():
-        num_candidates = len(dataset[0]["utterances"][0]["candidates"])
-        if args.num_candidates > 0 and dataset_name == 'train':
-            num_candidates = min(args.num_candidates, num_candidates)
-        for dialog in dataset:
-            persona = dialog["personality"].copy()
-            for _ in range(args.personality_permutations):
-                for utterance in dialog["utterances"]:
-                    history = utterance["history"][-(2*args.max_history+1):]
-                    for j, candidate in enumerate(utterance["candidates"][-num_candidates:]):
-                        lm_labels = bool(j == num_candidates-1)
-                        instance, _ = build_input_from_segments(persona, history, candidate, tokenizer, lm_labels)
-                        for input_name, input_array in instance.items():
-                            datasets[dataset_name][input_name].append(input_array)
-                    datasets[dataset_name]["mc_labels"].append(num_candidates - 1)
-                    datasets[dataset_name]["n_candidates"] = num_candidates
-                persona = [persona[-1]] + persona[:-1]  # permuted personalities
-
-    logger.info("Pad inputs and convert to Tensor")
-    tensor_datasets = {"train": [], "valid": []}
-    for dataset_name, dataset in datasets.items():
-        dataset = pad_dataset(dataset, padding=tokenizer.convert_tokens_to_ids(SPECIAL_TOKENS[-1]))
-        for input_name in MODEL_INPUTS:
-            tensor = torch.tensor(dataset[input_name])
-            if input_name != "mc_labels":
-                tensor = tensor.view((-1, datasets[dataset_name]["n_candidates"]) + tensor.shape[1:])
-            tensor_datasets[dataset_name].append(tensor)
-
-    logger.info("Build train and validation dataloaders")
-    train_dataset, valid_dataset = TensorDataset(*tensor_datasets["train"]), TensorDataset(*tensor_datasets["valid"])
-    train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset) if args.distributed else None
-    valid_sampler = torch.utils.data.distributed.DistributedSampler(valid_dataset) if args.distributed else None
-    train_loader = DataLoader(train_dataset, sampler=train_sampler, batch_size=args.train_batch_size, shuffle=(not args.distributed))
-    valid_loader = DataLoader(valid_dataset, sampler=valid_sampler, batch_size=args.valid_batch_size, shuffle=False)
-
-    logger.info("Train dataset (Batch, Candidates, Seq length): {}".format(train_dataset.tensors[0].shape))
-    logger.info("Valid dataset (Batch, Candidates, Seq length): {}".format(valid_dataset.tensors[0].shape))
-    return train_loader, valid_loader, train_sampler, valid_sampler
+    return loader, sampler
 
 
 
@@ -456,4 +447,4 @@ print("getting dataset")
 
 # print(len(h["query"]))
 
-train_loader, valid_loader, train_sampler, valid_sampler = get_data_loaders_ms(args, tokenizer, mode = "train")
+train_loader, train_sampler = get_data_loaders_ms(args, tokenizer, mode = "train")
