@@ -291,12 +291,17 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
         noanswtoks = tokenizer.convert_tokens_to_ids(tokenizer.tokenize("No Answer present."))
 
         removed_counter = 0
-        for i in range(nq):
+        for i in ms["query_id"]:
             istr = str(i)
+            passages_obj = ms["passages"][istr]
             if ms["answers"][istr] == [noanswtoks]:
                 for elem in ms:
                     del ms[elem][istr]
                 removed_counter += 1
+            elif len(passages_obj) < 2:
+                for elem in ms:
+                    del ms[elem][istr]
+
             if i % 10000 == 0:
                 print(f"Removing paragraphs step: {i}")
 
@@ -319,7 +324,7 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
     datadict = defaultdict(list)
     #for i in range(number_questions):
     qcounter = 0
-    for i in ms["query"]:
+    for i in ms["query_id"]:
         istr = str(i)
 
         
@@ -337,10 +342,9 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
         assert (pos_pass["is_selected"] == 1)
 
         neg_pass_list = [x for x in range(number_passages) if x not in pos_passage_list]
-        try:
-            neg_pass = passages_obj[random.choice(neg_pass_list)]
-        except:
-            import pdb; pdb.set_trace()
+
+        neg_pass = passages_obj[random.choice(neg_pass_list)]
+
         
         context1 = pos_pass["passage_text"]
         context2 = neg_pass["passage_text"]
@@ -357,7 +361,7 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
         datadict["token_type_ids"].append(token_type_ids)
         
         qcounter += 1
-        if qcounter % 10000:
+        if qcounter % 10000 == 0:
             print(f"Input lists building step: {qcounter}")
 
     tensor_dataset = []
