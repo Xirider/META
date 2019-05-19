@@ -291,7 +291,7 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
         noanswtoks = tokenizer.convert_tokens_to_ids(tokenizer.tokenize("No Answer present."))
 
         removed_counter = 0
-        for i in ms["query_id"]:
+        for i in ms["query"]:
             istr = str(i)
             passages_obj = ms["passages"][istr]
             if ms["answers"][istr] == [noanswtoks]:
@@ -301,7 +301,7 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
             elif len(passages_obj) < 2:
                 for elem in ms:
                     del ms[elem][istr]
-
+                removed_counter += 1
             if i % 10000 == 0:
                 print(f"Removing paragraphs step: {i}")
 
@@ -324,7 +324,7 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
     datadict = defaultdict(list)
     #for i in range(number_questions):
     qcounter = 0
-    for i in ms["query_id"]:
+    for i in ms["query"]:
         istr = str(i)
 
         
