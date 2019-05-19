@@ -317,14 +317,13 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
 
 
 
-        datadict["answers"].append()
+        #datadict["answers"].append()
 
 
-        ms["answers"][istr]
+        #ms["answers"][istr]
 
 
 
-    answers = ms["answers"]
 
 
 
