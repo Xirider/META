@@ -254,7 +254,7 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
     if dataset_cache_e and os.path.isfile(dataset_cache_e):
         logger.info("Load few paragraph dataset from cache at %s", dataset_cache_e)
         ms = torch.load(dataset_cache_e)
-        print("dataset loaded")
+        print("few paragraph dataset loaded")
 
     else:
 
@@ -311,7 +311,7 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
         context1 = pos_pass["passage_text"]
         context2 = neg_pass["passage_text"]
 
-        answer1 = ms["answers"][istr]
+        answer1 = ms["answers"][istr][0]
 
         input_ids, token_type_ids, mc_token_ids, lm_labels = build_input_from_segments_ms(query, context1, context2, answer1, tokenizer, with_eos=True)
 
@@ -443,6 +443,7 @@ args.dataset_path = None
 args.dataset_cache="./dataset_cache"
 
 tokenizer =  OpenAIGPTTokenizer.from_pretrained("openai-gpt")
+tokenizer.set_special_tokens(SPECIAL_TOKENS)
 
 
 #"./train_v2.1.json.gz"
