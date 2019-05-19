@@ -251,7 +251,6 @@ def build_input_from_segments_ms(query, context1, context2, answer1, tokenizer, 
     input_ids = pad_data(input_ids, maxlen=maxlen, padding = pad )
     token_type_ids = pad_data(token_type_ids, maxlen=maxlen, padding = pad )
     lm_labels = pad_data(lm_labels, maxlen=maxlen, padding = -1 )
-    import pdb; pdb.set_trace()
     assert (len(input_ids[1]) == maxlen)
 
 
