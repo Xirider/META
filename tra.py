@@ -19,7 +19,7 @@ from ignite.contrib.handlers.tensorboard_logger import TensorboardLogger, Output
 from pytorch_pretrained_bert import (OpenAIAdam, OpenAIGPTDoubleHeadsModel, OpenAIGPTTokenizer,
                                      GPT2DoubleHeadsModel, GPT2Tokenizer, WEIGHTS_NAME, CONFIG_NAME)
 
-from utils import get_data_loaders
+from utils import get_data_loaders_ms
 
 from utils import PADDED_INPUTS, MODEL_INPUTS, SPECIAL_TOKENS
 
@@ -91,7 +91,9 @@ def train():
         model = DistributedDataParallel(model, device_ids=[args.local_rank], output_device=args.local_rank)
 
     logger.info("Prepare datasets")
-    train_loader, val_loader, train_sampler, valid_sampler = get_data_loaders(args, tokenizer)
+    #train_loader, val_loader, train_sampler, valid_sampler = get_data_loaders(args, tokenizer)
+    train_loader, train_sampler = get_data_loaders_ms(args, tokenizer, mode="train")
+    val_loader, val_sampler = get_data_loaders_ms(args, tokenizer, mode="train")
 
     # Training function and trainer
     def update(engine, batch):

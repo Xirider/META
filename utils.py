@@ -193,7 +193,7 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
     dataset_cache = dataset_cache + '_' + "msmarco_" + mode + type(tokenizer).__name__  # Do avoid using GPT cache for GPT-2 and vice-versa
     dataset_cache_e = dataset_cache + "_after_rem_paras"
 
-    if dataset_cache_e and os.path.isfile(dataset_cache_e):
+    if dataset_cache_e and os.path.isfile(dataset_cache_e) and rebuild == False:
         logger.info("Load few paragraph dataset from cache at %s", dataset_cache_e)
         ms = torch.load(dataset_cache_e)
         print("few paragraph dataset loaded")
@@ -208,7 +208,10 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
         noanswtoks = tokenizer.convert_tokens_to_ids(tokenizer.tokenize("No Answer present."))
 
         removed_counter = 0
-        for i in ms["query"]:
+        
+        keyslist = [*ms["query"]]
+
+        for i in keyslist:
             istr = str(i)
             passages_obj = ms["passages"][istr]
             if ms["answers"][istr] == [noanswtoks]:
@@ -259,6 +262,7 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
         assert (pos_pass["is_selected"] == 1)
 
         neg_pass_list = [x for x in range(number_passages) if x not in pos_passage_list]
+        assert (neg_pass_list > 0)
 
         neg_pass = passages_obj[random.choice(neg_pass_list)]
 
