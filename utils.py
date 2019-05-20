@@ -161,8 +161,8 @@ def build_input_from_segments_ms(query, context1, context2, answer1, tokenizer, 
 
     assert (len(lm_labels_pos) == len(input_ids[0]))
     assert (len(lm_labels_neg) == len(input_ids[1]))
-    assert (input_ids[0][position_cls_pos] + 1 == clas)
-    assert (input_ids[1][position_cls_neg] + 1 == clas)
+    assert (input_ids[0][position_cls_pos+ 1] == clas)
+    assert (input_ids[1][position_cls_neg+ 1] == clas)
 
     mc_label = [0]
     maxlen = tokenizer.max_len
