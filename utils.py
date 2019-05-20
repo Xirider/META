@@ -13,6 +13,7 @@ import random
 
 import torch
 from torch.utils.data import DataLoader, TensorDataset
+from torch.nn.parallel import DistributedDataParallel
 
 from pytorch_pretrained_bert import cached_path
 
@@ -193,155 +194,167 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
 
     dataset_cache = dataset_cache + '_' + "msmarco_" + mode + type(tokenizer).__name__  # Do avoid using GPT cache for GPT-2 and vice-versa
     dataset_cache_e = dataset_cache + "_after_rem_paras"
+    dataset_cache_final = dataset_cache + "_final"
 
-    if dataset_cache_e and os.path.isfile(dataset_cache_e) and rebuild == False:
-        logger.info("Load few paragraph dataset from cache at %s", dataset_cache_e)
-        ms = torch.load(dataset_cache_e)
+    if dataset_cache_final and os.path.isfile(dataset_cache_final) and rebuild == False:
+        logger.info("Load few paragraph dataset from cache at %s", dataset_cache_final)
+        tdataset = torch.load(dataset_cache_final)
         print("few paragraph dataset loaded")
 
     else:
 
-        ms = get_dataset_ms(tokenizer, args.dataset_path, args.dataset_cache, mode = mode)
-
-        # remove no-answer questions
-        nq = len(ms["query"])
-
-        noanswtoks = tokenizer.convert_tokens_to_ids(tokenizer.tokenize("No Answer present."))
-
-        removed_counter = 0
-        
-        keyslist = [*ms["query"]]
-
-        for i in keyslist:
-            istr = str(i)
-            passages_obj = ms["passages"][istr]
-            poscounter = False
-            for pas in passages_obj:
-                if pas["is_selected"] == 1:
-                    poscounter = True
-            if ms["answers"][istr] == [noanswtoks]:
-                for elem in ms:
-                    del ms[elem][istr]
-                removed_counter += 1
-            elif len(passages_obj) < 2:
-                for elem in ms:
-                    del ms[elem][istr]
-                removed_counter += 1
-            elif poscounter == False:
-                for elem in ms:
-                    del ms[elem][istr]
-                removed_counter += 1
-
-            if int(i) % 10000 == 0:
-                print(f"Removing paragraphs step: {i}")
-
-        logger.info(f"Previous dataset size: {nq}")
-        logger.info(f"Datapoints removed: {removed_counter}")
-
-        if dataset_cache_e:
-            torch.save(ms, dataset_cache_e, pickle_protocol=4)
-            print("removed paragraph dataset saved")
-
-    nq = len(ms["query"])
-    logger.info(f"New dataset size after removing No-Answers: {nq}")
-
-    logger.info("Build inputs and labels")
-
-    number_questions = len(ms["query"])
-    # half_questions = int((number_questions - (number_questions % 2)) / 2)
-    # logger.info(f"Number of question pairs: {half_questions}")
-
-    datadict = defaultdict(list)
-    #for i in range(number_questions):
-    qcounter = 0
-    for i in ms["query"]:
-        istr = str(i)
-
-        
-        query = ms["query"][istr]
-        passages_obj = ms["passages"][istr]
-        number_passages = len(passages_obj)
-        pos_passage_list = []
-        for ids, pas in enumerate(passages_obj):
-            if pas["is_selected"] == 1:
-                pos_passage_list.append(ids)
-
-        #pos_pass = passages_obj[random.randint(0, len(pos_passage_list))]
-        if len(pos_passage_list) > 0:
-
-
-            pos_pass = passages_obj[random.choice(pos_passage_list)]
-
-            assert (pos_pass["is_selected"] == 1)
-
-            neg_pass_list = [x for x in range(number_passages) if x not in pos_passage_list]
-            assert (len(neg_pass_list) > 0)
-
-            neg_pass = passages_obj[random.choice(neg_pass_list)]
-
-            
-            context1 = pos_pass["passage_text"]
-            context2 = neg_pass["passage_text"]
-
-            answer1 = ms["answers"][istr][0]
-
-            input_ids, token_type_ids, mc_token_ids, lm_labels, mc_labels = build_input_from_segments_ms(query, context1, 
-                                                                            context2, answer1, tokenizer, with_eos=True)
-
-            datadict["input_ids"].append(input_ids)
-            datadict["mc_token_ids"].append(mc_token_ids)
-            datadict["lm_labels"].append(lm_labels)
-            datadict["mc_labels"].append(mc_labels)
-            datadict["token_type_ids"].append(token_type_ids)
-            
-            qcounter += 1
-            if qcounter % 10000 == 0:
-                print(f"Input lists building step: {qcounter}")
+        if dataset_cache_e and os.path.isfile(dataset_cache_e) and rebuild == False:
+            logger.info("Load few paragraph dataset from cache at %s", dataset_cache_e)
+            ms = torch.load(dataset_cache_e)
+            print("few paragraph dataset loaded")
 
         else:
-            print("Empty pos list skipped")
 
-    ms = 0
-    # tensor_dataset = []
-    print("creating tensor dataset")
-    # for input_type in MODEL_INPUTS:
+            ms = get_dataset_ms(tokenizer, args.dataset_path, args.dataset_cache, mode = mode)
 
-    #     tensor = torch.tensor(datadict[input_type])
+            # remove no-answer questions
+            nq = len(ms["query"])
+
+            noanswtoks = tokenizer.convert_tokens_to_ids(tokenizer.tokenize("No Answer present."))
+
+            removed_counter = 0
+            
+            keyslist = [*ms["query"]]
+
+            for i in keyslist:
+                istr = str(i)
+                passages_obj = ms["passages"][istr]
+                poscounter = False
+                for pas in passages_obj:
+                    if pas["is_selected"] == 1:
+                        poscounter = True
+                if ms["answers"][istr] == [noanswtoks]:
+                    for elem in ms:
+                        del ms[elem][istr]
+                    removed_counter += 1
+                elif len(passages_obj) < 2:
+                    for elem in ms:
+                        del ms[elem][istr]
+                    removed_counter += 1
+                elif poscounter == False:
+                    for elem in ms:
+                        del ms[elem][istr]
+                    removed_counter += 1
+
+                if int(i) % 10000 == 0:
+                    print(f"Removing paragraphs step: {i}")
+
+            logger.info(f"Previous dataset size: {nq}")
+            logger.info(f"Datapoints removed: {removed_counter}")
+
+            if dataset_cache_e:
+                torch.save(ms, dataset_cache_e, pickle_protocol=4)
+                print("removed paragraph dataset saved")
+
+        nq = len(ms["query"])
+        logger.info(f"New dataset size after removing No-Answers: {nq}")
+
+        logger.info("Build inputs and labels")
+
+        number_questions = len(ms["query"])
+        # half_questions = int((number_questions - (number_questions % 2)) / 2)
+        # logger.info(f"Number of question pairs: {half_questions}")
+
+        datadict = defaultdict(list)
+        #for i in range(number_questions):
+        qcounter = 0
+        for i in ms["query"]:
+            istr = str(i)
+
+            
+            query = ms["query"][istr]
+            passages_obj = ms["passages"][istr]
+            number_passages = len(passages_obj)
+            pos_passage_list = []
+            for ids, pas in enumerate(passages_obj):
+                if pas["is_selected"] == 1:
+                    pos_passage_list.append(ids)
+
+            #pos_pass = passages_obj[random.randint(0, len(pos_passage_list))]
+            if len(pos_passage_list) > 0:
+
+
+                pos_pass = passages_obj[random.choice(pos_passage_list)]
+
+                assert (pos_pass["is_selected"] == 1)
+
+                neg_pass_list = [x for x in range(number_passages) if x not in pos_passage_list]
+                assert (len(neg_pass_list) > 0)
+
+                neg_pass = passages_obj[random.choice(neg_pass_list)]
+
+                
+                context1 = pos_pass["passage_text"]
+                context2 = neg_pass["passage_text"]
+
+                answer1 = ms["answers"][istr][0]
+
+                input_ids, token_type_ids, mc_token_ids, lm_labels, mc_labels = build_input_from_segments_ms(query, context1, 
+                                                                                context2, answer1, tokenizer, with_eos=True)
+
+                datadict["input_ids"].append(input_ids)
+                datadict["mc_token_ids"].append(mc_token_ids)
+                datadict["lm_labels"].append(lm_labels)
+                datadict["mc_labels"].append(mc_labels)
+                datadict["token_type_ids"].append(token_type_ids)
+                
+                qcounter += 1
+                if qcounter % 10000 == 0:
+                    print(f"Input lists building step: {qcounter}")
+
+            else:
+                print("Empty pos list skipped")
+
+        ms = 0
+        # tensor_dataset = []
+        print("creating tensor dataset")
+        # for input_type in MODEL_INPUTS:
+
+        #     tensor = torch.tensor(datadict[input_type])
+            
+        #     tensor_dataset.append(tensor)
+
+        #     tensor = None
+        #     print(f"model input tensor finished: {input_type}")
+
+
+        tensor1 = torch.tensor(datadict["input_ids"])
+        del datadict["input_ids"]
+        print(f"model input tensor finished")
+        tensor2 = torch.tensor(datadict["mc_token_ids"])
+        del datadict["mc_token_ids"]
+        print(f"model input tensor finished")
+        tensor3 = torch.tensor(datadict["lm_labels"])
+        del datadict["lm_labels"]
+        print(f"model input tensor finished")
+        tensor4 = torch.tensor(datadict["mc_labels"])
+        del datadict["mc_labels"]
+        print(f"model input tensor finished")
+        tensor5 = torch.tensor(datadict["token_type_ids"])
+        del datadict["token_type_ids"]
+        print(f"model input tensor finished")
+
+        datadict = 0
+
         
-    #     tensor_dataset.append(tensor)
 
-    #     tensor = None
-    #     print(f"model input tensor finished: {input_type}")
+        tdataset = TensorDataset(tensor1, tensor2, tensor3, tensor4, tensor5)
 
+        if dataset_cache_e:
+            torch.save(tdataset, dataset_cache_final, pickle_protocol=4)
+            print("final paragraph dataset saved")
 
-    tensor1 = torch.tensor(datadict["input_ids"])
-    del datadict["input_ids"]
-    print(f"model input tensor finished")
-    tensor2 = torch.tensor(datadict["mc_token_ids"])
-    del datadict["mc_token_ids"]
-    print(f"model input tensor finished")
-    tensor3 = torch.tensor(datadict["lm_labels"])
-    del datadict["lm_labels"]
-    print(f"model input tensor finished")
-    tensor4 = torch.tensor(datadict["mc_labels"])
-    del datadict["mc_labels"]
-    print(f"model input tensor finished")
-    tensor5 = torch.tensor(datadict["token_type_ids"])
-    del datadict["token_type_ids"]
-    print(f"model input tensor finished")
-
-    datadict = 0
-
-    
-
-    tdataset = TensorDataset(tensor1, tensor2, tensor3, tensor4, tensor5)
-
-    # tdataset = TensorDataset(*tensor_dataset)
+        # tdataset = TensorDataset(*tensor_dataset)
     # tensor_dataset = None
     sampler = torch.utils.data.distributed.DistributedSampler(tdataset) if args.distributed else None
     loader = DataLoader(tdataset, sampler=sampler, batch_size=args.train_batch_size, shuffle=(not args.distributed))
 
-    logger.info("Msmarco dataset (Batch, Candidates, Seq length): {}".format(tdataset.tensors[0].shape))
+    #logger.info("Msmarco dataset (Batch, Candidates, Seq length): {}".format(tdataset.tensors[0].shape))
     print("dataloader finished")
     import pdb; pdb.set_trace()
     return loader, sampler
@@ -526,6 +539,7 @@ if __name__ == "__main__":
 
     args.dataset_path = None
     args.dataset_cache="./dataset_cache"
+    args.distributed = False
 
     tokenizer =  OpenAIGPTTokenizer.from_pretrained("openai-gpt")
     tokenizer.set_special_tokens(SPECIAL_TOKENS)
