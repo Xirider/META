@@ -303,7 +303,7 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
 
     ms = 0
     tensor_dataset = []
-
+    print("creating tensor dataset")
     for input_type in MODEL_INPUTS:
 
         tensor = torch.tensor(datadict[input_type])
@@ -315,6 +315,7 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
     loader = DataLoader(tdataset, sampler=sampler, batch_size=args.train_batch_size, shuffle=(not args.distributed))
 
     logger.info("Msmarco dataset (Batch, Candidates, Seq length): {}".format(tdataset.tensors[0].shape))
+    print("dataloader finished")
     import pdb; pdb.set_trace()
     return loader, sampler
 
