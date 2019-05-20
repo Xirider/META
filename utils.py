@@ -132,7 +132,11 @@ def build_input_from_segments_ms(query, context1, context2, answer1, tokenizer, 
         reduced = tokenizer.max_len - (lenquery + lenanswer1 + 5)
         context2 = context1[:reduced].copy()
         lencontext2 = reduced
-        assert (lencontext2 == len(context2))
+        if lencontext2 == len(context2):
+            pass
+        else:
+            import pdb; pdb.set_trace()
+
 
 
 
@@ -214,6 +218,10 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
         for i in keyslist:
             istr = str(i)
             passages_obj = ms["passages"][istr]
+            poscounter = False
+            for pas in passages_obj:
+                if pas["is_selected"] == 1:
+                    poscounter = True
             if ms["answers"][istr] == [noanswtoks]:
                 for elem in ms:
                     del ms[elem][istr]
@@ -222,6 +230,11 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
                 for elem in ms:
                     del ms[elem][istr]
                 removed_counter += 1
+            elif poscounter == False:
+                for elem in ms:
+                    del ms[elem][istr]
+                removed_counter += 1
+
             if int(i) % 10000 == 0:
                 print(f"Removing paragraphs step: {i}")
 
