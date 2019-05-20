@@ -42,34 +42,13 @@ def download_pretrained_model():
     return tempdir
 
 
-def get_dataset(tokenizer, dataset_path, dataset_cache=None):
-    """ Get PERSONACHAT from S3 """
-    dataset_path = dataset_path or PERSONACHAT_URL
-    dataset_cache = dataset_cache + '_' + type(tokenizer).__name__  # Do avoid using GPT cache for GPT-2 and vice-versa
-    if dataset_cache and os.path.isfile(dataset_cache):
-        logger.info("Load tokenized dataset from cache at %s", dataset_cache)
-        dataset = torch.load(dataset_cache)
-    else:
-        logger.info("Download dataset from %s", dataset_path)
-        personachat_file = cached_path(dataset_path)
-        with open(personachat_file, "r", encoding="utf-8") as f:
-            dataset = json.loads(f.read())
-
-        logger.info("Tokenize and encode the dataset")
-        def tokenize(obj):
-            if isinstance(obj, str):
-                return tokenizer.convert_tokens_to_ids(tokenizer.tokenize(obj))
-            if isinstance(obj, dict):
-                return dict((n, tokenize(o)) for n, o in obj.items())
-            return list(tokenize(o) for o in obj)
-        dataset = tokenize(dataset)
-        if dataset_cache:
-            torch.save(dataset, dataset_cache)
-    return dataset
 
 def get_dataset_ms(tokenizer, dataset_path, dataset_cache=None, mode = "train"):
     """ get ms marco """
-    dataset_path = dataset_path or MSMARCO_TRAIN_URL
+    if mode == "train":
+        dataset_path = dataset_path or MSMARCO_TRAIN_URL
+    elif mode == "valid":
+        dataset_path = dataset_path or MSMARCO_DEV_URL
 
     dataset_cache = dataset_cache + '_' + "msmarco_" + mode + type(tokenizer).__name__  # Do avoid using GPT cache for GPT-2 and vice-versa
     if dataset_cache and os.path.isfile(dataset_cache):
@@ -116,21 +95,6 @@ def get_dataset_ms(tokenizer, dataset_path, dataset_cache=None, mode = "train"):
 
 
 
-def pad_dataset(dataset, padding=0):
-    """ Pad the dataset. This could be optimized by defining a Dataset class and padd only batches but this is simpler. """
-    max_l = max(len(x) for x in dataset["input_ids"])
-    for name in PADDED_INPUTS:
-        dataset[name] = [x + [padding if name != "lm_labels" else -1] * (max_l - len(x)) for x in dataset[name]]
-    return dataset
-
-def pad_dataset_ms(dataset, padding=0):
-    """ Pad the dataset. This could be optimized by defining a Dataset class and padd only batches but this is simpler. """
-    # need to change: index 0 and 1 for each example and pad it
-    max_l = max(len(x) for x in dataset["input_ids"])
-    for name in PADDED_INPUTS:
-        dataset[name] = [x + [padding if name != "lm_labels" else -1] * (max_l - len(x)) for x in dataset[name]]
-    return dataset
-
 def pad_data(data, maxlen, padding=0):
     """ Pad the dataset. This could be optimized by defining a Dataset class and padd only batches but this is simpler. """
     # need to change: index 0 and 1 for each example and pad it
@@ -141,53 +105,6 @@ def pad_data(data, maxlen, padding=0):
     assert(len(out) == 2)
     return out
 
-def get_dataset_personalities(tokenizer, dataset_path, dataset_cache=None):
-    """ Get personalities from PERSONACHAT """
-    dataset_path = dataset_path or PERSONACHAT_URL
-    dataset_cache = dataset_cache + '_' + type(tokenizer).__name__  # Do avoid using GPT cache for GPT-2 and vice-versa
-    if os.path.isfile(dataset_cache):
-        logger.info("Load tokenized dataset from cache at %s", dataset_cache)
-        personachat = torch.load(dataset_cache)
-    else:
-        logger.info("Download PERSONACHAT dataset from %s", dataset_path)
-        personachat_file = cached_path(dataset_path)
-        with open(personachat_file, "r", encoding="utf-8") as f:
-            personachat = json.loads(f.read())
-
-        logger.info("Tokenize and encode the dataset")
-        def tokenize(obj):
-            if isinstance(obj, str):
-                return tokenizer.convert_tokens_to_ids(tokenizer.tokenize(obj))
-            if isinstance(obj, dict):
-                return dict((n, tokenize(o)) for n, o in obj.items())
-            return list(tokenize(o) for o in obj)
-        personachat = tokenize(personachat)
-        torch.save(personachat, dataset_cache)
-
-    logger.info("Filter personalities")
-    personalities = []
-    for dataset in personachat.values():
-        for dialog in dataset:
-            personalities.append(dialog["personality"])
-
-    logger.info("Gathered {} personalities".format(len(personalities)))
-    return personalities
-
-def build_input_from_segments(persona, history, reply, tokenizer, lm_labels=False, with_eos=True):
-    """ Build a sequence of input from 3 segments: persona, history and last reply """
-    bos, eos, speaker1, speaker2 = tokenizer.convert_tokens_to_ids(SPECIAL_TOKENS[:-1])
-
-    instance = {}
-    sequence = [[bos] + list(chain(*persona))] + history + [reply + ([eos] if with_eos else [])]
-    sequence = [sequence[0]] + [[speaker2 if (len(sequence)-i) % 2 else speaker1] + s for i, s in enumerate(sequence[1:])]
-
-    instance["input_ids"] = list(chain(*sequence))
-    instance["token_type_ids"] = [speaker2 if i % 2 else speaker1 for i, s in enumerate(sequence) for _ in s]
-    instance["mc_token_ids"] = len(instance["input_ids"]) - 1
-    instance["lm_labels"] = [-1] * len(instance["input_ids"])
-    if lm_labels:
-        instance["lm_labels"] = ([-1] * sum(len(s) for s in sequence[:-1])) + [-1] + sequence[-1][1:]
-    return instance, sequence
 
 def build_input_from_segments_ms(query, context1, context2, answer1, tokenizer, with_eos=True):
     """ Build a sequence of input from 3 segments: persona, history and last reply """
@@ -302,7 +219,7 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
                 for elem in ms:
                     del ms[elem][istr]
                 removed_counter += 1
-            if i % 10000 == 0:
+            if int(i) % 10000 == 0:
                 print(f"Removing paragraphs step: {i}")
 
         logger.info(f"Previous dataset size: {nq}")
@@ -382,6 +299,23 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 def get_data_loaders(args, tokenizer):
     """ Prepare the dataset for training and evaluation """
     personachat = get_dataset(tokenizer, args.dataset_path, args.dataset_cache)
@@ -433,6 +367,100 @@ def get_data_loaders(args, tokenizer):
 
 
 
+
+
+def get_dataset(tokenizer, dataset_path, dataset_cache=None):
+    """ Get PERSONACHAT from S3 """
+    dataset_path = dataset_path or PERSONACHAT_URL
+    dataset_cache = dataset_cache + '_' + type(tokenizer).__name__  # Do avoid using GPT cache for GPT-2 and vice-versa
+    if dataset_cache and os.path.isfile(dataset_cache):
+        logger.info("Load tokenized dataset from cache at %s", dataset_cache)
+        dataset = torch.load(dataset_cache)
+    else:
+        logger.info("Download dataset from %s", dataset_path)
+        personachat_file = cached_path(dataset_path)
+        with open(personachat_file, "r", encoding="utf-8") as f:
+            dataset = json.loads(f.read())
+
+        logger.info("Tokenize and encode the dataset")
+        def tokenize(obj):
+            if isinstance(obj, str):
+                return tokenizer.convert_tokens_to_ids(tokenizer.tokenize(obj))
+            if isinstance(obj, dict):
+                return dict((n, tokenize(o)) for n, o in obj.items())
+            return list(tokenize(o) for o in obj)
+        dataset = tokenize(dataset)
+        if dataset_cache:
+            torch.save(dataset, dataset_cache)
+    return dataset
+
+def pad_dataset(dataset, padding=0):
+    """ Pad the dataset. This could be optimized by defining a Dataset class and padd only batches but this is simpler. """
+    max_l = max(len(x) for x in dataset["input_ids"])
+    for name in PADDED_INPUTS:
+        dataset[name] = [x + [padding if name != "lm_labels" else -1] * (max_l - len(x)) for x in dataset[name]]
+    return dataset
+
+def pad_dataset_ms(dataset, padding=0):
+    """ Pad the dataset. This could be optimized by defining a Dataset class and padd only batches but this is simpler. """
+    # need to change: index 0 and 1 for each example and pad it
+    max_l = max(len(x) for x in dataset["input_ids"])
+    for name in PADDED_INPUTS:
+        dataset[name] = [x + [padding if name != "lm_labels" else -1] * (max_l - len(x)) for x in dataset[name]]
+    return dataset
+
+
+
+def get_dataset_personalities(tokenizer, dataset_path, dataset_cache=None):
+    """ Get personalities from PERSONACHAT """
+    dataset_path = dataset_path or PERSONACHAT_URL
+    dataset_cache = dataset_cache + '_' + type(tokenizer).__name__  # Do avoid using GPT cache for GPT-2 and vice-versa
+    if os.path.isfile(dataset_cache):
+        logger.info("Load tokenized dataset from cache at %s", dataset_cache)
+        personachat = torch.load(dataset_cache)
+    else:
+        logger.info("Download PERSONACHAT dataset from %s", dataset_path)
+        personachat_file = cached_path(dataset_path)
+        with open(personachat_file, "r", encoding="utf-8") as f:
+            personachat = json.loads(f.read())
+
+        logger.info("Tokenize and encode the dataset")
+        def tokenize(obj):
+            if isinstance(obj, str):
+                return tokenizer.convert_tokens_to_ids(tokenizer.tokenize(obj))
+            if isinstance(obj, dict):
+                return dict((n, tokenize(o)) for n, o in obj.items())
+            return list(tokenize(o) for o in obj)
+        personachat = tokenize(personachat)
+        torch.save(personachat, dataset_cache)
+
+    logger.info("Filter personalities")
+    personalities = []
+    for dataset in personachat.values():
+        for dialog in dataset:
+            personalities.append(dialog["personality"])
+
+    logger.info("Gathered {} personalities".format(len(personalities)))
+    return personalities
+
+def build_input_from_segments(persona, history, reply, tokenizer, lm_labels=False, with_eos=True):
+    """ Build a sequence of input from 3 segments: persona, history and last reply """
+    bos, eos, speaker1, speaker2 = tokenizer.convert_tokens_to_ids(SPECIAL_TOKENS[:-1])
+
+    instance = {}
+    sequence = [[bos] + list(chain(*persona))] + history + [reply + ([eos] if with_eos else [])]
+    sequence = [sequence[0]] + [[speaker2 if (len(sequence)-i) % 2 else speaker1] + s for i, s in enumerate(sequence[1:])]
+
+    instance["input_ids"] = list(chain(*sequence))
+    instance["token_type_ids"] = [speaker2 if i % 2 else speaker1 for i, s in enumerate(sequence) for _ in s]
+    instance["mc_token_ids"] = len(instance["input_ids"]) - 1
+    instance["lm_labels"] = [-1] * len(instance["input_ids"])
+    if lm_labels:
+        instance["lm_labels"] = ([-1] * sum(len(s) for s in sequence[:-1])) + [-1] + sequence[-1][1:]
+    return instance, sequence
+
+
+
 class AttrDict(dict):
     def __init__(self, *args, **kwargs):
         super(AttrDict, self).__init__(*args, **kwargs)
@@ -442,20 +470,45 @@ from pytorch_pretrained_bert import (OpenAIAdam, OpenAIGPTDoubleHeadsModel, Open
                                      GPT2DoubleHeadsModel, GPT2Tokenizer, WEIGHTS_NAME, CONFIG_NAME)
 from argparse import ArgumentParser
 
-parser = ArgumentParser()
-args = parser.parse_args()
+if __name__ == "__main__":
 
-args.dataset_path = None
-args.dataset_cache="./dataset_cache"
+    parser = ArgumentParser()
+    args = parser.parse_args()
 
-tokenizer =  OpenAIGPTTokenizer.from_pretrained("openai-gpt")
-tokenizer.set_special_tokens(SPECIAL_TOKENS)
+    args.dataset_path = None
+    args.dataset_cache="./dataset_cache"
+
+    tokenizer =  OpenAIGPTTokenizer.from_pretrained("openai-gpt")
+    tokenizer.set_special_tokens(SPECIAL_TOKENS)
 
 
-#"./train_v2.1.json.gz"
-print("getting dataset")
-# h = get_dataset_ms(tokenizer = tokenizer, dataset_path = None, dataset_cache="./dataset_cache", mode = "train")
+    #"./train_v2.1.json.gz"
+    print("getting dataset")
+    # h = get_dataset_ms(tokenizer = tokenizer, dataset_path = None, dataset_cache="./dataset_cache", mode = "train")
 
-# print(len(h["query"]))
+    # print(len(h["query"]))
 
-train_loader, train_sampler = get_data_loaders_ms(args, tokenizer, mode = "train")
+    train_loader, train_sampler = get_data_loaders_ms(args, tokenizer, mode = "train")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
