@@ -310,7 +310,10 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
         
         tensor_dataset.append(tensor)
 
+        tensor = None
+
     tdataset = TensorDataset(*tensor_dataset)
+    tensor_dataset = None
     sampler = torch.utils.data.distributed.DistributedSampler(tdataset) if args.distributed else None
     loader = DataLoader(tdataset, sampler=sampler, batch_size=args.train_batch_size, shuffle=(not args.distributed))
 
