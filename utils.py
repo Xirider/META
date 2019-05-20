@@ -302,7 +302,7 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
             print("Empty pos list skipped")
 
     ms = 0
-    tensor_dataset = []
+    # tensor_dataset = []
     print("creating tensor dataset")
     # for input_type in MODEL_INPUTS:
 
