@@ -138,8 +138,8 @@ def build_input_from_segments_ms(query, context1, context2, answer1, tokenizer, 
 
 
 
-    position_cls_pos = lencontext1 + lenquery + 3
-    position_cls_neg = lencontext2 + lenquery + 3
+    position_cls_pos = lencontext1 + lenquery + 3 - 1
+    position_cls_neg = lencontext2 + lenquery + 3 - 1
 
     pos_para = [[para] + context1 + [ques] + query + [answ] + [clas] + answer1 + [eos] ]
     neg_para = [[para] + context2 + [ques] + query + [answ] + [clas] + answer1 + [eos] ]
@@ -356,7 +356,7 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
 
     #logger.info("Msmarco dataset (Batch, Candidates, Seq length): {}".format(tdataset.tensors[0].shape))
     print("dataloader finished")
-    import pdb; pdb.set_trace()
+
     return loader, sampler
 
 
@@ -552,8 +552,9 @@ if __name__ == "__main__":
 
     # print(len(h["query"]))
 
-    train_loader, train_sampler = get_data_loaders_ms(args, tokenizer, mode = "train")
+    #train_loader, train_sampler = get_data_loaders_ms(args, tokenizer, mode = "train")
 
+    train_loader, train_sampler = get_data_loaders_ms(args, tokenizer, mode = "valid")
 
 
 
