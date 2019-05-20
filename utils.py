@@ -257,33 +257,40 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
                 pos_passage_list.append(ids)
 
         #pos_pass = passages_obj[random.randint(0, len(pos_passage_list))]
-        pos_pass = passages_obj[random.choice(pos_passage_list)]
+        if len(pos_passage_list) > 0:
 
-        assert (pos_pass["is_selected"] == 1)
 
-        neg_pass_list = [x for x in range(number_passages) if x not in pos_passage_list]
-        assert (len(neg_pass_list) > 0)
+            pos_pass = passages_obj[random.choice(pos_passage_list)]
 
-        neg_pass = passages_obj[random.choice(neg_pass_list)]
+            assert (pos_pass["is_selected"] == 1)
 
-        
-        context1 = pos_pass["passage_text"]
-        context2 = neg_pass["passage_text"]
+            neg_pass_list = [x for x in range(number_passages) if x not in pos_passage_list]
+            assert (len(neg_pass_list) > 0)
 
-        answer1 = ms["answers"][istr][0]
+            neg_pass = passages_obj[random.choice(neg_pass_list)]
 
-        input_ids, token_type_ids, mc_token_ids, lm_labels, mc_labels = build_input_from_segments_ms(query, context1, 
-                                                                        context2, answer1, tokenizer, with_eos=True)
+            
+            context1 = pos_pass["passage_text"]
+            context2 = neg_pass["passage_text"]
 
-        datadict["input_ids"].append(input_ids)
-        datadict["mc_token_ids"].append(mc_token_ids)
-        datadict["lm_labels"].append(lm_labels)
-        datadict["mc_labels"].append(mc_labels)
-        datadict["token_type_ids"].append(token_type_ids)
-        
-        qcounter += 1
-        if qcounter % 10000 == 0:
-            print(f"Input lists building step: {qcounter}")
+            answer1 = ms["answers"][istr][0]
+
+            input_ids, token_type_ids, mc_token_ids, lm_labels, mc_labels = build_input_from_segments_ms(query, context1, 
+                                                                            context2, answer1, tokenizer, with_eos=True)
+
+            datadict["input_ids"].append(input_ids)
+            datadict["mc_token_ids"].append(mc_token_ids)
+            datadict["lm_labels"].append(lm_labels)
+            datadict["mc_labels"].append(mc_labels)
+            datadict["token_type_ids"].append(token_type_ids)
+            
+            qcounter += 1
+            if qcounter % 10000 == 0:
+                print(f"Input lists building step: {qcounter}")
+
+        else:
+            print("Empty pos list skipped")
+
 
     tensor_dataset = []
 
