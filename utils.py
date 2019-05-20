@@ -315,17 +315,22 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
 
 
     tensor1 = torch.tensor(datadict["input_ids"])
+    del datadict["input_ids"]
     print(f"model input tensor finished")
     tensor2 = torch.tensor(datadict["mc_token_ids"])
+    del datadict["mc_token_ids"]
     print(f"model input tensor finished")
     tensor3 = torch.tensor(datadict["lm_labels"])
+    del datadict["lm_labels"]
     print(f"model input tensor finished")
     tensor4 = torch.tensor(datadict["mc_labels"])
+    del datadict["mc_labels"]
     print(f"model input tensor finished")
     tensor5 = torch.tensor(datadict["token_type_ids"])
+    del datadict["token_type_ids"]
     print(f"model input tensor finished")
 
-
+    datadict = 0
 
     
 
