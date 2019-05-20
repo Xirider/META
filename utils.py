@@ -130,13 +130,10 @@ def build_input_from_segments_ms(query, context1, context2, answer1, tokenizer, 
         
     if ((lenquery + lencontext2 + lenanswer1 + 5) > tokenizer.max_len):
         reduced = tokenizer.max_len - (lenquery + lenanswer1 + 5)
-        context2 = context1[:reduced].copy()
+        context2 = context2[:reduced].copy()
         lencontext2 = reduced
-        if lencontext2 == len(context2):
-            pass
-        else:
-            import pdb; pdb.set_trace()
-
+        assert (lencontext2 == len(context2))
+    
 
 
 
