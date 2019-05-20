@@ -353,7 +353,7 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
     # tensor_dataset = None
     sampler = torch.utils.data.distributed.DistributedSampler(tdataset) if args.distributed else None
     loader = DataLoader(tdataset, sampler=sampler, batch_size=args.train_batch_size, shuffle=(not args.distributed))
-
+    tdataset = 0
     #logger.info("Msmarco dataset (Batch, Candidates, Seq length): {}".format(tdataset.tensors[0].shape))
     print("dataloader finished")
 
@@ -554,7 +554,7 @@ if __name__ == "__main__":
 
     #train_loader, train_sampler = get_data_loaders_ms(args, tokenizer, mode = "train")
 
-    train_loader, train_sampler = get_data_loaders_ms(args, tokenizer, mode = "valid")
+    train_loader, train_sampler = get_data_loaders_ms(args, tokenizer, mode = "train")
 
 
 
