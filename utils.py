@@ -304,16 +304,35 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
     ms = 0
     tensor_dataset = []
     print("creating tensor dataset")
-    for input_type in MODEL_INPUTS:
+    # for input_type in MODEL_INPUTS:
 
-        tensor = torch.tensor(datadict[input_type])
+    #     tensor = torch.tensor(datadict[input_type])
         
-        tensor_dataset.append(tensor)
+    #     tensor_dataset.append(tensor)
 
-        tensor = None
+    #     tensor = None
+    #     print(f"model input tensor finished: {input_type}")
 
-    tdataset = TensorDataset(*tensor_dataset)
-    tensor_dataset = None
+
+    tensor1 = torch.tensor(datadict["input_ids"])
+    print(f"model input tensor finished")
+    tensor2 = torch.tensor(datadict["mc_token_ids"])
+    print(f"model input tensor finished")
+    tensor3 = torch.tensor(datadict["lm_labels"])
+    print(f"model input tensor finished")
+    tensor4 = torch.tensor(datadict["mc_labels"])
+    print(f"model input tensor finished")
+    tensor5 = torch.tensor(datadict["token_type_ids"])
+    print(f"model input tensor finished")
+
+
+
+    
+
+    tdataset = TensorDataset(tensor1, tensor2, tensor3, tensor4, tensor5)
+
+    # tdataset = TensorDataset(*tensor_dataset)
+    # tensor_dataset = None
     sampler = torch.utils.data.distributed.DistributedSampler(tdataset) if args.distributed else None
     loader = DataLoader(tdataset, sampler=sampler, batch_size=args.train_batch_size, shuffle=(not args.distributed))
 
