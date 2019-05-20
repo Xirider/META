@@ -262,7 +262,7 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
         assert (pos_pass["is_selected"] == 1)
 
         neg_pass_list = [x for x in range(number_passages) if x not in pos_passage_list]
-        assert (neg_pass_list > 0)
+        assert (len(neg_pass_list) > 0)
 
         neg_pass = passages_obj[random.choice(neg_pass_list)]
 
