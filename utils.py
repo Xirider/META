@@ -345,7 +345,7 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
 
         tdataset = TensorDataset(tensor1, tensor2, tensor3, tensor4, tensor5)
 
-        if dataset_cache_e:
+        if dataset_cache_final:
             torch.save(tdataset, dataset_cache_final, pickle_protocol=4)
             print("final paragraph dataset saved")
 
@@ -540,6 +540,7 @@ if __name__ == "__main__":
     args.dataset_path = None
     args.dataset_cache="./dataset_cache"
     args.distributed = False
+    args.train_batch_size = 4
 
     tokenizer =  OpenAIGPTTokenizer.from_pretrained("openai-gpt")
     tokenizer.set_special_tokens(SPECIAL_TOKENS)
