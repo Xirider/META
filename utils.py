@@ -292,6 +292,9 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
                 context1 = pos_pass["passage_text"]
                 context2 = neg_pass["passage_text"]
 
+                print(len(context1))
+                print(len(context2))
+
                 answer1 = ms["answers"][istr][0]
 
                 input_ids, token_type_ids, mc_token_ids, lm_labels, mc_labels = build_input_from_segments_ms(query, context1, 
