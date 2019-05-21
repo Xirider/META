@@ -79,6 +79,7 @@ def train():
     model_class = GPT2DoubleHeadsModel if "gpt2" in args.model_checkpoint else OpenAIGPTDoubleHeadsModel
     model = model_class.from_pretrained(args.model_checkpoint)
     tokenizer.set_special_tokens(SPECIAL_TOKENS)
+    tokenizer.max_len = 180 # if we want to change the maxlen, we need to delete the last part of the dataset cache
     model.set_num_special_tokens(len(SPECIAL_TOKENS))
     model.to(args.device)
     optimizer = OpenAIAdam(model.parameters(), lr=args.lr)

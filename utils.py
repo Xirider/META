@@ -263,6 +263,7 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
         datadict = defaultdict(list)
         #for i in range(number_questions):
         qcounter = 0
+        passcounter = 0
         for i in ms["query"]:
             istr = str(i)
 
@@ -296,24 +297,29 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
                 
                 answer1 = ms["answers"][istr][0]
 
-                print(len(context1) + len(answer1) + len(query) + 5)
+                if ((len(context1) + len(answer1) + len(query) + 5 - 10) < tokenizer.max_len) or ((len(context2) + len(answer1) + len(query) + 5 - 10) < tokenizer.max_len) :
+                    
+                    
 
-                input_ids, token_type_ids, mc_token_ids, lm_labels, mc_labels = build_input_from_segments_ms(query, context1, 
-                                                                                context2, answer1, tokenizer, with_eos=True)
+                    input_ids, token_type_ids, mc_token_ids, lm_labels, mc_labels = build_input_from_segments_ms(query, context1, 
+                                                                                    context2, answer1, tokenizer, with_eos=True)
 
-                datadict["input_ids"].append(input_ids)
-                datadict["mc_token_ids"].append(mc_token_ids)
-                datadict["lm_labels"].append(lm_labels)
-                datadict["mc_labels"].append(mc_labels)
-                datadict["token_type_ids"].append(token_type_ids)
-                
-                qcounter += 1
-                if qcounter % 10000 == 0:
-                    print(f"Input lists building step: {qcounter}")
+                    datadict["input_ids"].append(input_ids)
+                    datadict["mc_token_ids"].append(mc_token_ids)
+                    datadict["lm_labels"].append(lm_labels)
+                    datadict["mc_labels"].append(mc_labels)
+                    datadict["token_type_ids"].append(token_type_ids)
+                    
+                    qcounter += 1
+                    if qcounter % 10000 == 0:
+                        print(f"Input lists building step: {qcounter}")
+                else:
+                    passcounter += 1
 
             else:
                 print("Empty pos list skipped")
 
+        print(f"Context too long were deleted, number: {passcounter}")
         ms = 0
         # tensor_dataset = []
         print("creating tensor dataset")
@@ -550,7 +556,7 @@ if __name__ == "__main__":
 
     tokenizer =  OpenAIGPTTokenizer.from_pretrained("openai-gpt")
     tokenizer.set_special_tokens(SPECIAL_TOKENS)
-    #tokenizer.max_len = 128
+    tokenizer.max_len = 180
 
     #"./train_v2.1.json.gz"
     print("getting dataset")
@@ -561,6 +567,8 @@ if __name__ == "__main__":
     #train_loader, train_sampler = get_data_loaders_ms(args, tokenizer, mode = "train")
 
     train_loader, train_sampler = get_data_loaders_ms(args, tokenizer, mode = "train")
+    train_loader, train_sampler = get_data_loaders_ms(args, tokenizer, mode = "valid")
+
 
 
 
