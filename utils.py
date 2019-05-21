@@ -125,13 +125,13 @@ def build_input_from_segments_ms(query, context1, context2, answer1, tokenizer, 
 
     if ((lenquery + lencontext1 + lenanswer1 + 5) > tokenizer.max_len):
         reduced = tokenizer.max_len - (lenquery + lenanswer1 + 5)
-        context1 = context1[:reduced].copy()
+        context1 = context1[-reduced:].copy()
         lencontext1 = reduced
         assert (lencontext1 == len(context1))
         
     if ((lenquery + lencontext2 + lenanswer1 + 5) > tokenizer.max_len):
         reduced = tokenizer.max_len - (lenquery + lenanswer1 + 5)
-        context2 = context2[:reduced].copy()
+        context2 = context2[-reduced:].copy()
         lencontext2 = reduced
         assert (lencontext2 == len(context2))
     
@@ -351,6 +351,7 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
 
         # tdataset = TensorDataset(*tensor_dataset)
     # tensor_dataset = None
+    import pdb; pdb.set_trace()
     sampler = torch.utils.data.distributed.DistributedSampler(tdataset) if args.distributed else None
     loader = DataLoader(tdataset, sampler=sampler, batch_size=args.train_batch_size, shuffle=(not args.distributed))
     tdataset = 0
