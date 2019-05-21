@@ -292,10 +292,11 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
                 context1 = pos_pass["passage_text"]
                 context2 = neg_pass["passage_text"]
 
-                print(len(context1))
-                print(len(context2))
-
+                
+                
                 answer1 = ms["answers"][istr][0]
+
+                print(len(context1) + len(answer1) + len(query) + 5)
 
                 input_ids, token_type_ids, mc_token_ids, lm_labels, mc_labels = build_input_from_segments_ms(query, context1, 
                                                                                 context2, answer1, tokenizer, with_eos=True)
@@ -354,7 +355,7 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
 
         # tdataset = TensorDataset(*tensor_dataset)
     # tensor_dataset = None
-    import pdb; pdb.set_trace()
+
     sampler = torch.utils.data.distributed.DistributedSampler(tdataset) if args.distributed else None
     loader = DataLoader(tdataset, sampler=sampler, batch_size=args.train_batch_size, shuffle=(not args.distributed))
     tdataset = 0
@@ -538,6 +539,7 @@ from argparse import ArgumentParser
 
 if __name__ == "__main__":
 
+    print("testing dataloaders")
     parser = ArgumentParser()
     args = parser.parse_args()
 
@@ -548,7 +550,7 @@ if __name__ == "__main__":
 
     tokenizer =  OpenAIGPTTokenizer.from_pretrained("openai-gpt")
     tokenizer.set_special_tokens(SPECIAL_TOKENS)
-
+    #tokenizer.max_len = 128
 
     #"./train_v2.1.json.gz"
     print("getting dataset")
