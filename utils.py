@@ -297,7 +297,7 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
                 
                 answer1 = ms["answers"][istr][0]
 
-                if ((len(context1) + len(answer1) + len(query) + 5 - 10) < tokenizer.max_len) or ((len(context2) + len(answer1) + len(query) + 5 - 10) < tokenizer.max_len) :
+                if ((len(context1) + len(answer1) + len(query) + 5 - 10) < tokenizer.max_len) and ((len(context2) + len(answer1) + len(query) + 5 - 10) < tokenizer.max_len) :
                     
                     
 
