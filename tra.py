@@ -94,7 +94,7 @@ def train():
     logger.info("Prepare datasets")
     #train_loader, val_loader, train_sampler, valid_sampler = get_data_loaders(args, tokenizer)
     train_loader, train_sampler = get_data_loaders_ms(args, tokenizer, mode="train")
-    val_loader, val_sampler = get_data_loaders_ms(args, tokenizer, mode="train")
+    val_loader, val_sampler = get_data_loaders_ms(args, tokenizer, mode="valid")
 
     # Training function and trainer
     def update(engine, batch):
