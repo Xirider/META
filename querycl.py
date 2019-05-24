@@ -7,6 +7,7 @@ import random
 from argparse import ArgumentParser
 from itertools import chain
 from pprint import pformat
+from scrape import searchandsplit
 
 import torch
 import torch.nn.functional as F
@@ -101,7 +102,7 @@ def run():
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device (cuda or cpu)")
 
     parser.add_argument("--no_sample", action='store_true', help="Set to use greedy decoding instead of sampling")
-    parser.add_argument("--max_length", type=int, default=20, help="Maximum length of the output utterances")
+    parser.add_argument("--max_length", type=int, default=30, help="Maximum length of the output utterances")
     parser.add_argument("--min_length", type=int, default=1, help="Minimum length of the output utterances")
     parser.add_argument("--seed", type=int, default=42, help="Seed")
     parser.add_argument("--temperature", type=int, default=0.7, help="Sampling softmax temperature")
@@ -133,22 +134,37 @@ def run():
 
     history = []
 
-    examplepara = "Evidence of prehistoric activity in the area comes from Ashton Moss – a 107-hectare (260-acre) peat bog – and is the only one of Tameside's 22 Mesolithic sites not located in the hilly uplands in the north east of the borough. A single Mesolithic flint tool has been discovered in the bog,[6][7] along with a collection of nine Neolithic flints.[8] There was further activity in or around the bog in the Bronze Age. In about 1911, an adult male skull was found in the moss; it was thought to belong to the Romano-British period – similar to the Lindow Man bog body – until radiocarbon dating revealed that it dated from 1,320–970 BC"
-    examplepara = tokenizer.encode(examplepara)
+    #examplepara = "Evidence of prehistoric activity in the area comes from Ashton Moss – a 107-hectare (260-acre) peat bog – and is the only one of Tameside's 22 Mesolithic sites not located in the hilly uplands in the north east of the borough. A single Mesolithic flint tool has been discovered in the bog,[6][7] along with a collection of nine Neolithic flints.[8] There was further activity in or around the bog in the Bronze Age. In about 1911, an adult male skull was found in the moss; it was thought to belong to the Romano-British period – similar to the Lindow Man bog body – until radiocarbon dating revealed that it dated from 1,320–970 BC"
+    #examplepara = tokenizer.encode(examplepara)
 
-    while True:
+    
+    raw_text = input(">>> ")
+    while not raw_text:
+        print('Prompt should not be empty!')
         raw_text = input(">>> ")
-        while not raw_text:
-            print('Prompt should not be empty!')
-            raw_text = input(">>> ")
-        query = tokenizer.encode(raw_text)
-        with torch.no_grad():
-            para = examplepara
+
+    paralist = searchandsplit(raw_text)
+    query = tokenizer.encode(raw_text)
+    toplist =[]
+
+    with torch.no_grad():
+        
+        for para in paralist:
+            txtpara = para
+            para = tokenizer.encode(para)
             out_ids, mc = sample_sequence(query,para, tokenizer, model, args)
 
-        out_text = tokenizer.decode(out_ids, skip_special_tokens=True)
-        print(f"Answer propability: {mc.item()}/n")
-        print(out_text)
+            out_text = tokenizer.decode(out_ids, skip_special_tokens=True)
+            toplist.append([mc.item(), out_text, txtpara])
+            print(f"Answer propability: {mc.item()}\n")
+            print(out_text)
+
+    sortedresults = sorted(toplist, key= lambda x: x[0])
+    for i in range(10):
+        print(f"Top {i}\n")
+        print(f"Answer propability: {sortedresults[i][0]}\n")
+        print(sortedresults[i][1])
+        print("Paragraph for this answer: " +sortedresults[i][2])
 
 
 if __name__ == "__main__":
