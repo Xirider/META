@@ -66,7 +66,7 @@ def sample_sequence(query, para, tokenizer, model, args, current_output=None):
 
     for i in range(args.max_length):
         input_ids, token_type_ids, mc_token_ids, _, _ = build_input_from_segments_ms(query = query, context1 = para, context2= [] ,
-        answer1 = answerpart, tokenizer=tokenizer, with_eos=False, inference = true)
+        answer1 = current_output, tokenizer=tokenizer, with_eos=False, inference = true)
 
         input_ids = torch.tensor(input_ids, device=args.device).unsqueeze(0)
         token_type_ids = torch.tensor(token_type_ids, device=args.device).unsqueeze(0)
