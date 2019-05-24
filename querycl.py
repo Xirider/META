@@ -150,7 +150,7 @@ def run():
     query = tokenizer.encode(raw_text)
     toplist =[]
 
-    threshold = 0.5
+    threshold = 0.1
     with torch.no_grad():
         
         for para in paralist:
