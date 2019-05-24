@@ -25,7 +25,7 @@ def searchandsplit(query, maxchars = 10000, minparalen = 40, maxparalen = 700):
 
     for url in urllist:
         #print(url)
-        article = Article(url, fetch_images = False, memoize_articles=False)
+        article = Article(url, fetch_images = False, memoize_articles=False, request_timeout=0.5)
         articlelist.append(article)
 
     news_pool.set(articlelist, threads_per_source = 1)
