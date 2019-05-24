@@ -107,7 +107,7 @@ def pad_data(data, maxlen, padding=0):
     return out
 
 
-def build_input_from_segments_ms(query, context1, context2, answer1, tokenizer, with_eos=True):
+def build_input_from_segments_ms(query, context1, context2, answer1, tokenizer, with_eos=True, inference = False):
     """ Build a sequence of input from 3 segments: persona, history and last reply """
 
     #SPECIAL_TOKENS = ["<bos>", "<eos>", "<speaker1>", "<speaker2>", "<pad>"]
@@ -141,14 +141,27 @@ def build_input_from_segments_ms(query, context1, context2, answer1, tokenizer, 
     position_cls_pos = lencontext1 + lenquery + 3 - 1
     position_cls_neg = lencontext2 + lenquery + 3 - 1
 
-    pos_para = [[para] + context1 + [ques] + query + [answ] + [clas] + answer1 + [eos] ]
-    neg_para = [[para] + context2 + [ques] + query + [answ] + [clas] + answer1 + [eos] ]
+    if inference:
+        pos_para = [[para] + context1 + [ques] + query + [answ] + [clas] + answer1 ]
+        neg_para = [[para] + context1 + [ques] + query + [answ] + [clas] + answer1 ]
+        position_cls_neg = position_cls_pos
+    else:
+
+        pos_para = [[para] + context1 + [ques] + query + [answ] + [clas] + answer1 + [eos] ]
+        neg_para = [[para] + context1 + [ques] + query + [answ] + [clas] + answer1 + [eos] ]
 
 
     input_ids = [list(chain(*pos_para)) , list(chain(*neg_para)) ]
 
-    token_type_ids_pos = [(1 + lencontext1)* [emb_para] + (3 + lenquery) * [emb_question] + (1 + lenanswer1) * [emb_answer] ]
-    token_type_ids_neg = [(1 + lencontext2)* [emb_para] + (3 + lenquery) * [emb_question] + (1 + lenanswer1) * [emb_answer] ]
+    if inference:
+        
+        token_type_ids_pos = [(1 + lencontext1)* [emb_para] + (3 + lenquery) * [emb_question] + (lenanswer1) * [emb_answer] ]
+        token_type_ids_neg =  [(1 + lencontext1)* [emb_para] + (3 + lenquery) * [emb_question] + (lenanswer1) * [emb_answer] ]
+
+    
+    else:
+        token_type_ids_pos = [(1 + lencontext1)* [emb_para] + (3 + lenquery) * [emb_question] + (1 + lenanswer1) * [emb_answer] ]
+        token_type_ids_neg = [(1 + lencontext2)* [emb_para] + (3 + lenquery) * [emb_question] + (1 + lenanswer1) * [emb_answer] ]
 
     token_type_ids = [ list(chain(*token_type_ids_pos)) , list(chain(*token_type_ids_neg)) ]
 
@@ -156,23 +169,29 @@ def build_input_from_segments_ms(query, context1, context2, answer1, tokenizer, 
 
     lm_labels_pos =  (lenquery + lencontext1 + 3) * [-1]  +  [clas] + answer1 + [eos]
     lm_labels_neg = (lenquery + lencontext2 + lenanswer1 +  5) * [-1]
+    if inference:
+        lm_labels_neg = lm_labels_pos
+
 
     lm_labels = [lm_labels_pos, lm_labels_neg]
 
-    assert (len(lm_labels_pos) == len(input_ids[0]))
-    assert (len(lm_labels_neg) == len(input_ids[1]))
-    assert (input_ids[0][position_cls_pos+ 1] == clas)
-    assert (input_ids[1][position_cls_neg+ 1] == clas)
+    if not inference:
+        assert (len(lm_labels_pos) == len(input_ids[0]))
+        assert (len(lm_labels_neg) == len(input_ids[1]))
+        assert (input_ids[0][position_cls_pos+ 1] == clas)
+        assert (input_ids[1][position_cls_neg+ 1] == clas)
+
+        
+
+        maxlen = tokenizer.max_len
+
+        input_ids = pad_data(input_ids, maxlen=maxlen, padding = pad )
+        token_type_ids = pad_data(token_type_ids, maxlen=maxlen, padding = pad )
+        lm_labels = pad_data(lm_labels, maxlen=maxlen, padding = -1 )
+        assert (len(input_ids[1]) == maxlen)
 
     mc_label = [0]
-    maxlen = tokenizer.max_len
-
-    input_ids = pad_data(input_ids, maxlen=maxlen, padding = pad )
-    token_type_ids = pad_data(token_type_ids, maxlen=maxlen, padding = pad )
-    lm_labels = pad_data(lm_labels, maxlen=maxlen, padding = -1 )
-    assert (len(input_ids[1]) == maxlen)
-
-
+    
     # instance = {}
     # sequence = [[bos] + list(chain(*persona))] + history + [reply + ([eos] if with_eos else [])]
     # sequence = [sequence[0]] + [[speaker2 if (len(sequence)-i) % 2 else speaker1] + s for i, s in enumerate(sequence[1:])]
