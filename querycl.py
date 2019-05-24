@@ -159,13 +159,15 @@ def run():
             print(f"Answer propability: {mc.item()}\n")
             print(out_text)
 
-    sortedresults = sorted(toplist, key= lambda x: x[0])
+    sortedresults = sorted(toplist, key= lambda x: x[0], reverse=True)
     for i in range(10):
         print(f"Top {i}\n")
         print(f"Answer propability: {sortedresults[i][0]}\n")
         print(sortedresults[i][1])
         print("Paragraph for this answer: " +sortedresults[i][2])
 
+    print("Number of paragraphs searched")
+    print(len(sortedresults))
 
 if __name__ == "__main__":
     run()
