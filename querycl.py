@@ -56,7 +56,7 @@ def top_filtering(logits, top_k=0, top_p=0.0, threshold=-float('Inf'), filter_va
 
 
 
-def sample_sequence(query, para, tokenizer, model, args, current_output=None):
+def sample_sequence(query, para, tokenizer, model, args, current_output=None, threshold=0.5):
     special_tokens_ids = tokenizer.convert_tokens_to_ids(SPECIAL_TOKENS)
 
 
@@ -90,6 +90,9 @@ def sample_sequence(query, para, tokenizer, model, args, current_output=None):
         if prev.item() in special_tokens_ids:
             break
         current_output.append(prev.item())
+        
+        if mc < threshold:
+            break
 
     return current_output, mc
 
@@ -147,20 +150,23 @@ def run():
     query = tokenizer.encode(raw_text)
     toplist =[]
 
+    threshold = 0.5
     with torch.no_grad():
         
         for para in paralist:
             txtpara = para
             para = tokenizer.encode(para)
-            out_ids, mc = sample_sequence(query,para, tokenizer, model, args)
+            out_ids, mc = sample_sequence(query,para, tokenizer, model, args,threshold=threshold)
 
             out_text = tokenizer.decode(out_ids, skip_special_tokens=True)
-            toplist.append([mc.item(), out_text, txtpara])
-            print(f"Answer propability: {mc.item()}\n")
-            print(out_text)
+            if mc > threshold:
+                toplist.append([mc.item(), out_text, txtpara])
+                print(f"Answer propability: {mc.item()}\n")
+                print(out_text)
 
     sortedresults = sorted(toplist, key= lambda x: x[0], reverse=True)
-    for i in range(10):
+    toprange = min([10, len(sortedresults)])
+    for i in range(toprange):
         print(f"Top {i}\n")
         print(f"Answer propability: {sortedresults[i][0]}\n")
         print(sortedresults[i][1])
