@@ -73,7 +73,7 @@ def sample_sequence(query, para, tokenizer, model, args, current_output=None):
         mc_token_ids = torch.tensor(mc_token_ids, device=args.device).unsqueeze(0)
 
         lm_logits, mc_logits = model(input_ids = input_ids, mc_token_ids = mc_token_ids, token_type_ids=token_type_ids)
-
+        import pdb; pdb.set_trace()
         logits = lm_logits[0, 0,-1, :] / args.temperature
         logits = top_filtering(logits, top_k=args.top_k, top_p=args.top_p)
         probs = F.softmax(logits, dim=-1)
