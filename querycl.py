@@ -78,6 +78,9 @@ def sample_sequence(query, para, tokenizer, model, args, current_output=None):
         logits = top_filtering(logits, top_k=args.top_k, top_p=args.top_p)
         probs = F.softmax(logits, dim=-1)
 
+        if i == 0:
+            mc = torch.sigmoid(mc_token_ids[0,0])
+
         prev = torch.topk(probs, 1)[1] if args.no_sample else torch.multinomial(probs, 1)
         if i < args.min_length and prev.item() in special_tokens_ids:
             while prev.item() in special_tokens_ids:
@@ -87,7 +90,7 @@ def sample_sequence(query, para, tokenizer, model, args, current_output=None):
             break
         current_output.append(prev.item())
 
-    return current_output
+    return current_output, mc
 
 def run():
     parser = ArgumentParser()
@@ -141,9 +144,10 @@ def run():
         query = tokenizer.encode(raw_text)
         with torch.no_grad():
             para = examplepara
-            out_ids = sample_sequence(query,para, tokenizer, model, args)
+            out_ids, mc = sample_sequence(query,para, tokenizer, model, args)
 
         out_text = tokenizer.decode(out_ids, skip_special_tokens=True)
+        print(f"Answer propability: {mc.item()}/n")
         print(out_text)
 
 
