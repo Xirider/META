@@ -12,6 +12,7 @@ def searchandsplit(query, maxchars = 10000, minparalen = 40, maxparalen = 700):
     start_time = time.time()
     #query = "who is germans chancellor?"
     print("start searching")
+    import pdb; pdb.set_trace()
 
     urllist = search(query, stop=10, pause = 31.0, only_standard = True)
 
