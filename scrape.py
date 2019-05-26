@@ -15,7 +15,7 @@ def searchandsplit(query, maxchars = 10000, minparalen = 40, maxparalen = 700):
 
     urllist = []
     #urllist = search(query, stop=10, pause = 31.0, only_standard = True)
-    for urlr in search(query, stop= 10, pause = 35.0,only_standard = True):
+    for urlr in search(query, stop= 10, pause = 0.0,only_standard = True):
         urllist.append(urlr)
         print("adding url ot url list")
 
@@ -40,16 +40,16 @@ def searchandsplit(query, maxchars = 10000, minparalen = 40, maxparalen = 700):
     attime = time.time() - start_time
     print(f"article adding to list after {attime} seconds")
     
-    for art in articlelist:
-        lasttime = time.time()
-        art.download()
-        downtime = time.time() - lasttime
+    # for art in articlelist:
+    #     lasttime = time.time()
+    #     art.download()
+    #     downtime = time.time() - lasttime
 
-        print(f"Downloading finished after {downtime} seconds")
+    #     print(f"Downloading finished after {downtime} seconds")
 
 
-    # news_pool.set(articlelist, threads_per_source = 1)
-    # news_pool.join()
+    news_pool.set(articlelist, threads_per_source = 1)
+    news_pool.join()
 
     downloadtime = time.time() - start_time
     print(f"Downloading finished after {downloadtime} seconds")
