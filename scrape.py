@@ -27,7 +27,8 @@ def searchandsplit(query, maxchars = 10000, minparalen = 40, maxparalen = 700):
 
     for url in urllist:
         #print(url)
-        article = Article(url, fetch_images = False, memoize_articles=False, request_timeout=0.5)
+        print("adding url to article object")
+        article = Article(url)
         articlelist.append(article)
 
     attime = time.time() - start_time

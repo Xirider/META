@@ -169,9 +169,10 @@ def run():
     sortedresults = sorted(toplist, key= lambda x: x[0], reverse=True)
     toprange = min([10, len(sortedresults)])
     for i in range(toprange):
+        print("\n\n")
         print(f"Top {i}\n")
         print(f"Answer propability: {sortedresults[i][0]}\n")
-        print(sortedresults[i][1])
+        print("Answer: " + sortedresults[i][1] +"\n")
         print("Paragraph for this answer: " +sortedresults[i][2])
 
     print("Number of paragraphs searched")
