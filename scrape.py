@@ -28,8 +28,17 @@ def searchandsplit(query, maxchars = 10000, minparalen = 40, maxparalen = 700):
         article = Article(url, fetch_images = False, memoize_articles=False, request_timeout=0.5)
         articlelist.append(article)
 
-    news_pool.set(articlelist, threads_per_source = 10)
-    news_pool.join()
+    
+    for art in articlelist:
+        lasttime = time.time()
+        art.download()
+        downtime = time.time() - lasttime
+
+        print(f"Downloading finished after {downtime} seconds")
+
+
+    # news_pool.set(articlelist, threads_per_source = 1)
+    # news_pool.join()
 
     downloadtime = time.time() - start_time
     print(f"Downloading finished after {downloadtime} seconds")
