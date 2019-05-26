@@ -1,5 +1,5 @@
 import time
-start_time = time.time()
+
 
 from googlesearch import search
 from nltk import sent_tokenize
@@ -9,13 +9,15 @@ from newspaper import Article, news_pool
 def searchandsplit(query, maxchars = 10000, minparalen = 40, maxparalen = 700):
 
 
-
+    start_time = time.time()
     #query = "who is germans chancellor?"
-
+    print("start searching")
 
     urllist = search(query, stop=10, pause = 31.0, only_standard = True)
 
-
+    
+    searchtime = time.time() - start_time
+    print(f"search finished after {searchtime} seconds")
 
     #print("for search --- %s seconds ---" % (time.time() - start_time))
 
@@ -28,6 +30,8 @@ def searchandsplit(query, maxchars = 10000, minparalen = 40, maxparalen = 700):
         article = Article(url, fetch_images = False, memoize_articles=False, request_timeout=0.5)
         articlelist.append(article)
 
+    attime = time.time() - start_time
+    print(f"article adding to list after {attime} seconds")
     
     for art in articlelist:
         lasttime = time.time()
