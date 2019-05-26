@@ -142,6 +142,7 @@ def run():
 
     
     raw_text = input(">>> ")
+    start_time = time.time()
     while not raw_text:
         print('Prompt should not be empty!')
         raw_text = input(">>> ")
