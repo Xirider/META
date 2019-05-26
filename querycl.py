@@ -8,7 +8,7 @@ from argparse import ArgumentParser
 from itertools import chain
 from pprint import pformat
 from scrape import searchandsplit
-
+import time
 import torch
 import torch.nn.functional as F
 
@@ -145,6 +145,7 @@ def run():
     while not raw_text:
         print('Prompt should not be empty!')
         raw_text = input(">>> ")
+        start_time = time.time()
 
     paralist = searchandsplit(raw_text)
     query = tokenizer.encode(raw_text)
@@ -174,6 +175,8 @@ def run():
 
     print("Number of paragraphs searched")
     print(len(sortedresults))
+    finaltime = time.time() - start_time
+    print(f"Processing finished after {finaltime}")
 
 if __name__ == "__main__":
     run()
