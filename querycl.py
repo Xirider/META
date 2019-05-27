@@ -105,7 +105,7 @@ def run():
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device (cuda or cpu)")
 
     parser.add_argument("--no_sample", action='store_true', help="Set to use greedy decoding instead of sampling")
-    parser.add_argument("--max_length", type=int, default=30, help="Maximum length of the output utterances")
+    parser.add_argument("--max_length", type=int, default=50, help="Maximum length of the output utterances")
     parser.add_argument("--min_length", type=int, default=1, help="Minimum length of the output utterances")
     parser.add_argument("--seed", type=int, default=42, help="Seed")
     parser.add_argument("--temperature", type=int, default=0.7, help="Sampling softmax temperature")
