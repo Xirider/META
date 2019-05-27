@@ -76,13 +76,17 @@ class Searcher():
 
         articlelist = []
 
-        timeout = 1.0
+        timeout = 1.5
 
         lasttime = time.time()
 
         finishedmap = self.pool.map(artdownload, urllist, timeout=timeout)
 
         iterator = finishedmap.result()
+
+        self.pool.close()
+        self.pool.join()
+
 
         downloadtime = time.time() - lasttime
         print(f"Map  finished after {downloadtime} seconds")
