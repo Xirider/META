@@ -14,16 +14,44 @@ def artdownload(url):
     ltime = time.time()
     art = Article(url)
     art.download()
-    downtime = time.time() - ltime
+    # downtime = time.time() - ltime
+    maxchars = 10000
+    minparalen = 40
+    maxparalen = 700
 
-    print(f"Downloading finished after {downtime} seconds")
+    paralist = []
+    try:
+        art.parse()
+        body = art.text
+        body = body[:maxchars]
+
+        splitbody = body.split("\n\n")
+        
+        for para in splitbody:
+            sents = sent_tokenize(para)
+            for i in range(len(sents)):
+                string = ""
+                for x in range(len(sents)-i):
+
+                    if len(string) + len(sents[i + x]) > maxparalen:
+                        break
+                    string = "".join([string, sents[i + x]])
+                if len(string) >= minparalen and string not in paralist:
+                    paralist.append(string)
+        
+        return paralist
+    except:
+        return []
+
+
+    #print(f"Downloading finished after {downtime} seconds")
     return art
 
 class Searcher():
     def __init__(self):
         self.pool = ProcessPool(max_workers=10)
         
-    def searchandsplit(self, query, maxchars = 10000, minparalen = 40, maxparalen = 700):
+    def searchandsplit(self, query):
 
 
         start_time = time.time()
@@ -47,7 +75,7 @@ class Searcher():
 
         articlelist = []
 
-        timeout = 1.0
+        timeout = 1.5
 
         lasttime = time.time()
 
@@ -56,7 +84,7 @@ class Searcher():
         iterator = finishedmap.result()
 
         downloadtime = time.time() - lasttime
-        print(f"Downloading finished after {downloadtime} seconds")
+        print(f"Map  finished after {downloadtime} seconds")
 
         timeoutcounter = 0
         while True:
@@ -76,7 +104,7 @@ class Searcher():
         print(timeoutcounter)
 
         downloadtime = time.time() - lasttime
-        print(f"List gathering finished after {downloadtime} seconds")
+        print(f"map + List gathering finished after {downloadtime} seconds")
         # for url in urllist:
         #     #print(url)
         #     print("adding url to article object")
@@ -98,32 +126,32 @@ class Searcher():
         # news_pool.join()
 
         downloadtime = time.time() - start_time
-        print(f"Downloading finished after {downloadtime} seconds")
-        paralist = []
-        for article in articlelist:
-            try:
-                article.parse()
-                body = article.text
-                body = body[:maxchars]
+        print(f"Everything (search + download + parse) finished after {downloadtime} seconds")
+        # paralist = []
+        # for article in articlelist:
+        #     try:
+        #         article.parse()
+        #         body = article.text
+        #         body = body[:maxchars]
 
-                splitbody = body.split("\n\n")
+        #         splitbody = body.split("\n\n")
                 
-                for para in splitbody:
-                    sents = sent_tokenize(para)
-                    for i in range(len(sents)):
-                        string = ""
-                        for x in range(len(sents)-i):
+        #         for para in splitbody:
+        #             sents = sent_tokenize(para)
+        #             for i in range(len(sents)):
+        #                 string = ""
+        #                 for x in range(len(sents)-i):
 
-                            if len(string) + len(sents[i + x]) > maxparalen:
-                                break
-                            string = "".join([string, sents[i + x]])
-                        if len(string) >= minparalen and string not in paralist:
-                            paralist.append(string)
-            except:
-                continue
-        processingtime = time.time() - start_time
-        print(f"Processing finished after {processingtime}")
-        return paralist
+        #                     if len(string) + len(sents[i + x]) > maxparalen:
+        #                         break
+        #                     string = "".join([string, sents[i + x]])
+        #                 if len(string) >= minparalen and string not in paralist:
+        #                     paralist.append(string)
+        #     except:
+        #         continue
+        # processingtime = time.time() - start_time
+        # print(f"Processing finished after {processingtime}")
+        return articlelist
 
                     
 

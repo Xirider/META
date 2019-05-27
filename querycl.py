@@ -149,23 +149,23 @@ def run():
         raw_text = input(">>> ")
         start_time = time.time()
 
-    paralist = search.searchandsplit(raw_text)
+    articlelist = search.searchandsplit(raw_text)
     query = tokenizer.encode(raw_text)
     toplist =[]
 
     threshold = 0.01
     with torch.no_grad():
-        
-        for para in paralist:
-            txtpara = para
-            para = tokenizer.encode(para)
-            out_ids, mc = sample_sequence(query,para, tokenizer, model, args,threshold=threshold)
+        for arti in articlelist:
+            for para in paralist:
+                txtpara = para
+                para = tokenizer.encode(para)
+                out_ids, mc = sample_sequence(query,para, tokenizer, model, args,threshold=threshold)
 
-            out_text = tokenizer.decode(out_ids, skip_special_tokens=True)
-            if mc > threshold:
-                toplist.append([mc.item(), out_text, txtpara])
-                print(f"Answer propability: {mc.item()}\n")
-                print(out_text)
+                out_text = tokenizer.decode(out_ids, skip_special_tokens=True)
+                if mc > threshold:
+                    toplist.append([mc.item(), out_text, txtpara])
+                    print(f"Answer propability: {mc.item()}\n")
+                    print(out_text)
 
     sortedresults = sorted(toplist, key= lambda x: x[0], reverse=True)
     toprange = min([10, len(sortedresults)])
