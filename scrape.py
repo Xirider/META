@@ -76,7 +76,7 @@ class Searcher():
 
         articlelist = []
 
-        timeout = 1.5
+        timeout = 0.6
 
         lasttime = time.time()
 
@@ -85,7 +85,7 @@ class Searcher():
         iterator = finishedmap.result()
 
         self.pool.close()
-        self.pool.join(timeout=0.1)
+        self.pool.join()
 
 
         downloadtime = time.time() - lasttime
