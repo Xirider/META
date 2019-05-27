@@ -92,6 +92,8 @@ class Searcher():
                 result = next(iterator)
                 articlelist.append(result)
                 timeoutcounter += 1
+            except:
+                pass
             # except StopIteration:
             #     break
             # except TimeoutError as error:
