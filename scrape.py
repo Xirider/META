@@ -88,18 +88,18 @@ class Searcher():
         print(f"Map  finished after {downloadtime} seconds")
 
         timeoutcounter = 0
-        # for i in range(10):
-        #     try:
-        #         shorttime = time.time()
-        #         result = next(iterator)
-        #         articlelist.append(result)
-        #         timeoutcounter += 1
-        #         printtime = time.time() - shorttime
-        #         print(f"iter finished after {printtime} seconds")
-        #     except:
-        #         pass
+        for i in range(10):
+            try:
+                shorttime = time.time()
+                result = next(iterator)
+                articlelist.append(result)
+                timeoutcounter += 1
+                printtime = time.time() - shorttime
+                print(f"iter finished after {printtime} seconds")
+            except:
+                pass
 
-        articlelist = list(iterator)
+        #articlelist = list(iterator)
             # except StopIteration:
             #     break
             # except TimeoutError as error:
