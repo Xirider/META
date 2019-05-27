@@ -38,7 +38,8 @@ def artdownload(url):
                     string = "".join([string, sents[i + x]])
                 if len(string) >= minparalen and string not in paralist:
                     paralist.append(string)
-        
+        downtime = time.time() - ltime
+        print(f"Article downloaded and parsed after {downtime}")
         return paralist
     except:
         return []
