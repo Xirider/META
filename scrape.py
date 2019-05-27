@@ -85,7 +85,7 @@ class Searcher():
         iterator = finishedmap.result()
 
         self.pool.close()
-        self.pool.join()
+        self.pool.join(timeout=0.1)
 
 
         downloadtime = time.time() - lasttime
