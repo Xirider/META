@@ -12,7 +12,7 @@ from pebble import ProcessPool, ProcessExpired
 
 def artdownload(url):
     ltime = time.time()
-    art = Article(url)
+    art = Article(url, fetch_images=False, memoize_articles=False)
     art.download()
     # downtime = time.time() - ltime
     maxchars = 10000
@@ -38,8 +38,8 @@ def artdownload(url):
                     string = "".join([string, sents[i + x]])
                 if len(string) >= minparalen and string not in paralist:
                     paralist.append(string)
-        downtime = time.time() - ltime
-        print(f"Article downloaded and parsed after {downtime}")
+        #downtime = time.time() - ltime
+        #print(f"Article downloaded and parsed after {downtime}")
         return paralist
     except:
         return []
@@ -76,7 +76,7 @@ class Searcher():
 
         articlelist = []
 
-        timeout = 0.6
+        timeout = 1.0
 
         lasttime = time.time()
 
@@ -84,8 +84,6 @@ class Searcher():
 
         iterator = finishedmap.result()
 
-        self.pool.close()
-        self.pool.join()
 
 
         downloadtime = time.time() - lasttime
@@ -94,12 +92,12 @@ class Searcher():
         timeoutcounter = 0
         for i in range(10):
             try:
-                shorttime = time.time()
+                #shorttime = time.time()
                 result = next(iterator)
                 articlelist.append(result)
                 timeoutcounter += 1
-                printtime = time.time() - shorttime
-                print(f"iter finished after {printtime} seconds")
+                #printtime = time.time() - shorttime
+                #print(f"iter finished after {printtime} seconds")
             except:
                 pass
 
@@ -164,6 +162,10 @@ class Searcher():
         #         continue
         # processingtime = time.time() - start_time
         # print(f"Processing finished after {processingtime}")
+
+        
+        self.pool.close()
+        self.pool.join()
         return articlelist
 
                     
