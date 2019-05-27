@@ -58,7 +58,7 @@ class Searcher():
         downloadtime = time.time() - lasttime
         print(f"Downloading finished after {downloadtime} seconds")
 
-        timoutcounter = 0
+        timeoutcounter = 0
         while True:
             try:
                 result = next(iterator)
@@ -71,8 +71,9 @@ class Searcher():
                 print("%s. Exit code: %d" % (error, error.exitcode))
             except Exception as error:
                 print("function raised %s" % error)
-                print(error.traceback)  # Python's traceback of remote process            
-
+                print(error.traceback)  # Python's traceback of remote process 
+        print("timeouts")           
+        print(timeoutcounter)
 
         downloadtime = time.time() - lasttime
         print(f"List gathering finished after {downloadtime} seconds")
