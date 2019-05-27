@@ -85,13 +85,16 @@ class Searcher():
 
         downloadtime = time.time() - lasttime
         print(f"Map  finished after {downloadtime} seconds")
-
+        import pdb; pdb.set_trace()
         timeoutcounter = 0
         for i in range(10):
             try:
+                shorttime = time.time()
                 result = next(iterator)
                 articlelist.append(result)
                 timeoutcounter += 1
+                printtime = time.time() - shorttime
+                print(f"iter finished after {printtime} seconds")
             except:
                 pass
             # except StopIteration:
