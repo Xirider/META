@@ -87,20 +87,21 @@ class Searcher():
         print(f"Map  finished after {downloadtime} seconds")
 
         timeoutcounter = 0
-        while True:
+        for i in range(10):
             try:
                 result = next(iterator)
                 articlelist.append(result)
-            except StopIteration:
-                break
-            except TimeoutError as error:
                 timeoutcounter += 1
-            except ProcessExpired as error:
-                print("%s. Exit code: %d" % (error, error.exitcode))
-            except Exception as error:
-                print("function raised %s" % error)
-                print(error.traceback)  # Python's traceback of remote process 
-        print("timeouts")           
+            # except StopIteration:
+            #     break
+            # except TimeoutError as error:
+            #     timeoutcounter += 1
+            # except ProcessExpired as error:
+            #     print("%s. Exit code: %d" % (error, error.exitcode))
+            # except Exception as error:
+            #     print("function raised %s" % error)
+            #     print(error.traceback)  # Python's traceback of remote process 
+        print("No timeouts in this many cases")           
         print(timeoutcounter)
 
         downloadtime = time.time() - lasttime

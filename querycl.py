@@ -156,7 +156,7 @@ def run():
     threshold = 0.01
     with torch.no_grad():
         for arti in articlelist:
-            for para in paralist:
+            for para in arti:
                 txtpara = para
                 para = tokenizer.encode(para)
                 out_ids, mc = sample_sequence(query,para, tokenizer, model, args,threshold=threshold)
