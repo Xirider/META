@@ -7,7 +7,7 @@ import random
 from argparse import ArgumentParser
 from itertools import chain
 from pprint import pformat
-from scrape import searchandsplit
+from scrape import Searcher
 import time
 import torch
 import torch.nn.functional as F
@@ -140,6 +140,7 @@ def run():
     #examplepara = "Evidence of prehistoric activity in the area comes from Ashton Moss – a 107-hectare (260-acre) peat bog – and is the only one of Tameside's 22 Mesolithic sites not located in the hilly uplands in the north east of the borough. A single Mesolithic flint tool has been discovered in the bog,[6][7] along with a collection of nine Neolithic flints.[8] There was further activity in or around the bog in the Bronze Age. In about 1911, an adult male skull was found in the moss; it was thought to belong to the Romano-British period – similar to the Lindow Man bog body – until radiocarbon dating revealed that it dated from 1,320–970 BC"
     #examplepara = tokenizer.encode(examplepara)
 
+    search = Searcher()
     
     raw_text = input(">>> ")
     start_time = time.time()
@@ -148,7 +149,7 @@ def run():
         raw_text = input(">>> ")
         start_time = time.time()
 
-    paralist = searchandsplit(raw_text)
+    paralist = search.searchandsplit(raw_text)
     query = tokenizer.encode(raw_text)
     toplist =[]
 
