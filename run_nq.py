@@ -806,7 +806,7 @@ class CreateTFExampleFn(object):
             [input_feature.answer_type])
       else:
         token_map = [-1] * len(input_feature.input_ids)
-        for k, v in input_feature.token_to_orig_map.iteritems():
+        for k, v in input_feature.token_to_orig_map.items():
           token_map[k] = v
         features["token_map"] = create_int_feature(token_map)
 
@@ -1126,7 +1126,7 @@ class FeatureWriter(object):
       features["answer_types"] = create_int_feature([feature.answer_type])
     else:
       token_map = [-1] * len(feature.input_ids)
-      for k, v in feature.token_to_orig_map.iteritems():
+      for k, v in feature.token_to_orig_map.items():
         token_map[k] = v
       features["token_map"] = create_int_feature(token_map)
 
@@ -1197,7 +1197,7 @@ def compute_predictions(example):
   n_best_size = 10
   max_answer_length = 30
 
-  for unique_id, result in example.results.iteritems():
+  for unique_id, result in example.results.items():
     if unique_id not in example.features:
       raise ValueError("No feature found with unique_id:", unique_id)
     token_map = example.features[unique_id]["token_map"].int64_list.value
@@ -1428,7 +1428,7 @@ def main(_):
     tf.logging.info("  Num orig examples = %d", len(eval_examples))
     tf.logging.info("  Num split examples = %d", len(eval_features))
     tf.logging.info("  Batch size = %d", FLAGS.predict_batch_size)
-    for spans, ids in num_spans_to_ids.iteritems():
+    for spans, ids in num_spans_to_ids.items():
       tf.logging.info("  Num split into %d = %d", spans, len(ids))
 
     predict_input_fn = input_fn_builder(
