@@ -333,7 +333,7 @@ def candidates_iter(e):
 
 def create_example_from_jsonl(line):
   """Creates an NQ example from a given line of JSON."""
-  line = line.json
+  line = line.decode("utf-8")
   e = json.loads(line, object_pairs_hook=collections.OrderedDict)
   add_candidate_types_and_positions(e)
   annotation, annotated_idx, annotated_sa = get_first_annotation(e)
