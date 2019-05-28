@@ -852,9 +852,9 @@ def read_nq_examples(input_file, is_training):
 
   def _open(path):
     if path.endswith(".gz"):
-      return gzip.GzipFile(fileobj=tf.gfile.Open(path, "r"))
+      return gzip.GzipFile(fileobj=tf.gfile.Open(path, "rb"))
     else:
-      return tf.gfile.Open(path, "r")
+      return tf.gfile.Open(path, "rb")
 
   for path in input_paths:
     tf.logging.info("Reading: %s", path)
