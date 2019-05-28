@@ -1283,12 +1283,33 @@ def compute_pred_dict(candidates_dict, dev_features, raw_results):
     features.append(f.features.feature)
   feature_ids = tf.to_int32(np.array(feature_ids)).eval(session=sess)
   features_by_id = list(zip(feature_ids, features))
+  # features_by_id= zip(feature_ids, features)
+  # features_by_id = dict(zip(feature_ids, features))
 
   # Join examplew with features and raw results.
   examples = []
 
-  import pdb; pdb.set_trace()
-  merged = sorted(examples_by_id + raw_results_by_id + features_by_id)
+
+
+  import itertools
+
+  def python2sort(x):
+      it = iter(x)
+      groups = [[next(it)]]
+      for item in it:
+          for group in groups:
+              try:
+                  item < group[0]  # exception if not comparable
+                  group.append(item)
+                  break
+              except TypeError:
+                  continue
+          else:  # did not break, make new group
+              groups.append([item])
+      print(groups)  # for debugging
+      return itertools.chain.from_iterable(sorted(group) for group in groups)
+
+  merged = python2sort(examples_by_id + raw_results_by_id + features_by_id)
   for idx, datum in merged:
     if isinstance(datum, tuple):
       examples.append(EvalExample(datum[0], datum[1]))
