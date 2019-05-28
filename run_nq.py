@@ -1277,16 +1277,17 @@ def compute_pred_dict(candidates_dict, dev_features, raw_results):
   feature_ids = []
   features = []
   for f in dev_features:
-    try:
-      feature_ids.append(f.features.feature["unique_ids"].int64_list.value[0] + 1)
-    except:
-      import pdb; pdb.set_trace()
+    
+    feature_ids.append(f.features.feature["unique_ids"].int64_list.value[0] + 1)
+
     features.append(f.features.feature)
   feature_ids = tf.to_int32(np.array(feature_ids)).eval(session=sess)
   features_by_id = list(zip(feature_ids, features))
 
   # Join examplew with features and raw results.
   examples = []
+
+  import pdb; pdb.set_trace()
   merged = sorted(examples_by_id + raw_results_by_id + features_by_id)
   for idx, datum in merged:
     if isinstance(datum, tuple):
