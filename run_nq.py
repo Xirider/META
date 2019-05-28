@@ -860,7 +860,7 @@ def read_nq_examples(input_file, is_training):
     tf.logging.info("Reading: %s", path)
     with _open(path) as input_file:
       for line in input_file:
-        input_data.append(create_example_from_jsonl(line))
+        input_data.append(create_example_from_jsonl(str(line)))
 
   examples = []
   for entry in input_data:
