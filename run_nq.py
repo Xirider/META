@@ -15,7 +15,12 @@ from bert import modeling
 from bert import optimization
 from bert import tokenization
 import numpy as np
-import tensorflow as tf
+
+#import tensorflow as tf
+
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
+
 
 flags = tf.flags
 FLAGS = flags.FLAGS
