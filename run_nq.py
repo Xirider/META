@@ -234,6 +234,7 @@ def get_first_annotation(e):
     annotated_sa: (tuple) char offset of the start and end token
         of the short answer. The end token is exclusive.
   """
+  import pdb; pdb.set_trace()
   positive_annotations = sorted(
       [a for a in e["annotations"] if has_long_answer(a)],
       key=lambda a: a["long_answer"]["candidate_index"])
@@ -280,6 +281,7 @@ def token_to_char_offset(e, candidate_idx, token_idx):
 
 def get_candidate_type(e, idx):
   """Returns the candidate's type: Table, Paragraph, List or Other."""
+  import pdb; pdb.set_trace()
   c = e["long_answer_candidates"][idx]
   first_token = e["document_tokens"][c["start_token"]]["token"]
   if first_token == "<Table>":
@@ -333,6 +335,7 @@ def candidates_iter(e):
 
 def create_example_from_jsonl(line):
   """Creates an NQ example from a given line of JSON."""
+  import pdb; pdb.set_trace()
   line = line.decode("utf-8")
   e = json.loads(line, object_pairs_hook=collections.OrderedDict)
   add_candidate_types_and_positions(e)
@@ -467,7 +470,7 @@ def read_nq_entry(entry, is_training):
 
   def is_whitespace(c):
     return c in " \t\r\n" or ord(c) == 0x202F
-
+  import pdb; pdb.set_trace()
   examples = []
   contexts_id = entry["id"]
   contexts = entry["contexts"]
@@ -776,6 +779,7 @@ class CreateTFExampleFn(object):
 
   def process(self, example):
     """Coverts an NQ example in a list of serialized tf examples."""
+    import pdb; pdb.set_trace()
     nq_examples = read_nq_entry(example, self.is_training)
     input_features = []
     for nq_example in nq_examples:
@@ -938,6 +942,7 @@ def model_fn_builder(bert_config, init_checkpoint, learning_rate,
     """The `model_fn` for TPUEstimator."""
 
     tf.logging.info("*** Features ***")
+    import pdb; pdb.set_trace()
     for name in sorted(features.keys()):
       tf.logging.info("  name = %s, shape = %s" % (name, features[name].shape))
 
@@ -1196,7 +1201,7 @@ def compute_predictions(example):
   predictions = []
   n_best_size = 10
   max_answer_length = 30
-
+  import pdb; pdb.set_trace()
   for unique_id, result in example.results.items():
     if unique_id not in example.features:
       raise ValueError("No feature found with unique_id:", unique_id)
@@ -1227,7 +1232,7 @@ def compute_predictions(example):
         # Span logits minus the cls logits seems to be close to the best.
         score = summary.short_span_score - summary.cls_token_score
         predictions.append((score, summary, start_span, end_span))
-
+  import pdb; pdb.set_trace()
   score, summary, start_span, end_span = sorted(predictions, reverse=True)[0]
   short_span = Span(start_span, end_span)
   long_span = Span(-1, -1)
@@ -1442,7 +1447,7 @@ def main(_):
     def append_feature(feature):
       eval_features.append(feature)
       eval_writer.process_feature(feature)
-
+    import pdb; pdb.set_trace()
     num_spans_to_ids = convert_examples_to_features(
         examples=eval_examples,
         tokenizer=tokenizer,
@@ -1463,7 +1468,7 @@ def main(_):
         seq_length=FLAGS.max_seq_length,
         is_training=False,
         drop_remainder=False)
-
+    import pdb; pdb.set_trace()
     # If running eval on the TPU, you will need to specify the number of steps.
     all_results = []
     for result in estimator.predict(
