@@ -669,6 +669,7 @@ def convert_single_example(example, tokenizer, is_training):
     tokens.append("[SEP]")
     segment_ids.append(1)
     assert len(tokens) == len(segment_ids)
+    print(tokens)
     import pdb; pdb.set_trace()
 
     input_ids = tokenizer.convert_tokens_to_ids(tokens)
