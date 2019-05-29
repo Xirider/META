@@ -669,7 +669,7 @@ def convert_single_example(example, tokenizer, is_training):
     tokens.append("[SEP]")
     segment_ids.append(1)
     assert len(tokens) == len(segment_ids)
-    if "[ContextId=-1]" in tokens:
+    if "[ContextId=0]" in tokens:
       print(tokens)
     else:
       print("1")
