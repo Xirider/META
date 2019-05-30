@@ -81,7 +81,9 @@ def load_tf_weights_in_bert(model, tf_checkpoint_path):
             print("Skipping {}".format("/".join(name)))
             continue
         pointer = model
+
         for m_name in name:
+            
             if re.fullmatch(r'[A-Za-z]+_\d+', m_name):
                 l = re.split(r'_(\d+)', m_name)
             else:
@@ -95,6 +97,15 @@ def load_tf_weights_in_bert(model, tf_checkpoint_path):
                 pointer = getattr(pointer, 'weight')
             elif l[0] == 'squad':
                 pointer = getattr(pointer, 'classifier')
+            elif l[0] == 'answer_type_output_bias':
+                pointer = getattr(pointer, 'answer_type.bias')
+            elif l[0] == 'answer_type_output_weights':
+                pointer = getattr(pointer, 'answer_type.weight')
+            elif l[0] == 'cls':
+                pass
+            elif l[0] == 'nq':
+                pointer = getattr(pointer, 'answer_type')
+
             else:
                 try:
                     pointer = getattr(pointer, l[0])
@@ -104,9 +115,10 @@ def load_tf_weights_in_bert(model, tf_checkpoint_path):
             if len(l) >= 2:
                 num = int(l[1])
                 pointer = pointer[num]
+            print("Pt Pointer: {}".format(pointer))
         if m_name[-11:] == '_embeddings':
             pointer = getattr(pointer, 'weight')
-        elif m_name == 'kernel':
+        elif m_name == 'kernel' or m_name == 'output_weights' or m_name == 'answer_type_output_weights':
             array = np.transpose(array)
         try:
             assert pointer.shape == array.shape
@@ -115,6 +127,7 @@ def load_tf_weights_in_bert(model, tf_checkpoint_path):
             raise
         print("Initialize PyTorch weight {}".format(name))
         pointer.data = torch.from_numpy(array)
+
     return model
 
 
