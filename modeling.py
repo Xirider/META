@@ -131,6 +131,7 @@ def load_tf_weights_in_bert(model, tf_checkpoint_path):
     return model
 
 
+
 def gelu(x):
     """Implementation of the gelu activation function.
         For information: OpenAI GPT's gelu is slightly different (and gives slightly different results):
