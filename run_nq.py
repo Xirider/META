@@ -736,6 +736,27 @@ def convert_single_example(example, tokenizer, is_training):
 
     features.append(feature)
 
+    # Pytorch test
+    import pdb; pdb.set_trace()
+    import torch
+    import modelingpt
+    bertconfigpt = modelingpt.BertConfig.from_json_file("bert-joint-baseline/bert_config.json")
+    ptmodel = modelingpt.BertNQA(bertconfigpt)
+
+    ptmodel = ptmodel.cuda()
+    input_ids = torch.tensor(input_ids, device="cuda").unsqueeze(0)
+    token_type_ids = torch.tensor(token_type_ids, device="cuda").unsqueeze(0)
+    mc_token_ids = torch.tensor(mc_token_ids, device="cuda").unsqueeze(0)
+
+    start_logits, end_logits, answer_type_logits = ptmodel(input_ids = input_ids,  token_type_ids=segment_ids, attention_mask=input_mask)
+
+
+
+
+
+
+
+
   return features
 
 
