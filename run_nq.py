@@ -669,12 +669,7 @@ def convert_single_example(example, tokenizer, is_training):
     tokens.append("[SEP]")
     segment_ids.append(1)
     assert len(tokens) == len(segment_ids)
-    if "[ContextId=0]" in tokens:
-      print(tokens)
-    else:
-      print("1")
-    import time
-    time.sleep(0.05)
+
     
 
     input_ids = tokenizer.convert_tokens_to_ids(tokens)
@@ -1144,7 +1139,7 @@ class FeatureWriter(object):
       for k, v in feature.token_to_orig_map.items():
         token_map[k] = v
       features["token_map"] = create_int_feature(token_map)
-
+    
     tf_example = tf.train.Example(features=tf.train.Features(feature=features))
     self._writer.write(tf_example.SerializeToString())
 
