@@ -120,7 +120,7 @@ def load_tf_weights_in_bert(model, tf_checkpoint_path):
             print("Pt Pointer: {}".format(pointer))
         if m_name[-11:] == '_embeddings':
             pointer = getattr(pointer, 'weight')
-        elif m_name == 'kernel' or m_name == 'output_weights' or m_name == 'answer_type_output_weights':
+        elif m_name == 'kernel' or l[0] == 'output_weights' or l[0] == 'answer_type_output_weights':
             array = np.transpose(array)
         try:
             assert pointer.shape == array.shape
