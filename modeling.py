@@ -98,13 +98,15 @@ def load_tf_weights_in_bert(model, tf_checkpoint_path):
             elif l[0] == 'squad':
                 pointer = getattr(pointer, 'classifier')
             elif l[0] == 'answer_type_output_bias':
-                pointer = getattr(pointer, 'answer_type.bias')
+                pointer = getattr(pointer, 'answer_type')
+                pointer = getattr(pointer, 'bias')
             elif l[0] == 'answer_type_output_weights':
-                pointer = getattr(pointer, 'answer_type.weight')
+                pointer = getattr(pointer, 'answer_type')
+                pointer = getattr(pointer, 'weight')
             elif l[0] == 'cls':
                 pass
             elif l[0] == 'nq':
-                pointer = getattr(pointer, 'answer_type')
+                pointer = getattr(pointer, 'qa_outputs')
 
             else:
                 try:
