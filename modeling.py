@@ -117,7 +117,9 @@ def load_tf_weights_in_bert(model, tf_checkpoint_path):
             if len(l) >= 2:
                 num = int(l[1])
                 pointer = pointer[num]
-            print("Pt Pointer: {}".format(pointer))
+            if l[0] != 'bert':
+                print("Pt Pointer: {}".format(pointer))
+            
         if m_name[-11:] == '_embeddings':
             pointer = getattr(pointer, 'weight')
         elif m_name == 'kernel':
@@ -131,6 +133,9 @@ def load_tf_weights_in_bert(model, tf_checkpoint_path):
         print("Initialize PyTorch weight {}".format(name))
         pointer.data = torch.from_numpy(array)
 
+    for k, v in model.named_parameters():
+        print(k)
+        print(v.sum())
     return model
 
 
