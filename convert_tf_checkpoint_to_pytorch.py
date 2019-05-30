@@ -15,7 +15,7 @@ def convert_tf_checkpoint_to_pytorch(tf_checkpoint_path, bert_config_file, pytor
     # Initialise PyTorch model
     config = BertConfig.from_json_file(bert_config_file)
     print("Building PyTorch model from configuration: {}".format(str(config)))
-    model = BertForPreTraining(config)
+    model = BertNQA(config)
 
     # Load weights from tf checkpoint
     import pdb; pdb.set_trace()
