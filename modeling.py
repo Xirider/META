@@ -86,7 +86,7 @@ def load_tf_weights_in_bert(model, tf_checkpoint_path):
                 l = re.split(r'_(\d+)', m_name)
             else:
                 l = [m_name]
-            print(f"TF: {l}")
+            print("TF: {}".format(l))
             if l[0] == 'kernel' or l[0] == 'gamma':
                 pointer = getattr(pointer, 'weight')
             elif l[0] == 'output_bias' or l[0] == 'beta':
