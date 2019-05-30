@@ -71,6 +71,7 @@ def load_tf_weights_in_bert(model, tf_checkpoint_path):
         names.append(name)
         arrays.append(array)
 
+    import pdb; pdb.set_trace()
     for name, array in zip(names, arrays):
         name = name.split('/')
         # adam_v and adam_m are variables used in AdamWeightDecayOptimizer to calculated m and v
