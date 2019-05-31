@@ -907,6 +907,10 @@ def read_nq_examples(input_file, is_training):
 def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
                  use_one_hot_embeddings):
   """Creates a classification model."""
+  input_ids = tf.Print(input_ids, [input_ids], message="input_ids in tf")
+  input_mask = tf.Print(input_mask, [input_mask], message="mask in tf")
+  segment_ids = tf.Print(segment_ids, [segment_ids], message="segmentids in tf")
+
   model = modeling.BertModel(
       config=bert_config,
       is_training=is_training,
@@ -918,7 +922,7 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   # Get the logits for the start and end predictions.
   final_hidden = model.get_sequence_output()
 
-  # final_hidden = tf.Print(final_hidden, [final_hidden[0][0]], message="final hidden in tf")
+  final_hidden = tf.Print(final_hidden, [final_hidden[0][0]], message="final hidden in tf")
 
   final_hidden_shape = modeling.get_shape_list(final_hidden, expected_rank=3)
   batch_size = final_hidden_shape[0]
