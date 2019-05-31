@@ -928,9 +928,8 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   # Get the logits for the start and end predictions.
   final_hidden = model.get_sequence_output()
 
-  firstlayer = model.get_all_encoder_layers()[0]
-
-  final_hidden = tf.Print(firstlayer, [firstlayer[0][0]], message="first layer in tf", summarize=100)
+  
+  #final_hidden = tf.Print(firstlayer, [firstlayer[0][0]], message="first layer in tf", summarize=100)
 
   final_hidden_shape = modeling.get_shape_list(final_hidden, expected_rank=3)
   batch_size = final_hidden_shape[0]
@@ -974,7 +973,7 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   answer_type_logits = tf.nn.bias_add(answer_type_logits,
                                       answer_type_output_bias)
   
-  #start_logits = tf.Print(start_logits, [start_logits], message="fina start logits tf", summarize=1000)
+  start_logits = tf.Print(start_logits, [start_logits], message="fina start logits tf", summarize=1000)
 
   return (start_logits, end_logits, answer_type_logits)
 
