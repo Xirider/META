@@ -22,6 +22,7 @@ import requests
 from botocore.exceptions import ClientError
 from tqdm import tqdm
 
+
 try:
     from torch.hub import _get_torch_home
     torch_cache_home = _get_torch_home()
