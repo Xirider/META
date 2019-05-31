@@ -81,6 +81,9 @@ flags.DEFINE_bool("do_train", False, "Whether to run training.")
 
 flags.DEFINE_bool("do_predict", False, "Whether to run eval on the dev set.")
 
+flags.DEFINE_bool("pytorch", False, "Whether to run eval on the dev set.")
+
+
 flags.DEFINE_integer("train_batch_size", 32, "Total batch size for training.")
 
 flags.DEFINE_integer("predict_batch_size", 8,
@@ -739,22 +742,23 @@ def convert_single_example(example, tokenizer, is_training):
 
     features.append(feature)
 
-    # # Pytorch test
+    # Pytorch test
 
-    # import pdb; pdb.set_trace()
-    # import torch
-    # import modelingpt
-    # # bertconfigpt = modelingpt.BertConfig.from_json_file("bert-joint-baseline/bert_config.json")
-    # # ptmodel = modelingpt.BertNQA(bertconfigpt)
-    # ptmodel = modelingpt.BertNQA.from_pretrained("bert-joint-baseline")
+    if FLAGS.pytorch:
+      import pdb; pdb.set_trace()
+      import torch
+      import modelingpt
+      # bertconfigpt = modelingpt.BertConfig.from_json_file("bert-joint-baseline/bert_config.json")
+      # ptmodel = modelingpt.BertNQA(bertconfigpt)
+      ptmodel = modelingpt.BertNQA.from_pretrained("bert-joint-baseline")
 
 
-    # ptmodel = ptmodel.cuda()
-    # input_ids = torch.tensor(input_ids, device="cuda").unsqueeze(0)
-    # token_type_ids = torch.tensor(segment_ids, device="cuda").unsqueeze(0)
-    # attention_mask = torch.tensor(input_mask, device="cuda").unsqueeze(0)
+      ptmodel = ptmodel.cuda()
+      input_ids = torch.tensor(input_ids, device="cuda").unsqueeze(0)
+      token_type_ids = torch.tensor(segment_ids, device="cuda").unsqueeze(0)
+      attention_mask = torch.tensor(input_mask, device="cuda").unsqueeze(0)
 
-    # start_logits, end_logits, answer_type_logits = ptmodel(input_ids = input_ids,  token_type_ids=token_type_ids, attention_mask=attention_mask)
+      start_logits, end_logits, answer_type_logits = ptmodel(input_ids = input_ids,  token_type_ids=token_type_ids, attention_mask=attention_mask)
 
 
 
@@ -907,9 +911,9 @@ def read_nq_examples(input_file, is_training):
 def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
                  use_one_hot_embeddings):
   """Creates a classification model."""
-  input_ids = tf.Print(input_ids, [input_ids], message="input_ids in tf", summarize=1000)
-  input_mask = tf.Print(input_mask, [input_mask], message="mask in tf",summarize=1000)
-  segment_ids = tf.Print(segment_ids, [segment_ids], message="segmentids in tf", summarize=1000)
+  input_ids = tf.Print(input_ids, [input_ids.shape], message="input_ids in tf", summarize=1000)
+  input_mask = tf.Print(input_mask, [input_mask.shape], message="mask in tf",summarize=1000)
+  segment_ids = tf.Print(segment_ids, [segment_ids.shape], message="segmentids in tf", summarize=1000)
 
   model = modeling.BertModel(
       config=bert_config,
