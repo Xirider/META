@@ -918,6 +918,9 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   # Get the logits for the start and end predictions.
   final_hidden = model.get_sequence_output()
 
+  tf.Print("final_hidden in tf")
+  tf.Print(final_hidden[0][0])
+
   final_hidden_shape = modeling.get_shape_list(final_hidden, expected_rank=3)
   batch_size = final_hidden_shape[0]
   seq_length = final_hidden_shape[1]
@@ -990,6 +993,16 @@ def model_fn_builder(bert_config, init_checkpoint, learning_rate,
         input_mask=input_mask,
         segment_ids=segment_ids,
         use_one_hot_embeddings=use_one_hot_embeddings)
+
+    tf.Print("input ids")
+    tf.Print(input_ids)
+    tf.Print("input_mask")
+    tf.Print(input_mask)
+    tf.Print("segment_ids")
+    tf.Print(segment_ids)
+    tf.Print("start_logits")
+    tf.Print(start_logits)
+
 
     tvars = tf.trainable_variables()
 
