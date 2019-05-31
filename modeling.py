@@ -81,6 +81,7 @@ def load_tf_weights_in_bert(model, tf_checkpoint_path):
             print("Skipping {}".format("/".join(name)))
             continue
         pointer = model
+        print("TF: {}".format(name))
 
         for m_name in name:
             
@@ -88,37 +89,37 @@ def load_tf_weights_in_bert(model, tf_checkpoint_path):
                 l = re.split(r'_(\d+)', m_name)
             else:
                 l = [m_name]
-            print("TF: {}".format(l))
+            #print("TF: {}".format(l))
             if l[0] == 'kernel' or l[0] == 'gamma':
                 pointer = getattr(pointer, 'weight')
-                print("kernel")
+                #print("kernel")
             elif l[0] == 'output_bias' or l[0] == 'beta':
                 pointer = getattr(pointer, 'bias')
-                print("bias")
+                #print("bias")
             elif l[0] == 'output_weights':
                 pointer = getattr(pointer, 'weight')
-                print("output_weights")
+                #print("output_weights")
             elif l[0] == 'squad':
                 pointer = getattr(pointer, 'classifier')
-                print("classifier")
+                #print("classifier")
             elif l[0] == 'answer_type_output_bias':
                 pointer = getattr(pointer, 'answer_type')
                 pointer = getattr(pointer, 'bias')
-                print( "answer type bias")
+                #print( "answer type bias")
             elif l[0] == 'answer_type_output_weights':
                 pointer = getattr(pointer, 'answer_type')
                 pointer = getattr(pointer, 'weight')
-                print("answer type weight")
+                #print("answer type weight")
             elif l[0] == 'cls':
                 print("cls skipp")
-                
+
             elif l[0] == 'nq':
                 pointer = getattr(pointer, 'qa_outputs')
-                print("qa outputs")
+                #print("qa outputs")
             else:
                 try:
                     pointer = getattr(pointer, l[0])
-                    print("try path")
+                    #print("try path")
                 except AttributeError:
                     print("Skipping {}".format("/".join(name)))
                     continue
