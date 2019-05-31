@@ -1310,8 +1310,8 @@ class BertNQA(BertPreTrainedModel):
 
         self.apply(self.init_bert_weights)
 
-    def forward(self, input_ids, token_type_ids=None, attention_mask=None, start_positions=None, end_positions=None):
-        sequence_output, pooler = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False, answer_type=None)
+    def forward(self, input_ids, token_type_ids=None, attention_mask=None, start_positions=None, end_positions=None, answer_type=None):
+        sequence_output, pooler = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False)
         logits = self.qa_outputs(sequence_output)
         answer_type_logits = self.answer_type(pooler)
         start_logits, end_logits = logits.split(1, dim=-1)
