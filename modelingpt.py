@@ -65,14 +65,14 @@ def load_tf_weights_in_bert(model, tf_checkpoint_path):
     init_vars = tf.train.list_variables(tf_path)
     names = []
     arrays = []
-    import pdb; pdb.set_trace()
+
     for name, shape in init_vars:
         print("Loading TF weight {} with shape {}".format(name, shape))
         array = tf.train.load_variable(tf_path, name)
         names.append(name)
         arrays.append(array)
 
-    import pdb; pdb.set_trace()
+
     for name, array in zip(names, arrays):
         name = name.split('/')
         # adam_v and adam_m are variables used in AdamWeightDecayOptimizer to calculated m and v
@@ -91,39 +91,50 @@ def load_tf_weights_in_bert(model, tf_checkpoint_path):
             print("TF: {}".format(l))
             if l[0] == 'kernel' or l[0] == 'gamma':
                 pointer = getattr(pointer, 'weight')
+                print("kernel")
             elif l[0] == 'output_bias' or l[0] == 'beta':
                 pointer = getattr(pointer, 'bias')
+                print("bias")
             elif l[0] == 'output_weights':
                 pointer = getattr(pointer, 'weight')
+                print("output_weights")
             elif l[0] == 'squad':
                 pointer = getattr(pointer, 'classifier')
+                print("classifier")
             elif l[0] == 'answer_type_output_bias':
                 pointer = getattr(pointer, 'answer_type')
                 pointer = getattr(pointer, 'bias')
+                print( "answer type bias")
             elif l[0] == 'answer_type_output_weights':
                 pointer = getattr(pointer, 'answer_type')
                 pointer = getattr(pointer, 'weight')
+                print("answer type weight")
             elif l[0] == 'cls':
-                pass
+                print("cls skipp")
+                
             elif l[0] == 'nq':
                 pointer = getattr(pointer, 'qa_outputs')
-
+                print("qa outputs")
             else:
                 try:
                     pointer = getattr(pointer, l[0])
+                    print("try path")
                 except AttributeError:
                     print("Skipping {}".format("/".join(name)))
                     continue
             if len(l) >= 2:
                 num = int(l[1])
                 pointer = pointer[num]
+                print("len more than 1")
 
             
         if m_name[-11:] == '_embeddings':
             pointer = getattr(pointer, 'weight')
+            print("embeddings")
         elif m_name == 'kernel':
             #'output_weights' or l[0] == 'answer_type_output_weights'
             array = np.transpose(array)
+            print("kernels reshaped")
         try:
             assert pointer.shape == array.shape
         except AssertionError as e:
