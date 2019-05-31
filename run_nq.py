@@ -753,7 +753,8 @@ def convert_single_example(example, tokenizer, is_training):
 
       start_logits, end_logits, answer_type_logits = ptmodel(input_ids = input_ids,  token_type_ids=token_type_ids, attention_mask=attention_mask)
 
-
+    else:
+      print("skip example")
 
 
 
