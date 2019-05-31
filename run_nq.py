@@ -747,10 +747,10 @@ def convert_single_example(example, tokenizer, is_training):
 
     ptmodel = ptmodel.cuda()
     input_ids = torch.tensor(input_ids, device="cuda").unsqueeze(0)
-    token_type_ids = torch.tensor(token_type_ids, device="cuda").unsqueeze(0)
-    mc_token_ids = torch.tensor(mc_token_ids, device="cuda").unsqueeze(0)
+    token_type_ids = torch.tensor(segment_ids, device="cuda").unsqueeze(0)
+    attention_mask = torch.tensor(input_mask, device="cuda").unsqueeze(0)
 
-    start_logits, end_logits, answer_type_logits = ptmodel(input_ids = input_ids,  token_type_ids=segment_ids, attention_mask=input_mask)
+    start_logits, end_logits, answer_type_logits = ptmodel(input_ids = input_ids,  token_type_ids=token_type_ids, attention_mask=attention_mask)
 
 
 
