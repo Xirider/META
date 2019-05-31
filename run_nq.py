@@ -740,8 +740,10 @@ def convert_single_example(example, tokenizer, is_training):
     import pdb; pdb.set_trace()
     import torch
     import modelingpt
-    bertconfigpt = modelingpt.BertConfig.from_json_file("bert-joint-baseline/bert_config.json")
-    ptmodel = modelingpt.BertNQA(bertconfigpt)
+    # bertconfigpt = modelingpt.BertConfig.from_json_file("bert-joint-baseline/bert_config.json")
+    # ptmodel = modelingpt.BertNQA(bertconfigpt)
+    ptmodel = modelingpt.BertNQA.from_pretrained("bert-joint-baseline")
+
 
     ptmodel = ptmodel.cuda()
     input_ids = torch.tensor(input_ids, device="cuda").unsqueeze(0)
