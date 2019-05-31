@@ -695,7 +695,7 @@ def convert_single_example(example, tokenizer, is_training):
 
     #pytorch
 
-    istraining = True
+    is_training = True
 
 
     if is_training:
