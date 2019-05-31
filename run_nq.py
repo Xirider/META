@@ -911,9 +911,9 @@ def read_nq_examples(input_file, is_training):
 def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
                  use_one_hot_embeddings):
   """Creates a classification model."""
-  input_ids = tf.Print(input_ids, [input_ids.shape], message="input_ids in tf", summarize=1000)
-  input_mask = tf.Print(input_mask, [input_mask.shape], message="mask in tf",summarize=1000)
-  segment_ids = tf.Print(segment_ids, [segment_ids.shape], message="segmentids in tf", summarize=1000)
+  input_ids = tf.Print(input_ids, [input_ids], message="input_ids in tf", summarize=1000)
+  input_mask = tf.Print(input_mask, [input_mask], message="mask in tf",summarize=1000)
+  segment_ids = tf.Print(segment_ids, [segment_ids], message="segmentids in tf", summarize=1000)
 
   model = modeling.BertModel(
       config=bert_config,
