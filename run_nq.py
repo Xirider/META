@@ -692,6 +692,12 @@ def convert_single_example(example, tokenizer, is_training):
     end_position = None
     answer_type = None
     answer_text = ""
+
+    #pytorch
+
+    istraining = True
+
+
     if is_training:
       doc_start = doc_span.start
       doc_end = doc_span.start + doc_span.length - 1
@@ -755,7 +761,7 @@ def convert_single_example(example, tokenizer, is_training):
 
     else:
       print("skip example")
-
+    print(answer_text)
 
 
 
