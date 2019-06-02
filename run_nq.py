@@ -672,8 +672,8 @@ def convert_single_example(example, tokenizer, is_training):
     tokens.append("[SEP]")
     segment_ids.append(1)
     assert len(tokens) == len(segment_ids)
-
-    if "[ContextID=0]" in tokens:
+    import pdb; pdb.set_trace()
+    if "[ContextId=0]" in tokens:
       print(tokens)
       print("\n\n")
 
