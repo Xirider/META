@@ -672,7 +672,7 @@ def convert_single_example(example, tokenizer, is_training):
     tokens.append("[SEP]")
     segment_ids.append(1)
     assert len(tokens) == len(segment_ids)
-    import pdb; pdb.set_trace()
+    #import pdb; pdb.set_trace()
     if "[ContextId=0]" in tokens:
       print(tokens)
       print("\n\n")
@@ -915,9 +915,9 @@ def read_nq_examples(input_file, is_training):
 def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
                  use_one_hot_embeddings):
   """Creates a classification model."""
-  input_ids = tf.Print(input_ids, [input_ids], message="input_ids in tf", summarize=1000)
-  input_mask = tf.Print(input_mask, [input_mask], message="mask in tf",summarize=1000)
-  segment_ids = tf.Print(segment_ids, [segment_ids], message="segmentids in tf", summarize=1000)
+  # input_ids = tf.Print(input_ids, [input_ids], message="input_ids in tf", summarize=1000)
+  # input_mask = tf.Print(input_mask, [input_mask], message="mask in tf",summarize=1000)
+  # segment_ids = tf.Print(segment_ids, [segment_ids], message="segmentids in tf", summarize=1000)
 
   model = modeling.BertModel(
       config=bert_config,
@@ -975,7 +975,7 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   answer_type_logits = tf.nn.bias_add(answer_type_logits,
                                       answer_type_output_bias)
   
-  start_logits = tf.Print(start_logits, [start_logits], message="fina start logits tf", summarize=1000)
+  # start_logits = tf.Print(start_logits, [start_logits], message="fina start logits tf", summarize=1000)
 
   return (start_logits, end_logits, answer_type_logits)
 
