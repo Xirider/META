@@ -9,7 +9,7 @@ import unicodedata
 url = "https://en.wikipedia.org/wiki/CRISPR"
 #url = "https://en.wikipedia.org/wiki/Joona_Sotala"
 
-#url = "https://www.quora.com/Which-is-the-best-website-for-finance-related-freelancing"
+# #url = "https://www.quora.com/Which-is-the-best-website-for-finance-related-freelancing"
 
 import logging
 from newspaper.cleaners import DocumentCleaner
@@ -48,37 +48,124 @@ class WithTagOutputFormatter(OutputFormatter):
         return self.parser.nodeToString(cleaned_node)
 
     def convert_to_text(self):
-        txts = []
+        topcounter = 0
+        paracounter = 1
+        txts = ["[ContextId=-1] [NoLongAnswer]"]
         for node in list(self.get_top_node()):
             try:
                 txt = self.parser.getText(node)
             except ValueError as err:  # lxml error
                 log.info('%s ignoring lxml node error: %s', __title__, err)
                 txt = None
-
+            
             if txt:
+                #import pdb; pdb.set_trace()
+                numberlis = 0
                 txt = unescape(txt)
+
+                if paracounter < 49:
+                    paratoken = f"[Paragraph={paracounter}]"
+                else:
+                    paratoken = "[UNK]"
+
+                if topcounter < 49:
+                    contexttoken = f"[ContextId={topcounter}]"
+                else:
+                    contexttoken = "[UNK]"
+
+
+                if "[Lis" in txt[:8] or "[Tab" in txt[:8]:
+                    numberlis = int(txt[0:3]) -1
+
+                    txt = txt[3:]
+
+                else:
+                    txt = " ".join((paratoken, txt ))
+                    paracounter += 1
+                txt = " ".join((contexttoken, txt ))
                 txt_lis = innerTrim(txt).split(r'\n')
                 txt_lis = [n.strip(' ') for n in txt_lis]
                 txts.extend(txt_lis)
-        return '\n\n'.join(txts)
+                
+                topcounter += numberlis
+                topcounter += 1
+                # more than 500 contexts, then stop
+                if topcounter > 500:
+                    break
+        return ' '.join(txts)
+
+
+    def add_newline_to_br(self):
+        for e in self.parser.getElementsByTag(self.top_node, tag='br'):
+            e.text = ' '
+
+
+    def add_newline_to_li(self):
+        topcounter = 0
+        for e in self.parser.getElementsByTag(self.top_node, tag='ul'):
+            li_list = self.parser.getElementsByTag(e, tag='li')
+            counter = 0
+            topcounter += 1
+            lenlis = len(li_list)
+            if topcounter < 49:
+                listtoken = f"[List={topcounter}] "
+            else:
+                listtoken = "[UNK] "
+            for li in li_list[:-1]:
+                counter += 1
+                if counter == 1:
+                    li.text ="{:03d}".format(lenlis) + listtoken  + self.parser.getText(li) #+ r'\n'
+                else:
+                    li.text = self.parser.getText(li) #+ r'\n'
+                for c in self.parser.getChildren(li):
+                    self.parser.remove(c)
+
+    def add_newline_to_table(self):
+        topcounter = 0
+        for e in self.parser.getElementsByTag(self.top_node, tag='table'):
+            li_list = self.parser.getElementsByTag(e, tag='tr')
+            counter = 0
+            topcounter += 1
+            lenlis = len(li_list)
+            if topcounter < 49:
+                tabletoken = f"[Table={topcounter}] "
+            else:
+                tabletoken = "[UNK] "
+
+            for li in li_list[:-1]:
+                counter += 1
+                if counter == 1:
+                    if e.text:
+                        etext = e.text
+                    else:
+                        etext = ""
+                    li.text ="{:03d}".format(lenlis) + tabletoken + etext + self.parser.getText(li) #+ r'\n'
+                    e.text = ""
+                else:
+                    li.text = self.parser.getText(li) #+ r'\n'
+                for c in self.parser.getChildren(li):
+                    self.parser.remove(c)
+
+
+
 
 
     def get_formatted(self, top_node):
             """Returns the body text of an article, and also the body article
             html if specified. Returns in (text, html) form
             """
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
             self.top_node = top_node
             html, text = '', ''
             #import pdb; pdb.set_trace()
             self.remove_negativescores_nodes()
 
-            self.config.keep_article_html = True
+            self.config.keep_article_html = False
 
             self.links_to_text()
             #self.add_newline_to_br()# replace with space or nothing
             self.add_newline_to_li()
+            self.add_newline_to_table()
             self.replace_with_text()
             self.remove_empty_tags()
             self.remove_trailing_media_div()
@@ -94,7 +181,6 @@ class WithTagOutputFormatter(OutputFormatter):
 
 
 
-start_time = time.time()
 
 def fulltext(html, language='en'):
     """Takes article HTML string input and outputs the fulltext
@@ -122,13 +208,20 @@ def fulltext(html, language='en'):
 
 
 
-html = requests.get(url).text
-text, html = fulltext(html)
-downloadtime = time.time() - start_time
-print(text)
-print(html)
-print(f"Downloading finished after {downloadtime} seconds")
+start_time = time.time()
+article = newspaper.Article(url, fetch_images=False, memoize_articles=False)
+article.download()
+html = article.html
 
+#html = requests.get(url).text
+afterdown = time.time()
+downloadtime = afterdown - start_time
+text, html = fulltext(html)
+formattime = time.time() - afterdown
+print(text)
+#print(html)
+print(f"Downloading finished after {downloadtime} seconds")
+print(f"formatting and parsing finished after {formattime} seconds")
 
 # # 
 
