@@ -673,8 +673,9 @@ def convert_single_example(example, tokenizer, is_training):
     segment_ids.append(1)
     assert len(tokens) == len(segment_ids)
 
-    print(tokens)
-    print("\n\n")
+    if "[ContextID=0]" in tokens:
+      print(tokens)
+      print("\n\n")
 
     input_ids = tokenizer.convert_tokens_to_ids(tokens)
 
