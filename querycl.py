@@ -117,8 +117,8 @@ def run():
     logger = logging.getLogger(__file__)
     logger.info(pformat(args))
 
-    if args.model_checkpoint == "":
-        args.model_checkpoint = download_pretrained_model()
+    # if args.model_checkpoint == "":
+    #     args.model_checkpoint = download_pretrained_model()
 
     random.seed(args.seed)
     torch.random.manual_seed(args.seed)

@@ -8,7 +8,7 @@ from newspaper import Article, news_pool
 
 from concurrent.futures import TimeoutError
 from pebble import ProcessPool, ProcessExpired
-
+from nqdata import url_to_nq_inputlist
 
 def artdownload(url):
     ltime = time.time()
@@ -49,9 +49,15 @@ def artdownload(url):
     return art
 
 class Searcher():
-    def __init__(self):
+    def __init__(self, use_nq_scraper = False):
         self.pool = ProcessPool(max_workers=10)
         
+        if use_nq_scraper:
+            self.scrape_function = url_to_nq_inputlist
+        else:
+            self.scrape_function = artdownload
+
+
     def searchandsplit(self, query):
 
 
@@ -80,7 +86,7 @@ class Searcher():
 
         lasttime = time.time()
 
-        finishedmap = self.pool.map(artdownload, urllist, timeout=timeout)
+        finishedmap = self.pool.map(self.scrape_function, urllist, timeout=timeout)
 
         iterator = finishedmap.result()
 

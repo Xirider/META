@@ -9,3 +9,4 @@ dataset_cache_OpenAIGPTTokenizer
 dataset_cache_msmarco_trainOpenAIGPTTokenizer
 dataset_cache_msmarco_trainOpenAIGPTTokenizer_backup
 *.gz
+savedmodel/pytorch_model.bin

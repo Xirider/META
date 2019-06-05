@@ -20,6 +20,7 @@ from newspaper.text import innerTrim
 import lxml.html.clean
 from html import unescape
 import collections
+import torch
 
 
 
@@ -32,16 +33,78 @@ def url_to_nq_inputlist(url):
   return text
 
 
-def build_input_batch(articlelist, question):
+def build_input_batch(articlelist, question, tokenizer, batch_size, **kwargs):
   """ Take in list of prepared articles and a question , convert to batches of tensor inputs """
+  
+  # convert all text articles to list of objects with token ids
+  article_object_list = []
+  number_examples = 0
+  for article_id, article in enumerate(articlelist):
+      input_object = convert_single_example(article, question, tokenizer, article_id=article_id)
+      
+      number_examples += len(input_object)
+      article_object_list.extend(input_object)
+      
+  # create batches by first converting to tensors and then stacking
+    #   number_examples / batch_size
+  new_batch = True
+  batch = -1
+  batch_article_list = []
+  
+  for ex_id, example in enumerate(article_object_list):
 
-  for article in articlelist:
+    
+
+    if new_batch:
+        batch += 1
+        example_number = 0
+        input_id_stack = []
+        input_mask_stack = []
+        segment_id_stack = []
+        batch_article = []
+        new_batch = False
+    
+    example.batch = batch
+    # print(example.article_id)
+    # if example.article_id > 3:
+    #     print(example.tokens)
+    input_id_stack.append(torch.tensor(example.input_ids))
+    input_mask_stack.append(torch.tensor(example.input_mask))
+    segment_id_stack.append(torch.tensor(example.segment_ids))
+
+    example_number += 1
+
+    batch_article.append(example)
+    # if ex_id > 60:
+    #     import pdb; pdb.set_trace()
+    # last batch gets padded
+    if (number_examples - 1) == ex_id:
+        maxlen = len(example.input_ids)
+        padding_tensor = torch.zeros([maxlen], dtype=torch.long)
+
+        while example_number < batch_size:
+            example_number += 1
+            input_id_stack.append(padding_tensor.clone())
+            input_mask_stack.append(padding_tensor.clone())
+            segment_id_stack.append(padding_tensor.clone())
+        assert (example_number == batch_size)
+
+            
+
+    if example_number == batch_size:
+        batch_article_list.append(batch_article)
+        new_batch = True
+        input_batch = torch.stack(input_id_stack)
+        input_mask = torch.stack(input_mask_stack)
+        input_segment = torch.stack(segment_id_stack)
+
+
+        yield (input_batch, input_mask, input_segment, batch_article)
+        
 
 
 
-
-
-def convert_single_example(article, question, tokenizer, is_training, max_query_length=30, max_seq_length = 384):
+def convert_single_example(article, question, tokenizer, article_id, max_query_length=30, max_seq_length = 384, doc_stride = 128):
   """Converts a single NqExample into a list of InputFeatures."""
   # tok_to_orig_index = []
   # orig_to_tok_index = []
@@ -98,29 +161,37 @@ def convert_single_example(article, question, tokenizer, is_training, max_query_
     doc_spans.append(_DocSpan(start=start_offset, length=length))
     if start_offset + length == len(all_doc_tokens):
       break
-    start_offset += min(length, FLAGS.doc_stride)
+    start_offset += min(length, doc_stride)
 
   for (doc_span_index, doc_span) in enumerate(doc_spans):
+    
     tokens = []
-    token_to_orig_map = {}
-    token_is_max_context = {}
+    # token_to_orig_map = {}
+    # token_is_max_context = {}
     segment_ids = []
     tokens.append("[CLS]")
     segment_ids.append(0)
+    question_length = len(query_tokens) + 2
     tokens.extend(query_tokens)
     segment_ids.extend([0] * len(query_tokens))
     tokens.append("[SEP]")
     segment_ids.append(0)
 
-    for i in range(doc_span.length):
-      split_token_index = doc_span.start + i
-      token_to_orig_map[len(tokens)] = tok_to_orig_index[split_token_index]
+    # for i in range(doc_span.length):
+    #   split_token_index = doc_span.start + i
+    #   token_to_orig_map[len(tokens)] = tok_to_orig_index[split_token_index]
 
-      is_max_context = check_is_max_context(doc_spans, doc_span_index,
-                                            split_token_index)
-      token_is_max_context[len(tokens)] = is_max_context
-      tokens.append(all_doc_tokens[split_token_index])
-      segment_ids.append(1)
+    #   is_max_context = check_is_max_context(doc_spans, doc_span_index,
+    #                                         split_token_index)
+    #   token_is_max_context[len(tokens)] = is_max_context
+    #   tokens.append(all_doc_tokens[split_token_index])
+    #   segment_ids.append(1)
+
+    context = all_doc_tokens[doc_span.start : doc_span.start+doc_span.length]
+    
+    tokens.extend(context)
+    segment_ids.extend([1] * doc_span.length)
+
     tokens.append("[SEP]")
     segment_ids.append(1)
     assert len(tokens) == len(segment_ids)
@@ -134,63 +205,67 @@ def convert_single_example(article, question, tokenizer, is_training, max_query_
     input_mask = [1] * len(input_ids)
 
     # Zero-pad up to the sequence length.
-    padding = [0] * (FLAGS.max_seq_length - len(input_ids))
+    padding = [0] * (max_seq_length - len(input_ids))
     input_ids.extend(padding)
     input_mask.extend(padding)
     segment_ids.extend(padding)
 
-    assert len(input_ids) == FLAGS.max_seq_length
-    assert len(input_mask) == FLAGS.max_seq_length
-    assert len(segment_ids) == FLAGS.max_seq_length
+    assert len(input_ids) == max_seq_length
+    assert len(input_mask) == max_seq_length
+    assert len(segment_ids) == max_seq_length
 
-    start_position = None
-    end_position = None
-    answer_type = None
-    answer_text = ""
+    # start_position = None
+    # end_position = None
+    # answer_type = None
+    # answer_text = ""
 
 
 
-    if is_training:
-      doc_start = doc_span.start
-      doc_end = doc_span.start + doc_span.length - 1
-      # For training, if our document chunk does not contain an annotation
-      # we throw it out, since there is nothing to predict.
-      contains_an_annotation = (
-          tok_start_position >= doc_start and tok_end_position <= doc_end)
-      if ((not contains_an_annotation) or
-          example.answer.type == AnswerType.UNKNOWN):
-        # If an example has unknown answer type or does not contain the answer
-        # span, then we only include it with probability --include_unknowns.
-        # When we include an example with unknown answer type, we set the first
-        # token of the passage to be the annotated short span.
-        if (FLAGS.include_unknowns < 0 or
-            random.random() > FLAGS.include_unknowns):
-          continue
-        start_position = 0
-        end_position = 0
-        answer_type = AnswerType.UNKNOWN
-      else:
-        doc_offset = len(query_tokens) + 2
-        start_position = tok_start_position - doc_start + doc_offset
-        end_position = tok_end_position - doc_start + doc_offset
-        answer_type = example.answer.type
+    # if is_training:
+    #   doc_start = doc_span.start
+    #   doc_end = doc_span.start + doc_span.length - 1
+    #   # For training, if our document chunk does not contain an annotation
+    #   # we throw it out, since there is nothing to predict.
+    #   contains_an_annotation = (
+    #       tok_start_position >= doc_start and tok_end_position <= doc_end)
+    #   if ((not contains_an_annotation) or
+    #       example.answer.type == AnswerType.UNKNOWN):
+    #     # If an example has unknown answer type or does not contain the answer
+    #     # span, then we only include it with probability --include_unknowns.
+    #     # When we include an example with unknown answer type, we set the first
+    #     # token of the passage to be the annotated short span.
+    #     if (FLAGS.include_unknowns < 0 or
+    #         random.random() > FLAGS.include_unknowns):
+    #       continue
+    #     start_position = 0
+    #     end_position = 0
+    #     answer_type = AnswerType.UNKNOWN
+    #   else:
+    #     doc_offset = len(query_tokens) + 2
+    #     start_position = tok_start_position - doc_start + doc_offset
+    #     end_position = tok_end_position - doc_start + doc_offset
+    #     answer_type = example.answer.type
 
-      answer_text = " ".join(tokens[start_position:(end_position + 1)])
+    #   answer_text = " ".join(tokens[start_position:(end_position + 1)])
 
-    feature = InputFeatures(
-        unique_id=-1,
-        example_index=-1,
+    feature = InputOutputs(
+        # unique_id=-1,
+        # example_index=-1,
         doc_span_index=doc_span_index,
         tokens=tokens,
-        token_to_orig_map=token_to_orig_map,
-        token_is_max_context=token_is_max_context,
+        # token_to_orig_map=token_to_orig_map,
+        # token_is_max_context=token_is_max_context,
         input_ids=input_ids,
         input_mask=input_mask,
         segment_ids=segment_ids,
-        start_position=start_position,
-        end_position=end_position,
-        answer_text=answer_text,
-        answer_type=answer_type)
+        article_id = article_id,
+        start_position=doc_span.start,
+        end_position=doc_span.start + doc_span.length,
+        question_offset = question_length,
+        all_doc_tokens= all_doc_tokens
+        # answer_text=answer_text,
+        # answer_type=answer_type
+        )
 
     features.append(feature)
 
@@ -199,36 +274,67 @@ def convert_single_example(article, question, tokenizer, is_training, max_query_
 
   return features
 
-class InputFeatures(object):
+class InputOutputs(object):
   """A single set of features of data."""
 
   def __init__(self,
-               unique_id,
-               example_index,
                doc_span_index,
                tokens,
-               token_to_orig_map,
-               token_is_max_context,
                input_ids,
                input_mask,
                segment_ids,
+               article_id,
+               question_offset,
+               batch = None,
                start_position=None,
                end_position=None,
-               answer_text="",
-               answer_type=AnswerType.SHORT):
-    self.unique_id = unique_id
-    self.example_index = example_index
+               doc_start=None,
+               doc_end=None,
+               score= None,
+               short_span_score = None,
+               cls_token_score = None,
+               start_logits = None,
+               end_logits = None,
+               answer_type_logits = None,
+               long_text = None,
+               all_doc_tokens = None,
+               short_text = None,
+               type_index = None
+
+
+
+
+               
+               
+               
+               ):
+
+
     self.doc_span_index = doc_span_index
     self.tokens = tokens
-    self.token_to_orig_map = token_to_orig_map
-    self.token_is_max_context = token_is_max_context
+    self.batch = batch
     self.input_ids = input_ids
     self.input_mask = input_mask
     self.segment_ids = segment_ids
     self.start_position = start_position
     self.end_position = end_position
-    self.answer_text = answer_text
-    self.answer_type = answer_type
+    self.article_id = article_id
+    self.question_offset = question_offset
+    self.doc_start = doc_start 
+    self.doc_end = doc_end 
+    self.score = score 
+    self.short_span_score = short_span_score 
+    self.cls_token_score = cls_token_score 
+    self.start_logits = start_logits 
+    self.end_logits = end_logits 
+    self.answer_type_logits = answer_type_logits 
+    self.long_text = long_text
+    self.all_doc_tokens = all_doc_tokens
+    self.short_text = short_text
+    self.type_index = type_index
+
+
+
 
 
 
