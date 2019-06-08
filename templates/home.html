@@ -10,6 +10,7 @@
             <h5 class="blue-text text-lighten-1">{{ query }}</h5>
 
           </div>
+          <div class="divider"></div>
 
         {% endif %}
 
@@ -17,9 +18,10 @@
         {% for answer in texts %}
         <div class="section">
             {% if answer.short %}
-            <h6 class="blue-text text-lighten-2"><a href={{answer.url}}>{{ answer.short }}</a></h5>
+            <h6 class="blue-text text-lighten-2">{{ answer.short }}</h5>
               {% endif %}
             <p>{{ answer.long }}</p>
+            <p class="blue-text text-lighten-5"><small><a href={{answer.url}}>Source - {{answer.url}}</a></small></p>
           </div>
           <div class="divider"></div>
 
