@@ -23,7 +23,7 @@ def search():
     query = request.args.get("q")
     
     if query:
-        print(query)
+        #print(query)
         show_list = model.get_answer(q = query)
         
         
