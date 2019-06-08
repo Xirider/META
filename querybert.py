@@ -14,6 +14,8 @@ import torch.nn.functional as F
 from collections import defaultdict
 import pickle
 import copy
+import numpy as np
+import cProfile
 
 #from pytorch_pretrained_bert import OpenAIGPTDoubleHeadsModel, OpenAIGPTTokenizer
 from utils import SPECIAL_TOKENS, build_input_from_segments_ms
@@ -60,7 +62,17 @@ def top_filtering(logits, top_k=0, top_p=0.0, threshold=-float('Inf'), filter_va
 
 # 
 
-
+def do_cprofile(func):
+    def profiled_func(*args, **kwargs):
+        profile = cProfile.Profile()
+        try:
+            profile.enable()
+            result = func(*args, **kwargs)
+            profile.disable()
+            return result
+        finally:
+            profile.print_stats()
+    return profiled_func
 
 def sample_sequence(query, para, tokenizer, model, args, current_output=None, threshold=0.5):
     special_tokens_ids = tokenizer.convert_tokens_to_ids(SPECIAL_TOKENS)
@@ -121,16 +133,26 @@ def compute_best_predictions(prediction_list, stopper, topk = 5,):
     #articles = defaultdict(list)
     score_list = []
     for batch in prediction_list:
+        print("new batch")
         [start_logits, end_logits, answer_type_logits, batch_article] = batch
         batch_size = len(batch_article)
+        start_logits = start_logits.tolist()
+        end_logits = end_logits.tolist()
+        answer_type_logits = answer_type_logits.tolist()
+        # start_logits = start_logits.data.cpu().numpy()
+        # end_logits = end_logits.data.cpu().numpy()
+        # answer_type_logits = answer_type_logits.data.cpu().numpy()
+        print("batch at cpu")
+
         for b in range(batch_size):
             example = batch_article[b]
-            example.start_logits = start_logits[b].tolist()
-            example.end_logits = end_logits[b].tolist()
-            example.answer_type_logits = answer_type_logits[b].tolist()
+            example.start_logits = start_logits[b]
+            example.end_logits = end_logits[b]
+            example.answer_type_logits = answer_type_logits[b]
             updated_example = score_short_spans(example)
             score_list.extend(updated_example)
 
+    print("finished putting examples into lists")
     score_list.sort(reverse=True, key= lambda x: x.score)
     # for ex in score_list:
     #     print(ex.score)
@@ -144,6 +166,7 @@ def compute_best_predictions(prediction_list, stopper, topk = 5,):
     top_results = []
     counter = 0
     while len(top_results) < topk:
+
         #import pdb; pdb.set_trace()
         current_example = score_list[counter]
         skip = False
@@ -151,7 +174,7 @@ def compute_best_predictions(prediction_list, stopper, topk = 5,):
 
         # decide which type of answer is necessary
         type_index = current_example.answer_type_logits.index(max(current_example.answer_type_logits))
-
+        #type_index = np.argmax(current_example.answer_type_logits)
 
         current_example.type_index = type_index
 
@@ -169,7 +192,10 @@ def compute_best_predictions(prediction_list, stopper, topk = 5,):
                 else:
                     pass
         if skip:
-            continue
+            if counter == lenlist - 1:
+                break
+            else:
+                continue
 
 
 
@@ -214,12 +240,12 @@ def compute_best_predictions(prediction_list, stopper, topk = 5,):
     return top_results
 
 
-def score_short_spans(example):
+def score_short_spans(example, top_scores = 5):
     	
     start_logits = example.start_logits
     end_logits = example.end_logits
     predictions = []
-    n_best_size = 10
+    n_best_size = top_scores
     max_answer_length = 30
 
     start_indexes = get_best_indexes(start_logits, n_best_size)
@@ -305,150 +331,209 @@ def decode(tokenizer, ids, skip_special_tokens=False, clean_up_tokenization_spac
 
 
 
-def run():
-    parser = ArgumentParser()
-    parser.add_argument("--dataset_path", type=str, default="", help="Path or url of the dataset. If empty download from S3.")
-    parser.add_argument("--dataset_cache", type=str, default='./dataset_cache', help="Path or url of the dataset cache")
-    parser.add_argument("--model_checkpoint", type=str, default="savedmodel", help="Path, url or short name of the model")
-    parser.add_argument("--max_history", type=int, default=2, help="Number of previous utterances to keep in history")
-    parser.add_argument("--batch_size", type=int, default=64, help="batch size for prediction")
-    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device (cuda or cpu)")
-
-    parser.add_argument("--no_sample", action='store_true', help="Set to use greedy decoding instead of sampling")
-    parser.add_argument("--max_length", type=int, default=50, help="Maximum length of the output utterances")
-    parser.add_argument("--min_length", type=int, default=1, help="Minimum length of the output utterances")
-    parser.add_argument("--seed", type=int, default=42, help="Seed")
-    parser.add_argument("--temperature", type=int, default=0.7, help="Sampling softmax temperature")
-    parser.add_argument("--top_k", type=int, default=0, help="Filter top-k tokens before sampling (<=0: no filtering)")
-    parser.add_argument("--top_p", type=float, default=0.9, help="Nucleus filtering (top-p) before sampling (<=0.0: no filtering)")
-    args = parser.parse_args()
-
-    logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger(__file__)
-    logger.info(pformat(args))
-
-    # if args.model_checkpoint == "":
-    #     args.model_checkpoint = download_pretrained_model()
-
-    random.seed(args.seed)
-    torch.random.manual_seed(args.seed)
-    torch.cuda.manual_seed(args.seed)
-    stopper = ["[UNK]", "[SEP]", "[Q]", "[CLS]", "[ContextId=-1]", "[NoLongAnswer]"]
-    for i in range(50):
-        stopper.extend([f"[ContextId={i}]",f"[Paragraph={i}]",f"[Table={i}]",f"[List={i}]" ])
-    stopper = tuple(stopper)
-    logger.info("Get pretrained model and tokenizer")
-    model = BertNQA.from_pretrained(args.model_checkpoint)
-    tokenizer = BertTokenizer.from_pretrained(args.model_checkpoint, never_split = stopper)
-    model.to(args.device)
-    model.eval()
-
-    # logger.info("Sample a personality")
-    # personalities = get_dataset_personalities(tokenizer, args.dataset_path, args.dataset_cache)
-    # personality = random.choice(personalities)
-    # logger.info("Selected personality: %s", tokenizer.decode(chain(*personality)))
-
-    history = []
-
-    #examplepara = "Evidence of prehistoric activity in the area comes from Ashton Moss – a 107-hectare (260-acre) peat bog – and is the only one of Tameside's 22 Mesolithic sites not located in the hilly uplands in the north east of the borough. A single Mesolithic flint tool has been discovered in the bog,[6][7] along with a collection of nine Neolithic flints.[8] There was further activity in or around the bog in the Bronze Age. In about 1911, an adult male skull was found in the moss; it was thought to belong to the Romano-British period – similar to the Lindow Man bog body – until radiocarbon dating revealed that it dated from 1,320–970 BC"
-    #examplepara = tokenizer.encode(examplepara)
-
-    search = Searcher(use_nq_scraper = True)
-    
-    raw_text = input(">>> ")
-    start_time = time.time()
-    while not raw_text:
-        print('Prompt should not be empty!')
-        raw_text = input(">>> ")
-        start_time = time.time()
-
-    articlelist = search.searchandsplit(raw_text)
-
-    # raw_text = "Who is the current president"
-    # #pickle.dump(articlelist, open("intermediatearticles.p", "wb"))
-    # articlelist = pickle.load(open("intermediatearticles.p", "rb"))
-
-    query = raw_text
-    toplist =[]
-    topresults = 5
-    # topmcs= [0.01] * topresults
-    # threshold = 0.01
-    prediction_list = []
-    print("starting encoding")
-    with torch.no_grad():
-        for batch in build_input_batch(articlelist = articlelist, question= query, tokenizer = tokenizer, batch_size = args.batch_size):
-            
-            print("batch starts")
-            (input_batch, input_mask, input_segment, batch_article) = batch
-            # for ba in batch_article:
-                # print("next article \n\n")
-                # print(ba.article_id)
-                # print(ba.tokens)
-            input_batch = input_batch.to(args.device)
-            input_mask = input_mask.to(args.device)
-            input_segment = input_segment.to(args.device)
-
-            start_logits, end_logits, answer_type_logits = model(input_ids = input_batch, token_type_ids = input_segment, attention_mask = input_mask)
-            prediction_list.append([start_logits, end_logits, answer_type_logits, batch_article])
-
-        print("compute best predictions")
-        number_computed_paras = len(prediction_list) * args.batch_size
-        top_results = compute_best_predictions(prediction_list, topk = topresults, stopper = stopper)
-    
-    for result_id, result in enumerate(top_results):
-
-        print("\n\n\n")
-        print(f"Top {result_id + 1}\n")
-        print(f"Answer score: {result.score}\n")
-        print(f"Answer propabilities: - Yes: {result.answer_type_logits[0]} - No: {result.answer_type_logits[1]} -No Answer {result.answer_type_logits[2]} -Short Answer {result.answer_type_logits[3]} -Only Long Answer: {result.answer_type_logits[4]}\n")
-        
-        if result.type_index == 0:
-            print("Answer: Yes\n")
-
-        if result.type_index == 1:
-            print("Answer: No\n")
-        
-        if result.type_index == 2:
-            print("No Answer found here")
+# @do_cprofile
+class QBert():
 
 
-        if result.type_index == 3:
-            decoded_short_answer = decode(tokenizer, result.short_text)
-            print(f"Short Answer: {decoded_short_answer}  \n\n")
+    def __init__(self):
+        parser = ArgumentParser()
+        parser.add_argument("--dataset_path", type=str, default="", help="Path or url of the dataset. If empty download from S3.")
+        parser.add_argument("--dataset_cache", type=str, default='./dataset_cache', help="Path or url of the dataset cache")
+        parser.add_argument("--model_checkpoint", type=str, default="savedmodel", help="Path, url or short name of the model")
+        parser.add_argument("--max_history", type=int, default=2, help="Number of previous utterances to keep in history")
+        parser.add_argument("--batch_size", type=int, default=32, help="batch size for prediction")
+        parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device (cuda or cpu)")
 
-        if result.type_index == 4 or result.type_index == 0 or result.type_index == 1 or result.type_index == 3:
-            decoded_long_answer = decode(tokenizer, result.long_text)
-            print(f"Long Answer: \n{decoded_long_answer}")
+        parser.add_argument("--no_sample", action='store_true', help="Set to use greedy decoding instead of sampling")
+        parser.add_argument("--max_length", type=int, default=50, help="Maximum length of the output utterances")
+        parser.add_argument("--min_length", type=int, default=1, help="Minimum length of the output utterances")
+        parser.add_argument("--seed", type=int, default=42, help="Seed")
+        parser.add_argument("--temperature", type=int, default=0.7, help="Sampling softmax temperature")
+        parser.add_argument("--top_k", type=int, default=0, help="Filter top-k tokens before sampling (<=0: no filtering)")
+        parser.add_argument("--top_p", type=float, default=0.9, help="Nucleus filtering (top-p) before sampling (<=0.0: no filtering)")
+        self.args = parser.parse_args()
+
+        logging.basicConfig(level=logging.INFO)
+        self.logger = logging.getLogger(__file__)
+        self.logger.info(pformat(self.args))
+
+        # if args.model_checkpoint == "":
+        #     args.model_checkpoint = download_pretrained_model()
+
+        random.seed(self.args.seed)
+        torch.random.manual_seed(self.args.seed)
+        torch.cuda.manual_seed(self.args.seed)
+        stopper = ["[UNK]", "[SEP]", "[Q]", "[CLS]", "[ContextId=-1]", "[NoLongAnswer]"]
+        for i in range(50):
+            stopper.extend([f"[ContextId={i}]",f"[Paragraph={i}]",f"[Table={i}]",f"[List={i}]" ])
+        self.stopper = tuple(stopper)
+        self.logger.info("Get pretrained model and tokenizer")
+        self.model = BertNQA.from_pretrained(self.args.model_checkpoint)
+        self.tokenizer = BertTokenizer.from_pretrained(self.args.model_checkpoint, never_split = self.stopper)
+        self.model.to(self.args.device)
+        self.model.eval()
+
+        # logger.info("Sample a personality")
+        # personalities = get_dataset_personalities(tokenizer, args.dataset_path, args.dataset_cache)
+        # personality = random.choice(personalities)
+        # logger.info("Selected personality: %s", tokenizer.decode(chain(*personality)))
+
+        history = []
+
+        #examplepara = "Evidence of prehistoric activity in the area comes from Ashton Moss – a 107-hectare (260-acre) peat bog – and is the only one of Tameside's 22 Mesolithic sites not located in the hilly uplands in the north east of the borough. A single Mesolithic flint tool has been discovered in the bog,[6][7] along with a collection of nine Neolithic flints.[8] There was further activity in or around the bog in the Bronze Age. In about 1911, an adult male skull was found in the moss; it was thought to belong to the Romano-British period – similar to the Lindow Man bog body – until radiocarbon dating revealed that it dated from 1,320–970 BC"
+        #examplepara = tokenizer.encode(examplepara)
+
+        self.search = Searcher(use_nq_scraper = True, use_api = True)
+        self.threshold = 1.0
 
 
-    #     for arti in articlelist:
-    #         for para in arti:
-    #             txtpara = para
+    def get_answer(self, q = None):
+        if not q:
 
-    #             out_ids, mc = sample_sequence(query,para, tokenizer, model, args,threshold=threshold)
+            raw_text = input(">>> ")
+            start_time = time.time()
+            while not raw_text:
+                print('Prompt should not be empty!')
+                raw_text = input(">>> ")
+                start_time = time.time()
+        else:
+            raw_text = q
 
-    #             out_text = tokenizer.decode(out_ids, skip_special_tokens=True)
-    #             mcs = mc.item()
-    #             if mcs > topmcs[0]:
-    #                 toplist.append([mcs, out_text, txtpara])
-    #                 print(f"Answer propability: {mcs}\n")
-    #                 print(out_text)
-    #                 topmcs.append(mcs)
-    #                 topmcs.sort()
-    #                 del topmcs[0]
-    # sortedresults = sorted(toplist, key= lambda x: x[0], reverse=True)
-    # toprange = min([topresults, len(sortedresults)])
-    # for i in range(toprange):
-    #     print("\n\n")
-    #     print(f"Top {i}\n")
-    #     print(f"Answer propability: {sortedresults[i][0]}\n")
-    #     print("Answer: " + sortedresults[i][1] +"\n")
-    #     print("Paragraph for this answer: " +sortedresults[i][2])
+        articlelist = self.search.searchandsplit(raw_text)
 
-    # print("Number of paragraphs searched")
-    # print(len(sortedresults))
-    finaltime = time.time() - start_time
-    print(f"Processing finished after {finaltime}")
+        # raw_text = "Who is the current president"
+        # #pickle.dump(articlelist, open("intermediatearticles.p", "wb"))
+        # articlelist = pickle.load(open("intermediatearticles.p", "rb"))
+
+        query = raw_text
+        toplist =[]
+        topresults = 5
+        # topmcs= [0.01] * topresults
+        # threshold = 0.01
+        prediction_list = []
+        print("starting encoding")
+        batch_list = build_input_batch(articlelist = articlelist, question= query, tokenizer = self.tokenizer, batch_size = self.args.batch_size)
+        print("finished encoding")
+        with torch.no_grad():
+            for batch in batch_list:
+                print("batch starts")
+                (input_batch, input_mask, input_segment, batch_article) = batch
+                # for ba in batch_article:
+                    # print("next article \n\n")
+                    # print(ba.article_id)
+                    # print(ba.tokens)
+                input_batch = input_batch.to(self.args.device)
+                input_mask = input_mask.to(self.args.device)
+                input_segment = input_segment.to(self.args.device)
+                print("model starts")
+                mts = time.time()
+                start_logits, end_logits, answer_type_logits = self.model(input_ids = input_batch, token_type_ids = input_segment, attention_mask = input_mask)
+                finaltime = time.time() - mts
+                print(f"model finished after {finaltime}")
+                print("model ends")
+                prediction_list.append([start_logits, end_logits, answer_type_logits, batch_article])
+                print("appending ends")
+
+            print("compute best predictions")
+            number_computed_paras = len(prediction_list) * self.args.batch_size
+            cbs = time.time()
+            top_results = compute_best_predictions(prediction_list, topk = topresults, stopper = self.stopper)
+            finaltime = time.time() - cbs
+            print(f"computing best preds finished after {finaltime}")
+        if not q:
+            for result_id, result in enumerate(top_results):
+                
+                print("\n\n\n")
+                print(f"Top {result_id + 1}\n")
+                print(f"Answer score: {result.score}\n")
+                print(f"Answer propabilities: - Yes: {result.answer_type_logits[0]} - No: {result.answer_type_logits[1]} -No Answer {result.answer_type_logits[2]} -Short Answer {result.answer_type_logits[3]} -Only Long Answer: {result.answer_type_logits[4]}\n")
+                
+                if result.type_index == 0:
+                    print("Answer: Yes\n")
+
+                if result.type_index == 1:
+                    print("Answer: No\n")
+                
+                if result.type_index == 2:
+                    print("No Answer found here")
+
+
+                if result.type_index == 3:
+                    decoded_short_answer = decode(self.tokenizer, result.short_text)
+                    print(f"Short Answer: {decoded_short_answer}  \n\n")
+
+                if result.type_index == 4 or result.type_index == 0 or result.type_index == 1 or result.type_index == 3:
+                    decoded_long_answer = decode(self.tokenizer, result.long_text)
+                    print(f"Long Answer: \n{decoded_long_answer}")
+
+        else:
+            show_list = []
+            for result_id, result in enumerate(top_results):
+                
+                answer_dict = {}            
+
+                if result.type_index == 2:
+                    continue
+
+
+                if result.type_index == 0:
+                    answer_dict["short"] = "Yes"
+
+                if result.type_index == 1:
+                    answer_dict["short"] = "No"
+                
+
+
+
+                if result.type_index == 3:
+                    answer_dict["short"] = decode(self.tokenizer, result.short_text[1:])
+                
+
+                if result.type_index == 4 or result.type_index == 0 or result.type_index == 1 or result.type_index == 3:
+                    answer_dict["long"] = decode(self.tokenizer, result.long_text[1:])
+
+                if result.type_index == 4:
+                    answer_dict["short"] = ""
+                answer_dict["url"] = result.url
+                answer_dict["type"] = result.type_index
+                if result.score > self.threshold:
+                    show_list.append(answer_dict)
+                else:
+                    print("skipped, too low score")
+            return show_list
+
+
+
+
+        #     for arti in articlelist:
+        #         for para in arti:
+        #             txtpara = para
+
+        #             out_ids, mc = sample_sequence(query,para, tokenizer, model, args,threshold=threshold)
+
+        #             out_text = tokenizer.decode(out_ids, skip_special_tokens=True)
+        #             mcs = mc.item()
+        #             if mcs > topmcs[0]:
+        #                 toplist.append([mcs, out_text, txtpara])
+        #                 print(f"Answer propability: {mcs}\n")
+        #                 print(out_text)
+        #                 topmcs.append(mcs)
+        #                 topmcs.sort()
+        #                 del topmcs[0]
+        # sortedresults = sorted(toplist, key= lambda x: x[0], reverse=True)
+        # toprange = min([topresults, len(sortedresults)])
+        # for i in range(toprange):
+        #     print("\n\n")
+        #     print(f"Top {i}\n")
+        #     print(f"Answer propability: {sortedresults[i][0]}\n")
+        #     print("Answer: " + sortedresults[i][1] +"\n")
+        #     print("Paragraph for this answer: " +sortedresults[i][2])
+
+        # print("Number of paragraphs searched")
+        # print(len(sortedresults))
+        finaltime = time.time() - start_time
+        print(f"Processing finished after {finaltime}")
 
 if __name__ == "__main__":
-    run()
+        abc = QBert()
+        abc.get_answer()

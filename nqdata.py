@@ -30,7 +30,7 @@ def url_to_nq_inputlist(url):
   article.download()
   html = article.html
   text , _ = html_to_marked_text(html)
-  return text
+  return {"text": text, "url": url}
 
 
 def build_input_batch(articlelist, question, tokenizer, batch_size, **kwargs):
@@ -50,6 +50,8 @@ def build_input_batch(articlelist, question, tokenizer, batch_size, **kwargs):
   new_batch = True
   batch = -1
   batch_article_list = []
+
+  return_list = []
   
   for ex_id, example in enumerate(article_object_list):
 
@@ -79,19 +81,15 @@ def build_input_batch(articlelist, question, tokenizer, batch_size, **kwargs):
     #     import pdb; pdb.set_trace()
     # last batch gets padded
     if (number_examples - 1) == ex_id:
-        maxlen = len(example.input_ids)
-        padding_tensor = torch.zeros([maxlen], dtype=torch.long)
+        # maxlen = len(example.input_ids)
+        # padding_tensor = torch.zeros([maxlen], dtype=torch.long)
 
-        while example_number < batch_size:
-            example_number += 1
-            input_id_stack.append(padding_tensor.clone())
-            input_mask_stack.append(padding_tensor.clone())
-            segment_id_stack.append(padding_tensor.clone())
-        assert (example_number == batch_size)
-
-            
-
-    if example_number == batch_size:
+        # while example_number < batch_size:
+        #     example_number += 1
+        #     input_id_stack.append(padding_tensor.clone())
+        #     input_mask_stack.append(padding_tensor.clone())
+        #     segment_id_stack.append(padding_tensor.clone())
+        # assert (example_number == batch_size)
         batch_article_list.append(batch_article)
         new_batch = True
         input_batch = torch.stack(input_id_stack)
@@ -99,7 +97,20 @@ def build_input_batch(articlelist, question, tokenizer, batch_size, **kwargs):
         input_segment = torch.stack(segment_id_stack)
 
 
-        yield (input_batch, input_mask, input_segment, batch_article)
+        return_list.append((input_batch, input_mask, input_segment, batch_article))
+            
+
+    elif example_number == batch_size:
+        batch_article_list.append(batch_article)
+        new_batch = True
+        input_batch = torch.stack(input_id_stack)
+        input_mask = torch.stack(input_mask_stack)
+        input_segment = torch.stack(segment_id_stack)
+
+
+        return_list.append((input_batch, input_mask, input_segment, batch_article))
+
+  return return_list
         
 
 
@@ -124,7 +135,7 @@ def convert_single_example(article, question, tokenizer, article_id, max_query_l
   #   tok_to_orig_index = [
   #       example.doc_tokens_map[index] for index in tok_to_orig_index
   #   ]
-  all_doc_tokens = tokenizer.tokenize(article)
+  all_doc_tokens = tokenizer.tokenize(article["text"])
 
 
 
@@ -262,7 +273,8 @@ def convert_single_example(article, question, tokenizer, article_id, max_query_l
         start_position=doc_span.start,
         end_position=doc_span.start + doc_span.length,
         question_offset = question_length,
-        all_doc_tokens= all_doc_tokens
+        all_doc_tokens= all_doc_tokens,
+        url=article["url"]
         # answer_text=answer_text,
         # answer_type=answer_type
         )
@@ -299,7 +311,8 @@ class InputOutputs(object):
                long_text = None,
                all_doc_tokens = None,
                short_text = None,
-               type_index = None
+               type_index = None,
+               url = None
 
 
 
@@ -332,6 +345,7 @@ class InputOutputs(object):
     self.all_doc_tokens = all_doc_tokens
     self.short_text = short_text
     self.type_index = type_index
+    self.url = url
 
 
 

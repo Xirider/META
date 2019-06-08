@@ -10,6 +10,9 @@ from concurrent.futures import TimeoutError
 from pebble import ProcessPool, ProcessExpired
 from nqdata import url_to_nq_inputlist
 
+
+from lib.google_search_results import GoogleSearchResults
+
 def artdownload(url):
     ltime = time.time()
     art = Article(url, fetch_images=False, memoize_articles=False)
@@ -49,13 +52,16 @@ def artdownload(url):
     return art
 
 class Searcher():
-    def __init__(self, use_nq_scraper = False):
-        self.pool = ProcessPool(max_workers=10)
+    def __init__(self, use_nq_scraper = False, use_api=False):
+        
         
         if use_nq_scraper:
             self.scrape_function = url_to_nq_inputlist
         else:
             self.scrape_function = artdownload
+        self.use_api = use_api
+
+
 
 
     def searchandsplit(self, query):
@@ -64,12 +70,32 @@ class Searcher():
         start_time = time.time()
         #query = "who is germans chancellor?"
         print("start searching")
-
+        self.pool = ProcessPool(max_workers=10)
         urllist = []
         #urllist = search(query, stop=10, pause = 31.0, only_standard = True)
-        for urlr in search(query, stop= 10, pause = 0.0,only_standard = True):
-            urllist.append(urlr)
-            print("adding url ot url list")
+
+
+
+        if self.use_api:
+            
+            params = {
+                "q" : query,
+
+                "hl" : "en",
+                "gl" : "us",
+                "google_domain" : "google.com",
+                "api_key" : "d243cd857dad394fe6407afd0094bf9f05aaf775922193fe230b4ea415871576",
+            }
+            client = GoogleSearchResults(params)
+            results = client.get_dict()
+
+            urllist = [ x["link"] for x in results["organic_results"]]
+            #extended_urllist = [ (x["link"], x["titel"]) for x in results["organic_results"]]
+            #print(urllist)
+        else:
+            for urlr in search(query, stop= 10, pause = 0.0,only_standard = True):
+                urllist.append(urlr)
+                print("adding url or url list")
 
 
 
@@ -196,12 +222,15 @@ class Searcher():
 
 
 
+if __name__ == "__main__":
+    
+
+    searcher = Searcher(use_nq_scraper = True, use_api=True)
+
+    ulist = searcher.searchandsplit("what is the reason of my life")
 
 
-
-
-
-
+    print(ulist)
 
 
 
