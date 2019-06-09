@@ -128,7 +128,7 @@ def get_best_indexes(logits, n_best_size):
 
 
 
-def compute_best_predictions(prediction_list, stopper, topk = 5,):
+def compute_best_predictions(prediction_list, stopper, topk = 5,threshold = 0):
     """ takes in list of predictions, creates list of prediction spans, returns the best span for the top spans """
     #articles = defaultdict(list)
     score_list = []
@@ -149,8 +149,9 @@ def compute_best_predictions(prediction_list, stopper, topk = 5,):
             example.start_logits = start_logits[b]
             example.end_logits = end_logits[b]
             example.answer_type_logits = answer_type_logits[b]
-            updated_example = score_short_spans(example)
-            score_list.extend(updated_example)
+            updated_example = score_short_spans(example, threshold=threshold)
+            if updated_example != 0:
+                score_list.append(updated_example)
 
     print("finished putting examples into lists")
     score_list.sort(reverse=True, key= lambda x: x.score)
@@ -166,7 +167,8 @@ def compute_best_predictions(prediction_list, stopper, topk = 5,):
     top_results = []
     counter = 0
     while len(top_results) < topk:
-
+        if lenlist == 0:
+            break
         #import pdb; pdb.set_trace()
         current_example = score_list[counter]
         skip = False
@@ -240,13 +242,15 @@ def compute_best_predictions(prediction_list, stopper, topk = 5,):
     return top_results
 
 
-def score_short_spans(example, top_scores = 5):
+def score_short_spans(example, top_scores = 10, threshold = 0):
     	
     start_logits = example.start_logits
     end_logits = example.end_logits
     predictions = []
     n_best_size = top_scores
     max_answer_length = 30
+    best_score = threshold
+    example.score = -1000
 
     start_indexes = get_best_indexes(start_logits, n_best_size)
     end_indexes = get_best_indexes(end_logits, n_best_size)
@@ -262,24 +266,33 @@ def score_short_spans(example, top_scores = 5):
             if length > max_answer_length:
                 continue
             #import pdb; pdb.set_trace()
-            example.short_span_score = (
+            short_span_score = (
                 start_logits[start_index] +
                 end_logits[end_index])
-            example.cls_token_score = (
+            cls_token_score = (
                 start_logits[0] + end_logits[0])
-            start_span = example.start_position - example.question_offset + start_index
-            end_span =example.start_position - example.question_offset + end_index + 1
-            short_text = example.tokens[start_index:end_index +1]
-            example.short_text = short_text
+            
             # Span logits minus the cls logits seems to be close to the best.
-            score = example.short_span_score - example.cls_token_score
+            score = short_span_score - cls_token_score
 
-            example.score = score
-            example.doc_start = start_span
-            example.doc_end = end_span
+            if score > best_score:
+                best_score = score
 
-            predictions.append(copy.deepcopy(example))
-    return predictions
+                example.short_span_score = short_span_score
+                example.cls_token_score = cls_token_score
+
+                start_span = example.start_position - example.question_offset + start_index
+                end_span =example.start_position - example.question_offset + end_index + 1
+                short_text = example.tokens[start_index:end_index +1]
+
+                example.short_text = short_text
+                example.score = score
+                example.doc_start = start_span
+                example.doc_end = end_span
+    if example.score > threshold:
+        return example
+    else:
+        return 0
 
     # score, summary, start_span, end_span = sorted(predictions, reverse=True)[0]
     # short_span = Span(start_span, end_span)
@@ -437,7 +450,7 @@ class QBert():
             print("compute best predictions")
             number_computed_paras = len(prediction_list) * self.args.batch_size
             cbs = time.time()
-            top_results = compute_best_predictions(prediction_list, topk = topresults, stopper = self.stopper)
+            top_results = compute_best_predictions(prediction_list, topk = topresults, stopper = self.stopper, threshold=self.threshold)
             finaltime = time.time() - cbs
             print(f"computing best preds finished after {finaltime}")
         if not q:
