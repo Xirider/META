@@ -31,7 +31,7 @@ logger = logging.getLogger(__file__)
 # missing tokens
 textcounter = 0
 
-def create_stopper()
+def create_stopper():
 
     stopper = ["[UNK]", "[SEP]", "[Q]", "[CLS]", "[ContextId=-1]", "[NoLongAnswer]"]
     for i in range(50):
