@@ -100,7 +100,7 @@ def get_dataset_ms(tokenizer, dataset_path, dataset_cache=None, mode = "train"):
 
         dataset = tokenize(dataset)
         if dataset_cache:
-            torch.save(dataset, dataset_cache, pickle_protocol=4)
+            torch.save(dataset, dataset_cache, pickle_protocol=3)
             print("dataset saved")
     return dataset
 
