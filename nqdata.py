@@ -115,7 +115,7 @@ def build_input_batch(articlelist, question, tokenizer, batch_size, **kwargs):
 
 
 
-def convert_single_example(article, question, tokenizer, article_id, max_query_length=30, max_seq_length = 384, doc_stride = 128, already_tokenized=False, url=None):
+def convert_single_example(article, question, tokenizer, article_id, max_query_length=30, max_seq_length = 384, doc_stride = 128, already_tokenized=False, url=None, answer_start=None, answer_end=None):
   """Converts a single NqExample into a list of InputFeatures."""
   # tok_to_orig_index = []
   # orig_to_tok_index = []
@@ -234,7 +234,10 @@ def convert_single_example(article, question, tokenizer, article_id, max_query_l
     # end_position = None
     # answer_type = None
     # answer_text = ""
-
+    if answer_start:
+        lenquery = len(query_tokens)
+        answer_start += lenquery
+        answer_end += lenquery
 
 
     # if is_training:
@@ -279,9 +282,13 @@ def convert_single_example(article, question, tokenizer, article_id, max_query_l
         end_position=doc_span.start + doc_span.length,
         question_offset = question_length,
         all_doc_tokens= all_doc_tokens,
-        url=url
+        url=url,
+        answer_start = answer_start,
+        answer_end = answer_end
+
         # answer_text=answer_text,
         # answer_type=answer_type
+
         )
 
     features.append(feature)
@@ -317,7 +324,9 @@ class InputOutputs(object):
                all_doc_tokens = None,
                short_text = None,
                type_index = None,
-               url = None
+               url = None,
+               answer_start = None,
+               answer_end = None
 
 
 
@@ -351,7 +360,8 @@ class InputOutputs(object):
     self.short_text = short_text
     self.type_index = type_index
     self.url = url
-
+    self.answer_start = answer_start
+    self.answer_end = answer_end
 
 
 

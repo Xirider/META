@@ -513,6 +513,11 @@ class QBert():
                     show_list.append(answer_dict)
                 else:
                     print("skipped, too low score")
+            
+
+            finaltime = time.time() - start_time
+            print(f"Total Time: {finaltime}")
+
             return show_list
 
 

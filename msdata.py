@@ -14,6 +14,8 @@ import random
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 from torch.nn.parallel import DistributedDataParallel
+import collections
+import numpy as np
 
 from pytorch_pretrained_bert import cached_path
 
@@ -108,6 +110,115 @@ def pad_data(data, maxlen, padding=0):
         out.append(x)
     assert(len(out) == 2)
     return out
+
+
+def findspanmatch(context, answer, maxlen = 50, overlap = 20, max_misses = 5, min_real_content = 0.6, answer_overlap = 0.6):
+    """ Takes in an context and answer, marks all exact matches, seperates in overlaping parts,takes all possible spans, 
+    rates them acc to most pos word, cutting if more than a number of nun content words, returning the original span, 
+    maybe count each word only once  """
+
+    poslist = []
+    for tok in context:
+        if tok in answer:
+            poslist.append(1)
+        else:
+            poslist.append(0)
+
+    poslistarray = np.asarray(poslist, dtype=np.int64)
+
+    _DocSpan = collections.namedtuple("DocSpan", ["start", "length", "tokens", "pos", "posarray"])
+    doc_spans = []
+    start_offset = 0
+    while start_offset < len(context):
+        length = len(context) - start_offset
+        length = min(length, maxlen)
+        doc_spans.append(_DocSpan(start=start_offset, length=length, tokens=context[start_offset:start_offset+length],
+         pos=poslist[start_offset:start_offset+length],posarray=poslistarray[start_offset:start_offset+length] ))
+        
+        if start_offset + length == len(context):
+            break
+        start_offset += min(length, overlap)
+
+    beststart = None
+    bestend = None
+    bestoverlap = 0
+    bestratio = 0
+
+
+    for (doc_span_index, doc_span) in enumerate(doc_spans):
+
+        
+        for start_index, startbin in enumerate(doc_span.pos):
+
+            if startbin:
+                for end_index, endbin in enumerate(doc_span.pos):
+                    if endbin:
+                        if end_index < start_index:
+                            #print("skipped, wrong order")
+                            continue
+                        if (doc_span.posarray[start_index:end_index + 1].sum() + max_misses) < (end_index - start_index):
+                            #print("skipped, to few pos")
+                            continue
+
+                        # test for real overlap
+                        span_tokens = doc_span.tokens[start_index:end_index + 1]
+                        copied_answer = answer.copy()
+                        realoverlap = 0
+                        for ele in span_tokens:
+                            if ele in copied_answer:
+                                ele_index = copied_answer.index(ele)
+                                del copied_answer[ele_index]
+
+                                realoverlap += 1
+                        
+                        # if start_index == 11 and end_index == 14:
+                        #     import pdb; pdb.set_trace()
+
+
+                        realratio = realoverlap / (end_index - start_index + 1)
+
+                        if realratio < min_real_content:
+                            #print("too low ratio")
+                            continue
+                        if (realoverlap + max_misses) < (end_index - start_index):
+                            #print("skipped, to few real pos")
+                            continue
+                        
+                        if len(answer) * answer_overlap > realoverlap:
+                            continue
+
+
+                        if realoverlap >= bestoverlap:
+                            if realoverlap == bestoverlap:
+                                if realratio < bestratio:
+                                    continue
+                            bestoverlap = realoverlap
+                            bestratio = realoverlap
+                            beststart = start_index + doc_span.start
+                            bestend = end_index + doc_span.start + 1
+
+
+
+                        #import pdb; pdb.set_trace()
+                        # print(doc_span.tokens[start_index:end_index + 1])
+                        # print(start_index)
+                        # print(end_index)
+                        # if end_index == 14:
+                        #     import pdb; pdb.set_trace()
+        
+        
+        
+        
+        
+        
+        # np.sum(doc_span.pos)
+
+
+
+    if bestoverlap > 0:
+        return beststart, bestend
+    else:
+        return None, None
 
 
 def build_input_from_segments_ms(query, context1, context2, answer1, tokenizer, with_eos=True, inference = False):
@@ -208,7 +319,90 @@ def build_input_from_segments_ms(query, context1, context2, answer1, tokenizer, 
 
     return input_ids, token_type_ids, mc_token_ids, lm_labels, mc_label
 
-def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebuild=False):
+
+
+def convert_to_full_text(spanstart, spanend, context, contextid, neg_pass_list, passages_obj, answerable, maxlen):
+    """ takes in the important context and adds more negative passages to both sides randomly, also cuts them off if they are too long  """
+
+    full_text = []
+    left_ids = []
+    right_ids = []
+    if spanstart == -1:
+        fixatespans = True
+        
+    else:
+        fixatespans = False
+
+    # modify all texts with paragraph tags
+    paracounter = 0
+    contextfinished = False
+    for pasid in neg_pass_list:
+        paracounter += 1
+        if contextid < pasid and not contextfinished:
+            context = [f"[ContextId={paracounter -1}]",f"[Paragraph={paracounter}]"] + context
+            paracounter += 1
+            contextfinished = True
+        passages_obj[pasid]["text"] = [f"[ContextId={paracounter -1}]",f"[Paragraph={paracounter}]"] + passages_obj[pasid]["text"]
+    if not contextfinished:
+        paracounter += 1
+        context = [f"[ContextId={paracounter -1}]",f"[Paragraph={paracounter}]"] + context
+            
+    if 0 in neg_pass_list:
+        passages_obj[pasid]["text"] = ["[ContextId=-1]", "[NoLongAnswer]"] + passages_obj[pasid]["text"]
+    elif contextid == 0:
+        context =  ["[ContextId=-1]", "[NoLongAnswer]"] + context
+
+    # fulltext = ["[ContextId=-1]", "[NoLongAnswer]", f"[ContextId={paracounter -1}]",f"[Paragraph={paracounter}]"]
+
+
+    # loop through neglist and add it to both sides
+    for pasid in range(neg_pass_list):
+        if pasid < contextid:
+            left_ids.append(pasid)
+        else:
+            right_ids.append(pasid)
+    
+    tokens_added_left = 0
+    for left in left_ids:
+        text_to_add = passages_obj[left]["text"]
+        lentext = len(text_to_add)
+        full_text.extend(text_to_add)
+        tokens_added_left += lentext
+
+    contextlen = len(context)
+    full_text.extend(context)
+
+    tokens_added_right = 0
+    for right in right_ids:
+        text_to_add = passages_obj[right]["text"]
+        lentext = len(text_to_add)
+        full_text.extend(text_to_add)
+        tokens_added_right += lentext
+
+    maxlen = maxlen - 34
+    startrangepoint = max(0, tokens_added_left - (maxlen - contextlen))
+
+    startrange = random.randrange(startrangepoint, tokens_added_left)
+
+    spanmovement = tokens_added_left - startrange
+    spanstart += spanmovement
+    spanend += spanmovement
+
+    endrange = min(spanmovement + maxlen + 1, spanmovement + contextlen + tokens_added_right + 1)
+    full_text = full_text[startrange:endrange]
+
+
+    if fixatespans:
+        spanstart = -1
+        spanend = -1
+
+    start_position = spanmovement
+
+    return spanstart, spanend, start_position ,full_text
+
+
+
+def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebuild=False,):
     """ Prepare the dataset for training and evaluation """
 
 
@@ -312,28 +506,58 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
                 neg_pass_list = [x for x in range(number_passages) if x not in pos_passage_list]
                 assert (len(neg_pass_list) > 0)
                 passage = pos_pass
+                context = passage["text"]
                 answer1 = ms["answers"][istr][0]
-            
+                spanstart, spanend = findspanmatch(context, answer1)
+
+                contextid = pospasid
+                if answer1 in ["Yes", "YES", "yes"]:
+                    answer_type = 0
+
+                    spanstart = -1
+                    spanend = -1
+                elif answer1 in ["No", "no", "NO"]:
+                    answer_type = 1
+                    spanstart = -1
+                    spanend = -1
+
+                else:
+                    answer_type = 3
+                    if not spanstart:
+                        continue
+
+
             else:
                 answerable = False
                 neg_pass_list = list(range(0, number_passages))
                 negpasid = random.choice(neg_pass_list)
+                neg_pass_list.remove(negpasid)
                 neg_pass = passages_obj[negpasid]
+
+                contextid = negpasid
 
                 passage = neg_pass
 
                 context = passage["text"]
                 answer1 = None
-            
-            
+
+                answer_type = 2
+                spanstart = -1
+                spanend = -1
             
 
-            if ((len(context1) + len(answer1) + len(query) + 5 - 10) < tokenizer.max_len) and ((len(context2) + len(answer1) + len(query) + 5 - 10) < tokenizer.max_len) :
+            if len(context) + 34 > tokenizer.max_len:
+                continue
+            # add all the contexts with their type, and move the start and end spans accordingly
+            spanstart, spanend, start_position, full_text = convert_to_full_text(spanstart, spanend, context, contextid, neg_pass_list, passages_obj, answerable, maxlen=tokenizer.max_len)
+            
+
+            # if ((len(context1) + len(answer1) + len(query) + 5 - 10) < tokenizer.max_len) and ((len(context2) + len(answer1) + len(query) + 5 - 10) < tokenizer.max_len) :
                 
                 
 
-                input_ids, token_type_ids, mc_token_ids, lm_labels, mc_labels = build_input_from_segments_ms(query, context1, 
-                                                                                    context2, answer1, tokenizer, with_eos=True)
+                # input_ids, token_type_ids, mc_token_ids, lm_labels, mc_labels = build_input_from_segments_ms(query, context1, 
+                #                                                                     context2, answer1, tokenizer, with_eos=True)
 
                 datadict["input_ids"].append(input_ids)
                 datadict["mc_token_ids"].append(mc_token_ids)
@@ -575,31 +799,46 @@ from argparse import ArgumentParser
 
 if __name__ == "__main__":
 
-    print("testing dataloaders")
-    parser = ArgumentParser()
-    args = parser.parse_args()
+    # print("testing dataloaders")
+    # parser = ArgumentParser()
+    # args = parser.parse_args()
 
-    args.dataset_path = None
-    args.dataset_cache="./dc_ms_nqpipe"
-    args.distributed = False
-    args.train_batch_size = 4
+    # args.dataset_path = None
+    # args.dataset_cache="./dc_ms_nqpipe"
+    # args.distributed = False
+    # args.train_batch_size = 4
 
-    tokenizer =  BertTokenizer.from_pretrained("savedmodel")
-    # tokenizer.set_special_tokens(SPECIAL_TOKENS)
-    tokenizer.max_len = 384
+    # tokenizer =  BertTokenizer.from_pretrained("savedmodel")
+    # # tokenizer.set_special_tokens(SPECIAL_TOKENS)
+    # tokenizer.max_len = 384
 
-    #"./train_v2.1.json.gz"
-    print("getting dataset")
-    # h = get_dataset_ms(tokenizer = tokenizer, dataset_path = None, dataset_cache="./dataset_cache", mode = "train")
+    # #"./train_v2.1.json.gz"
+    # print("getting dataset")
+    # # h = get_dataset_ms(tokenizer = tokenizer, dataset_path = None, dataset_cache="./dataset_cache", mode = "train")
 
-    # print(len(h["query"]))
+    # # print(len(h["query"]))
 
-    #train_loader, train_sampler = get_data_loaders_ms(args, tokenizer, mode = "train")
+    # #train_loader, train_sampler = get_data_loaders_ms(args, tokenizer, mode = "train")
 
-    train_loader, train_sampler = get_data_loaders_ms(args, tokenizer, mode = "train")
-    train_loader, train_sampler = get_data_loaders_ms(args, tokenizer, mode = "valid")
+    # train_loader, train_sampler = get_data_loaders_ms(args, tokenizer, mode = "train")
+    # train_loader, train_sampler = get_data_loaders_ms(args, tokenizer, mode = "valid")
 
 
+
+    tokenizer =  OpenAIGPTTokenizer.from_pretrained("openai-gpt")
+    
+    #context =  ['the','theory', 'behind', 'the', '85', '##th', 'percent', '##ile', 'rules', 'is', ',', 'that', 'as', 'a', 'policy', ',', 'most','citizens', 'should', 'be', 'deemed', 'reasonable',  'a', 'policy','and', 'pr', '##ude', '##nt', ',', 'and', 'limits', 'must', 'be', 'practical', 'to', 'enforce', '.', 'however', ',', 'there', 'are', 'some', 'circumstances', 'where', 'motor', '##ists', 'do', 'not', 'tend', 'to', 'process', 'all', 'the', 'risks', 'involved', ',', 'and', 'as', 'a', 'mass', 'choose', 'a', 'poor', '85', '##th', 'percent', '##ile', 'speed', '.', 'this', 'rule', 'in', 'substance', 'is', 'a', 'process', 'for', 'voting', 'the', 'speed', 'limit', 'by', 'driving', ';', 'and', 'in', 'contrast', 'to', 'del', '##ega', '##ting', 'the', 'speed', 'limit', 'to', 'an', 'engineering', 'expert', '.', '[ContextId=28]']
+    #answer = ['that', 'policy', 'as']  
+
+
+    context = f"Shaking is a symptom in which a person has tremors (shakiness or small back and forth movements) in part or all of his body. Shaking can be due to cold body temperatures, rising fever (such as with infections), neurological problems, medicine effects, drug abuse, etc. ...Read more"
+    answer = "Shaking can be due to cold body temperatures, rising fever (such as with infections), neurological problems, medicine effects, drug abuse, etc."
+
+    context = tokenizer.tokenize(context)
+    answer = tokenizer.tokenize(answer)
+    print(context)
+    print(answer)
+    a = findspanmatch(context, answer)
 
 
 
