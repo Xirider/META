@@ -17,10 +17,10 @@ from torch.nn.parallel import DistributedDataParallel
 import collections
 import numpy as np
 
+from nqdata import convert_single_example
+
 from pytorch_pretrained_bert import cached_path
 
-PERSONACHAT_URL = "https://s3.amazonaws.com/datasets.huggingface.co/personachat/personachat_self_original.json"
-HF_FINETUNED_MODEL = "https://s3.amazonaws.com/models.huggingface.co/transfer-learning-chatbot/finetuned_chatbot_gpt.tar.gz"
 
 MSMARCO_TRAIN_URL = "https://msmarco.blob.core.windows.net/msmarco/train_v2.1.json.gz"
 MSMARCO_DEV_URL = "https://msmarco.blob.core.windows.net/msmarco/dev_v2.1.json.gz"
@@ -28,11 +28,16 @@ MSMARCO_DEV_URL = "https://msmarco.blob.core.windows.net/msmarco/dev_v2.1.json.g
 logger = logging.getLogger(__file__)
 
 
-PADDED_INPUTS = ["input_ids", "lm_labels", "token_type_ids"]
-MODEL_INPUTS = ["input_ids", "mc_token_ids", "lm_labels", "mc_labels", "token_type_ids"]
-SPECIAL_TOKENS = ["<paragraph>", "<question>", "<answer>", "<eos>", "<clas>", "<emb_para>",  "<emb_question>",  "<emb_answer>", "<pad>"]
 # missing tokens
 textcounter = 0
+
+def create_stopper()
+
+    stopper = ["[UNK]", "[SEP]", "[Q]", "[CLS]", "[ContextId=-1]", "[NoLongAnswer]"]
+    for i in range(50):
+        stopper.extend([f"[ContextId={i}]",f"[Paragraph={i}]",f"[Table={i}]",f"[List={i}]" ])
+    stopper = tuple(stopper)
+    return stopper
 
 def download_pretrained_model():
     """ Download and extract finetuned model from S3 """
@@ -221,105 +226,6 @@ def findspanmatch(context, answer, maxlen = 50, overlap = 20, max_misses = 5, mi
         return None, None
 
 
-def build_input_from_segments_ms(query, context1, context2, answer1, tokenizer, with_eos=True, inference = False):
-    """ Build a sequence of input from 3 segments: persona, history and last reply """
-
-    #SPECIAL_TOKENS = ["<bos>", "<eos>", "<speaker1>", "<speaker2>", "<pad>"]
-
-    
-
-    para, ques, answ, eos, clas, emb_para, emb_question, emb_answer, pad = tokenizer.convert_tokens_to_ids(SPECIAL_TOKENS)
-
-    lenquery = len(query)
-    lencontext1 = len(context1)
-    lencontext2 = len(context2)
-    lenanswer1 = len(answer1)
-
-    # shorten too long paragraphs
-
-    if ((lenquery + lencontext1 + lenanswer1 + 5) > tokenizer.max_len):
-        reduced = tokenizer.max_len - (lenquery + lenanswer1 + 5)
-        context1 = context1[-reduced:].copy()
-        lencontext1 = reduced
-        assert (lencontext1 == len(context1))
-        
-    if ((lenquery + lencontext2 + lenanswer1 + 5) > tokenizer.max_len):
-        reduced = tokenizer.max_len - (lenquery + lenanswer1 + 5)
-        context2 = context2[-reduced:].copy()
-        lencontext2 = reduced
-        assert (lencontext2 == len(context2))
-    
-
-
-
-    position_cls_pos = lencontext1 + lenquery + 3 - 1
-    position_cls_neg = lencontext2 + lenquery + 3 - 1
-
-    if inference:
-        pos_para = [[para] + context1 + [ques] + query + [answ] + [clas] + answer1 ]
-        neg_para = [[para] + context1 + [ques] + query + [answ] + [clas] + answer1 ]
-        position_cls_neg = position_cls_pos
-    else:
-
-        pos_para = [[para] + context1 + [ques] + query + [answ] + [clas] + answer1 + [eos] ]
-        neg_para = [[para] + context1 + [ques] + query + [answ] + [clas] + answer1 + [eos] ]
-
-
-    input_ids = [list(chain(*pos_para)) , list(chain(*neg_para)) ]
-
-    if inference:
-        
-        token_type_ids_pos = [(1 + lencontext1)* [emb_para] + (3 + lenquery) * [emb_question] + (lenanswer1) * [emb_answer] ]
-        token_type_ids_neg =  [(1 + lencontext1)* [emb_para] + (3 + lenquery) * [emb_question] + (lenanswer1) * [emb_answer] ]
-
-    
-    else:
-        token_type_ids_pos = [(1 + lencontext1)* [emb_para] + (3 + lenquery) * [emb_question] + (1 + lenanswer1) * [emb_answer] ]
-        token_type_ids_neg = [(1 + lencontext2)* [emb_para] + (3 + lenquery) * [emb_question] + (1 + lenanswer1) * [emb_answer] ]
-
-    token_type_ids = [ list(chain(*token_type_ids_pos)) , list(chain(*token_type_ids_neg)) ]
-
-    mc_token_ids = [position_cls_pos, position_cls_neg]
-
-    lm_labels_pos =  (lenquery + lencontext1 + 3) * [-1]  +  [clas] + answer1 + [eos]
-    lm_labels_neg = (lenquery + lencontext2 + lenanswer1 +  5) * [-1]
-    if inference:
-        lm_labels_neg = lm_labels_pos
-
-
-    lm_labels = [lm_labels_pos, lm_labels_neg]
-
-    if not inference:
-        assert (len(lm_labels_pos) == len(input_ids[0]))
-        assert (len(lm_labels_neg) == len(input_ids[1]))
-        assert (input_ids[0][position_cls_pos+ 1] == clas)
-        assert (input_ids[1][position_cls_neg+ 1] == clas)
-
-        
-
-        maxlen = tokenizer.max_len
-
-        input_ids = pad_data(input_ids, maxlen=maxlen, padding = pad )
-        token_type_ids = pad_data(token_type_ids, maxlen=maxlen, padding = pad )
-        lm_labels = pad_data(lm_labels, maxlen=maxlen, padding = -1 )
-        assert (len(input_ids[1]) == maxlen)
-
-    mc_label = [0]
-    
-    # instance = {}
-    # sequence = [[bos] + list(chain(*persona))] + history + [reply + ([eos] if with_eos else [])]
-    # sequence = [sequence[0]] + [[speaker2 if (len(sequence)-i) % 2 else speaker1] + s for i, s in enumerate(sequence[1:])]
-
-    # instance["input_ids"] = list(chain(*sequence))
-    # instance["token_type_ids"] = [speaker2 if i % 2 else speaker1 for i, s in enumerate(sequence) for _ in s]
-    # instance["mc_token_ids"] = len(instance["input_ids"]) - 1
-    # instance["lm_labels"] = [-1] * len(instance["input_ids"])
-    # if lm_labels:
-    #     instance["lm_labels"] = ([-1] * sum(len(s) for s in sequence[:-1])) + [-1] + sequence[-1][1:]
-
-    return input_ids, token_type_ids, mc_token_ids, lm_labels, mc_label
-
-
 
 def convert_to_full_text(spanstart, spanend, context, contextid, neg_pass_list, passages_obj, answerable, maxlen):
     """ takes in the important context and adds more negative passages to both sides randomly, also cuts them off if they are too long  """
@@ -402,7 +308,7 @@ def convert_to_full_text(spanstart, spanend, context, contextid, neg_pass_list, 
 
 
 
-def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebuild=False,):
+def get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train", no_answer = False, rebuild=False,):
     """ Prepare the dataset for training and evaluation """
 
 
@@ -553,21 +459,26 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
             
 
             # if ((len(context1) + len(answer1) + len(query) + 5 - 10) < tokenizer.max_len) and ((len(context2) + len(answer1) + len(query) + 5 - 10) < tokenizer.max_len) :
+            
+            single_example = convert_single_example(full_text, query, tokenizer, None,  already_tokenized = True, answer_start = spanstart, answer_end=spanend, answer_type = answer_type, mode = "train")
                 
-                
+            single_example = single_example[0]
 
                 # input_ids, token_type_ids, mc_token_ids, lm_labels, mc_labels = build_input_from_segments_ms(query, context1, 
                 #                                                                     context2, answer1, tokenizer, with_eos=True)
 
-                datadict["input_ids"].append(input_ids)
-                datadict["mc_token_ids"].append(mc_token_ids)
-                datadict["lm_labels"].append(lm_labels)
-                datadict["mc_labels"].append(mc_labels)
-                datadict["token_type_ids"].append(token_type_ids)
-                
-                qcounter += 1
-                if qcounter % 10000 == 0:
-                    print(f"Input lists building step: {qcounter}")
+            datadict["input_ids"].append(single_example.input_ids)
+            datadict["start_label"].append(single_example.answer_start)
+            datadict["end_label"].append(single_example.answer_end)
+            datadict["answer_type_label"].append(single_example.answer_type)
+            datadict["token_type_ids"].append(single_example.segment_ids)
+            datadict["input_mask"].append(single_example.input_mask)
+            
+
+
+            qcounter += 1
+            if qcounter % 10000 == 0:
+                print(f"Input lists building step: {qcounter}")
             else:
                 passcounter += 1
 
@@ -590,24 +501,27 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
         tensor1 = torch.tensor(datadict["input_ids"])
         del datadict["input_ids"]
         print(f"model input tensor finished")
-        tensor2 = torch.tensor(datadict["mc_token_ids"])
-        del datadict["mc_token_ids"]
+        tensor2 = torch.tensor(datadict["start_label"])
+        del datadict["start_label"]
         print(f"model input tensor finished")
-        tensor3 = torch.tensor(datadict["lm_labels"])
-        del datadict["lm_labels"]
+        tensor3 = torch.tensor(datadict["end_label"])
+        del datadict["end_label"]
         print(f"model input tensor finished")
-        tensor4 = torch.tensor(datadict["mc_labels"])
-        del datadict["mc_labels"]
+        tensor4 = torch.tensor(datadict["answer_type_label"])
+        del datadict["answer_type_label"]
         print(f"model input tensor finished")
         tensor5 = torch.tensor(datadict["token_type_ids"])
         del datadict["token_type_ids"]
+        print(f"model input tensor finished")
+        tensor6 = torch.tensor(datadict["input_mask"])
+        del datadict["input_mask"]
         print(f"model input tensor finished")
 
         datadict = 0
 
         
 
-        tdataset = TensorDataset(tensor1, tensor2, tensor3, tensor4, tensor5)
+        tdataset = TensorDataset(tensor1, tensor2, tensor3, tensor4, tensor5, tensor6)
 
         if dataset_cache_final:
             torch.save(tdataset, dataset_cache_final, pickle_protocol=4)
@@ -633,101 +547,6 @@ def get_data_loaders_ms(args, tokenizer, mode = "train", no_answer = False, rebu
 
 
 
-
-
-
-
-
-
-
-
-
-
-def get_data_loaders(args, tokenizer):
-    """ Prepare the dataset for training and evaluation """
-    personachat = get_dataset(tokenizer, args.dataset_path, args.dataset_cache)
-
-    logger.info("Build inputs and labels")
-    datasets = {"train": defaultdict(list), "valid": defaultdict(list)}
-    for dataset_name, dataset in personachat.items():
-        num_candidates = len(dataset[0]["utterances"][0]["candidates"])
-        if args.num_candidates > 0 and dataset_name == 'train':
-            num_candidates = min(args.num_candidates, num_candidates)
-        for dialog in dataset:
-            persona = dialog["personality"].copy()
-            for _ in range(args.personality_permutations):
-                for utterance in dialog["utterances"]:
-                    history = utterance["history"][-(2*args.max_history+1):]
-                    for j, candidate in enumerate(utterance["candidates"][-num_candidates:]):
-                        lm_labels = bool(j == num_candidates-1)
-                        instance, _ = build_input_from_segments(persona, history, candidate, tokenizer, lm_labels)
-                        for input_name, input_array in instance.items():
-                            datasets[dataset_name][input_name].append(input_array)
-                    datasets[dataset_name]["mc_labels"].append(num_candidates - 1)
-                    datasets[dataset_name]["n_candidates"] = num_candidates
-                persona = [persona[-1]] + persona[:-1]  # permuted personalities
-
-    logger.info("Pad inputs and convert to Tensor")
-    tensor_datasets = {"train": [], "valid": []}
-    for dataset_name, dataset in datasets.items():
-        dataset = pad_dataset(dataset, padding=tokenizer.convert_tokens_to_ids(SPECIAL_TOKENS[-1]))
-        for input_name in MODEL_INPUTS:
-            tensor = torch.tensor(dataset[input_name])
-            if input_name != "mc_labels":
-                tensor = tensor.view((-1, datasets[dataset_name]["n_candidates"]) + tensor.shape[1:])
-            tensor_datasets[dataset_name].append(tensor)
-
-    logger.info("Build train and validation dataloaders")
-    train_dataset, valid_dataset = TensorDataset(*tensor_datasets["train"]), TensorDataset(*tensor_datasets["valid"])
-    train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset) if args.distributed else None
-    valid_sampler = torch.utils.data.distributed.DistributedSampler(valid_dataset) if args.distributed else None
-    train_loader = DataLoader(train_dataset, sampler=train_sampler, batch_size=args.train_batch_size, shuffle=(not args.distributed))
-    valid_loader = DataLoader(valid_dataset, sampler=valid_sampler, batch_size=args.valid_batch_size, shuffle=False)
-
-    logger.info("Train dataset (Batch, Candidates, Seq length): {}".format(train_dataset.tensors[0].shape))
-    logger.info("Valid dataset (Batch, Candidates, Seq length): {}".format(valid_dataset.tensors[0].shape))
-    return train_loader, valid_loader, train_sampler, valid_sampler
-
-
-
-
-
-
-
-
-
-def get_dataset(tokenizer, dataset_path, dataset_cache=None):
-    """ Get PERSONACHAT from S3 """
-    dataset_path = dataset_path or PERSONACHAT_URL
-    dataset_cache = dataset_cache + '_' + type(tokenizer).__name__  # Do avoid using GPT cache for GPT-2 and vice-versa
-    if dataset_cache and os.path.isfile(dataset_cache):
-        logger.info("Load tokenized dataset from cache at %s", dataset_cache)
-        dataset = torch.load(dataset_cache)
-    else:
-        logger.info("Download dataset from %s", dataset_path)
-        personachat_file = cached_path(dataset_path)
-        with open(personachat_file, "r", encoding="utf-8") as f:
-            dataset = json.loads(f.read())
-
-        logger.info("Tokenize and encode the dataset")
-        def tokenize(obj):
-            if isinstance(obj, str):
-                return tokenizer.convert_tokens_to_ids(tokenizer.tokenize(obj))
-            if isinstance(obj, dict):
-                return dict((n, tokenize(o)) for n, o in obj.items())
-            return list(tokenize(o) for o in obj)
-        dataset = tokenize(dataset)
-        if dataset_cache:
-            torch.save(dataset, dataset_cache)
-    return dataset
-
-def pad_dataset(dataset, padding=0):
-    """ Pad the dataset. This could be optimized by defining a Dataset class and padd only batches but this is simpler. """
-    max_l = max(len(x) for x in dataset["input_ids"])
-    for name in PADDED_INPUTS:
-        dataset[name] = [x + [padding if name != "lm_labels" else -1] * (max_l - len(x)) for x in dataset[name]]
-    return dataset
-
 def pad_dataset_ms(dataset, padding=0):
     """ Pad the dataset. This could be optimized by defining a Dataset class and padd only batches but this is simpler. """
     # need to change: index 0 and 1 for each example and pad it
@@ -736,55 +555,6 @@ def pad_dataset_ms(dataset, padding=0):
         dataset[name] = [x + [padding if name != "lm_labels" else -1] * (max_l - len(x)) for x in dataset[name]]
     return dataset
 
-
-
-def get_dataset_personalities(tokenizer, dataset_path, dataset_cache=None):
-    """ Get personalities from PERSONACHAT """
-    dataset_path = dataset_path or PERSONACHAT_URL
-    dataset_cache = dataset_cache + '_' + type(tokenizer).__name__  # Do avoid using GPT cache for GPT-2 and vice-versa
-    if os.path.isfile(dataset_cache):
-        logger.info("Load tokenized dataset from cache at %s", dataset_cache)
-        personachat = torch.load(dataset_cache)
-    else:
-        logger.info("Download PERSONACHAT dataset from %s", dataset_path)
-        personachat_file = cached_path(dataset_path)
-        with open(personachat_file, "r", encoding="utf-8") as f:
-            personachat = json.loads(f.read())
-
-        logger.info("Tokenize and encode the dataset")
-        def tokenize(obj):
-            if isinstance(obj, str):
-                return tokenizer.convert_tokens_to_ids(tokenizer.tokenize(obj))
-            if isinstance(obj, dict):
-                return dict((n, tokenize(o)) for n, o in obj.items())
-            return list(tokenize(o) for o in obj)
-        personachat = tokenize(personachat)
-        torch.save(personachat, dataset_cache)
-
-    logger.info("Filter personalities")
-    personalities = []
-    for dataset in personachat.values():
-        for dialog in dataset:
-            personalities.append(dialog["personality"])
-
-    logger.info("Gathered {} personalities".format(len(personalities)))
-    return personalities
-
-def build_input_from_segments(persona, history, reply, tokenizer, lm_labels=False, with_eos=True):
-    """ Build a sequence of input from 3 segments: persona, history and last reply """
-    bos, eos, speaker1, speaker2 = tokenizer.convert_tokens_to_ids(SPECIAL_TOKENS[:-1])
-
-    instance = {}
-    sequence = [[bos] + list(chain(*persona))] + history + [reply + ([eos] if with_eos else [])]
-    sequence = [sequence[0]] + [[speaker2 if (len(sequence)-i) % 2 else speaker1] + s for i, s in enumerate(sequence[1:])]
-
-    instance["input_ids"] = list(chain(*sequence))
-    instance["token_type_ids"] = [speaker2 if i % 2 else speaker1 for i, s in enumerate(sequence) for _ in s]
-    instance["mc_token_ids"] = len(instance["input_ids"]) - 1
-    instance["lm_labels"] = [-1] * len(instance["input_ids"])
-    if lm_labels:
-        instance["lm_labels"] = ([-1] * sum(len(s) for s in sequence[:-1])) + [-1] + sequence[-1][1:]
-    return instance, sequence
 
 
 
@@ -799,46 +569,47 @@ from argparse import ArgumentParser
 
 if __name__ == "__main__":
 
-    # print("testing dataloaders")
-    # parser = ArgumentParser()
-    # args = parser.parse_args()
+    print("testing dataloaders")
+    parser = ArgumentParser()
+    args = parser.parse_args()
 
-    # args.dataset_path = None
-    # args.dataset_cache="./dc_ms_nqpipe"
-    # args.distributed = False
-    # args.train_batch_size = 4
+    args.dataset_path = None
+    args.dataset_cache="./dc_ms_nqpipe"
+    args.distributed = False
+    args.train_batch_size = 4
+    stopper = create_stopper()
+    tokenizer =  BertTokenizer.from_pretrained("savedmodel", never_split = stopper)
+    # tokenizer.set_special_tokens(SPECIAL_TOKENS)
+    tokenizer.max_len = 384
 
-    # tokenizer =  BertTokenizer.from_pretrained("savedmodel")
-    # # tokenizer.set_special_tokens(SPECIAL_TOKENS)
-    # tokenizer.max_len = 384
+    #"./train_v2.1.json.gz"
+    print("getting dataset")
+    # h = get_dataset_ms(tokenizer = tokenizer, dataset_path = None, dataset_cache="./dataset_cache", mode = "train")
 
-    # #"./train_v2.1.json.gz"
-    # print("getting dataset")
-    # # h = get_dataset_ms(tokenizer = tokenizer, dataset_path = None, dataset_cache="./dataset_cache", mode = "train")
+    # print(len(h["query"]))
 
-    # # print(len(h["query"]))
+    #train_loader, train_sampler = get_data_loaders_ms(args, tokenizer, mode = "train")
 
-    # #train_loader, train_sampler = get_data_loaders_ms(args, tokenizer, mode = "train")
-
-    # train_loader, train_sampler = get_data_loaders_ms(args, tokenizer, mode = "train")
-    # train_loader, train_sampler = get_data_loaders_ms(args, tokenizer, mode = "valid")
+    train_loader, train_sampler = get_data_loaders_ms(args, tokenizer, mode = "train")
+    print("train set finished")
+    train_loader, train_sampler = get_data_loaders_ms(args, tokenizer, mode = "valid")
 
 
 
-    tokenizer =  OpenAIGPTTokenizer.from_pretrained("openai-gpt")
+    # tokenizer =  OpenAIGPTTokenizer.from_pretrained("openai-gpt")
     
     #context =  ['the','theory', 'behind', 'the', '85', '##th', 'percent', '##ile', 'rules', 'is', ',', 'that', 'as', 'a', 'policy', ',', 'most','citizens', 'should', 'be', 'deemed', 'reasonable',  'a', 'policy','and', 'pr', '##ude', '##nt', ',', 'and', 'limits', 'must', 'be', 'practical', 'to', 'enforce', '.', 'however', ',', 'there', 'are', 'some', 'circumstances', 'where', 'motor', '##ists', 'do', 'not', 'tend', 'to', 'process', 'all', 'the', 'risks', 'involved', ',', 'and', 'as', 'a', 'mass', 'choose', 'a', 'poor', '85', '##th', 'percent', '##ile', 'speed', '.', 'this', 'rule', 'in', 'substance', 'is', 'a', 'process', 'for', 'voting', 'the', 'speed', 'limit', 'by', 'driving', ';', 'and', 'in', 'contrast', 'to', 'del', '##ega', '##ting', 'the', 'speed', 'limit', 'to', 'an', 'engineering', 'expert', '.', '[ContextId=28]']
     #answer = ['that', 'policy', 'as']  
 
 
-    context = f"Shaking is a symptom in which a person has tremors (shakiness or small back and forth movements) in part or all of his body. Shaking can be due to cold body temperatures, rising fever (such as with infections), neurological problems, medicine effects, drug abuse, etc. ...Read more"
-    answer = "Shaking can be due to cold body temperatures, rising fever (such as with infections), neurological problems, medicine effects, drug abuse, etc."
+    # context = f"Shaking is a symptom in which a person has tremors (shakiness or small back and forth movements) in part or all of his body. Shaking can be due to cold body temperatures, rising fever (such as with infections), neurological problems, medicine effects, drug abuse, etc. ...Read more"
+    # answer = "Shaking can be due to cold body temperatures, rising fever (such as with infections), neurological problems, medicine effects, drug abuse, etc."
 
-    context = tokenizer.tokenize(context)
-    answer = tokenizer.tokenize(answer)
-    print(context)
-    print(answer)
-    a = findspanmatch(context, answer)
+    # context = tokenizer.tokenize(context)
+    # answer = tokenizer.tokenize(answer)
+    # print(context)
+    # print(answer)
+    # a = findspanmatch(context, answer)
 
 
 

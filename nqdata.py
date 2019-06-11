@@ -115,7 +115,8 @@ def build_input_batch(articlelist, question, tokenizer, batch_size, **kwargs):
 
 
 
-def convert_single_example(article, question, tokenizer, article_id, max_query_length=30, max_seq_length = 384, doc_stride = 128, already_tokenized=False, url=None, answer_start=None, answer_end=None):
+def convert_single_example(article, question, tokenizer, article_id, max_query_length=30, max_seq_length = 384, doc_stride = 128, 
+                            already_tokenized=False, url=None, answer_start=None, answer_end=None, answer_type=None, mode="inference"):
   """Converts a single NqExample into a list of InputFeatures."""
   # tok_to_orig_index = []
   # orig_to_tok_index = []
@@ -138,6 +139,7 @@ def convert_single_example(article, question, tokenizer, article_id, max_query_l
   if not already_tokenized:
     all_doc_tokens = tokenizer.tokenize(article["text"])
     url = article["url"]
+    question = tokenizer.tokenize(question)
   else:
     all_doc_tokens = article
 
@@ -147,7 +149,7 @@ def convert_single_example(article, question, tokenizer, article_id, max_query_l
   # QUERY
   query_tokens = []
   query_tokens.append("[Q]")
-  query_tokens.extend(tokenizer.tokenize(question))
+  query_tokens.extend(question)
   if len(query_tokens) > max_query_length:
     query_tokens = query_tokens[max_query_length:]
 
@@ -235,9 +237,15 @@ def convert_single_example(article, question, tokenizer, article_id, max_query_l
     # answer_type = None
     # answer_text = ""
     if answer_start:
-        lenquery = len(query_tokens)
-        answer_start += lenquery
-        answer_end += lenquery
+        if answer_start == -1:
+            answer_start = 0
+            answer_end = 0
+        else:
+            
+            answer_start += question_length
+            answer_end += question_length
+
+
 
 
     # if is_training:
@@ -284,7 +292,8 @@ def convert_single_example(article, question, tokenizer, article_id, max_query_l
         all_doc_tokens= all_doc_tokens,
         url=url,
         answer_start = answer_start,
-        answer_end = answer_end
+        answer_end = answer_end,
+        answer_type = answer_type
 
         # answer_text=answer_text,
         # answer_type=answer_type
@@ -319,6 +328,7 @@ class InputOutputs(object):
                cls_token_score = None,
                start_logits = None,
                end_logits = None,
+               answer_type = None,
                answer_type_logits = None,
                long_text = None,
                all_doc_tokens = None,
@@ -362,6 +372,7 @@ class InputOutputs(object):
     self.url = url
     self.answer_start = answer_start
     self.answer_end = answer_end
+    self.answer_type = answer_type
 
 
 
