@@ -99,6 +99,10 @@ def get_dataset_ms(tokenizer, dataset_path, dataset_cache=None, mode = "train"):
 
 
         dataset = tokenize(dataset)
+        with open(dataset_cache, 'w') as json_file:
+            json.dump(dataset, json_file)
+        print("json saved")
+        import pdb; pdb.set_trace()
         if dataset_cache:
             torch.save(dataset, dataset_cache, pickle_protocol=3)
             print("dataset saved")
