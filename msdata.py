@@ -489,15 +489,15 @@ def get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train", no_answer = Fal
             
             single_example = single_example[0]
 
-                if positive_count < 1000:
-                    print("After converting to single example")
-                    print(tokenizer.convert_ids_to_tokens(single_example.input_ids))
-                    print(single_example.answer_start)
-                    print(single_example.answer_end)
-                    print(single_example.answer_type)
-                    print(single_example.segment_ids)
-                    print(single_example.input_mask)
-                    print("single example finished")
+            if positive_count < 1000:
+                print("After converting to single example")
+                print(tokenizer.convert_ids_to_tokens(single_example.input_ids))
+                print(single_example.answer_start)
+                print(single_example.answer_end)
+                print(single_example.answer_type)
+                print(single_example.segment_ids)
+                print(single_example.input_mask)
+                print("single example finished")
                 # input_ids, token_type_ids, mc_token_ids, lm_labels, mc_labels = build_input_from_segments_ms(query, context1, 
                 #                                                                     context2, answer1, tokenizer, with_eos=True)
 
