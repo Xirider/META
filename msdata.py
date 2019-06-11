@@ -361,7 +361,10 @@ def get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train", no_answer = Fal
                     removed_counter += 1
                 if len(passages_obj) < 2:
                     for elem in ms:
-                        del ms[elem][istr]
+                        try:
+                            del ms[elem][istr]
+                        except:
+                            import pdb; pdb.set_trace()
                     removed_counter += 1
 # '                elif poscounter == False:
 #                     for elem in ms:
