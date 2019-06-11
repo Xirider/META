@@ -444,6 +444,7 @@ def get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train", no_answer = Fal
                     if positive_count < 1000:
                         print(f"Here should be not none {spanstart}")
                         print(spanstart)
+                        print(answer1)
 
                 positive_count += 1
 
