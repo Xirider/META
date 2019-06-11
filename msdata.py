@@ -590,9 +590,9 @@ if __name__ == "__main__":
 
     #train_loader, train_sampler = get_data_loaders_ms(args, tokenizer, mode = "train")
 
-    train_loader, train_sampler = get_data_loaders_ms(args, tokenizer, mode = "train")
+    train_loader, train_sampler = get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train")
     print("train set finished")
-    train_loader, train_sampler = get_data_loaders_ms(args, tokenizer, mode = "valid")
+    train_loader, train_sampler = get_data_loaders_ms_nqstyle(args, tokenizer, mode = "valid")
 
 
 
