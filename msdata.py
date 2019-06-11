@@ -378,6 +378,9 @@ def get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train", no_answer = Fal
 
         logger.info("Build inputs and labels")
 
+        positive_count = 0
+        negative_count = 0
+
         number_questions = len(ms["query"])
         # half_questions = int((number_questions - (number_questions % 2)) / 2)
         # logger.info(f"Number of question pairs: {half_questions}")
@@ -422,16 +425,27 @@ def get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train", no_answer = Fal
 
                     spanstart = -1
                     spanend = -1
+                    if positive_count < 1000:
+                        print("Yes happended")
+                        print(answer1)
+                        print(spanstart)
                 elif answer1 in ["No", "no", "NO"]:
                     answer_type = 1
                     spanstart = -1
                     spanend = -1
-
+                    if positive_count < 1000:
+                        print("No happended")
+                        print(answer1)
+                        print(spanstart)
                 else:
                     answer_type = 3
                     if not spanstart:
                         continue
+                    if positive_count < 1000:
+                        print(f"Here should be not none {spanstart}")
+                        print(spanstart)
 
+                positive_count += 1
 
             else:
                 answerable = False
@@ -451,19 +465,38 @@ def get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train", no_answer = Fal
                 spanstart = -1
                 spanend = -1
             
-
+                negative_count += 1
             if len(context) + 34 > tokenizer.max_len:
+                if positive_count < 1000:
+                    print("skipped example because it was too long")
+                    print(len(context))
                 continue
             # add all the contexts with their type, and move the start and end spans accordingly
             spanstart, spanend, start_position, full_text = convert_to_full_text(spanstart, spanend, context, contextid, neg_pass_list, passages_obj, answerable, maxlen=tokenizer.max_len)
             
+            if positive_count < 1000:
+                print("after convert to full text")
+                print(spanstart)
+                print(spanend)
+                print(start_position)
+                print(full_text)
+
 
             # if ((len(context1) + len(answer1) + len(query) + 5 - 10) < tokenizer.max_len) and ((len(context2) + len(answer1) + len(query) + 5 - 10) < tokenizer.max_len) :
             
             single_example = convert_single_example(full_text, query, tokenizer, None,  already_tokenized = True, answer_start = spanstart, answer_end=spanend, answer_type = answer_type, mode = "train")
-                
+            
             single_example = single_example[0]
 
+                if positive_count < 1000:
+                    print("After converting to single example")
+                    print(tokenizer.convert_ids_to_tokens(single_example.input_ids))
+                    print(single_example.answer_start)
+                    print(single_example.answer_end)
+                    print(single_example.answer_type)
+                    print(single_example.segment_ids)
+                    print(single_example.input_mask)
+                    print("single example finished")
                 # input_ids, token_type_ids, mc_token_ids, lm_labels, mc_labels = build_input_from_segments_ms(query, context1, 
                 #                                                                     context2, answer1, tokenizer, with_eos=True)
 
@@ -482,7 +515,8 @@ def get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train", no_answer = Fal
             else:
                 passcounter += 1
 
-
+        print(f"positive count: {positive_count}")
+        print(f"negative count: {negative_count}")
 
         print(f"Context too long were deleted, number: {passcounter}")
         ms = 0
