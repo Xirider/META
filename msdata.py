@@ -98,14 +98,14 @@ def get_dataset_ms(tokenizer, dataset_path, dataset_cache=None, mode = "train"):
             return list(tokenize(o) for o in obj)
 
 
-        dataset = tokenize(dataset)
-        with open(dataset_cache, 'w') as json_file:
-            json.dump(dataset, json_file)
-        print("json saved")
-        import pdb; pdb.set_trace()
-        if dataset_cache:
-            torch.save(dataset, dataset_cache, pickle_protocol=3)
-            print("dataset saved")
+        # dataset = tokenize(dataset)
+        # with open(dataset_cache, 'w') as json_file:
+        #     json.dump(dataset, json_file)
+        # print("json saved")
+        # import pdb; pdb.set_trace()
+        # if dataset_cache:
+        #     torch.save(dataset, dataset_cache, pickle_protocol=3)
+        #     print("dataset saved")
     return dataset
 
 
@@ -252,6 +252,7 @@ def convert_to_full_text(spanstart, spanend, context, contextid, neg_pass_list, 
             context = [f"[ContextId={paracounter -1}]",f"[Paragraph={paracounter}]"] + context
             paracounter += 1
             contextfinished = True
+        passages_obj[pasid]["text"] = tokenizer.tokenize(passages_obj[pasid]["text"])
         passages_obj[pasid]["text"] = [f"[ContextId={paracounter -1}]",f"[Paragraph={paracounter}]"] + passages_obj[pasid]["text"]
     if not contextfinished:
         paracounter += 1
@@ -341,7 +342,7 @@ def get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train", no_answer = Fal
             # remove no-answer questions
             nq = len(ms["query"])
 
-            noanswtoks =tokenizer.tokenize("No Answer present.")
+            noanswtoks ="No Answer present."
 
             removed_counter = 0
             
@@ -354,7 +355,7 @@ def get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train", no_answer = Fal
                 for pas in passages_obj:
                     if pas["is_selected"] == 1:
                         poscounter = True
-                if not ms["answers"][istr] == [noanswtoks] and poscounter == False:
+                if not ms["answers"][istr] == noanswtoks and poscounter == False:
                     for elem in ms:
                         del ms[elem][istr]
                     removed_counter += 1
@@ -398,6 +399,7 @@ def get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train", no_answer = Fal
 
             
             query = ms["query"][istr]
+            query = tokenizer.tokenize(query)
             passages_obj = ms["passages"][istr]
             number_passages = len(passages_obj)
             pos_passage_list = []
@@ -420,7 +422,9 @@ def get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train", no_answer = Fal
                 assert (len(neg_pass_list) > 0)
                 passage = pos_pass
                 context = passage["text"]
+                context = tokenizer.tokenize(context)
                 answer1 = ms["answers"][istr][0]
+                answer1 = tokenizer.tokenize(answer1)
                 spanstart, spanend = findspanmatch(context, answer1)
 
                 contextid = pospasid
@@ -464,6 +468,7 @@ def get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train", no_answer = Fal
                 passage = neg_pass
 
                 context = passage["text"]
+                context = tokenizer.tokenize(context)
                 answer1 = None
 
                 answer_type = 2
