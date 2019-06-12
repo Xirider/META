@@ -121,7 +121,7 @@ def pad_data(data, maxlen, padding=0):
     return out
 
 
-def findspanmatch(context, answer, maxlen = 50, overlap = 20, max_misses = 5, min_real_content = 0.6, answer_overlap = 0.6):
+def findspanmatch(context, answer, maxlen = 50, overlap = 20, max_misses = 10, min_real_content = 0.7, answer_overlap = 0.7):
     """ Takes in an context and answer, marks all exact matches, seperates in overlaping parts,takes all possible spans, 
     rates them acc to most pos word, cutting if more than a number of nun content words, returning the original span, 
     maybe count each word only once  """
@@ -328,6 +328,9 @@ def convert_to_full_text(spanstart, spanend, context, contextid, neg_pass_list, 
 
     start_position = spanmovement
 
+    if full_text == []:
+        import pdb; pdb.set_trace()
+
     return spanstart, spanend, start_position ,full_text
 
 
@@ -532,6 +535,8 @@ def get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train", no_answer = Fal
             if positive_count < 1000:
                 print("After converting to single example")
                 print(tokenizer.convert_ids_to_tokens(single_example.input_ids))
+                print("here is the answer again:")
+                print(tokenizer.convert_ids_to_tokens(single_example.input_ids[single_example.answer_start:single_example.answer_end + 1]))
                 print(single_example.answer_start)
                 print(single_example.answer_end)
                 print(single_example.answer_type)
