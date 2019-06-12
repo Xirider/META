@@ -477,7 +477,7 @@ def get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train", no_answer = Fal
                 answer1 = ms["answers"][istr][0]
                 answer1 = tokenizer.tokenize(answer1)
                 spanstart, spanend = findspanmatch(context, answer1)
-                if spanstart:
+                if spanstart and positive_count < 1000:
                     print("answer span that was found")
                     print(context[spanstart: spanend+ 1])
                     print("context for this text")
