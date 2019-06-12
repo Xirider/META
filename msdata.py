@@ -263,14 +263,14 @@ def convert_to_full_text(spanstart, spanend, context, contextid, neg_pass_list, 
     for pasid in neg_pass_list:
         paracounter += 1
         if contextid < pasid and not contextfinished:
-            context = create_cp_token(paracounter -1, "con") + create_cp_token(paracounter, "para") + context
+            context = [create_cp_token(paracounter -1, "con")] + [create_cp_token(paracounter, "para")] + context
             paracounter += 1
             contextfinished = True
         passages_obj[pasid]["passage_text"] = tokenizer.tokenize(passages_obj[pasid]["passage_text"])
-        passages_obj[pasid]["passage_text"] = create_cp_token(paracounter -1, "con") + create_cp_token(paracounter, "para") + passages_obj[pasid]["passage_text"]
+        passages_obj[pasid]["passage_text"] = [create_cp_token(paracounter -1, "con")] + [create_cp_token(paracounter, "para")] + passages_obj[pasid]["passage_text"]
     if not contextfinished:
         paracounter += 1
-        context = create_cp_token(paracounter -1, "con") + create_cp_token(paracounter, "para") + context
+        context = [create_cp_token(paracounter -1, "con")] + [create_cp_token(paracounter, "para")] + context
             
     if 0 in neg_pass_list:
         passages_obj[pasid]["passage_text"] = ["[ContextId=-1]", "[NoLongAnswer]"] + passages_obj[pasid]["passage_text"]
@@ -454,6 +454,8 @@ def get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train", no_answer = Fal
                 if spanstart:
                     print("answer span that was found")
                     print(context[spanstart: spanend+ 1])
+                    print("context for this text")
+                    print(context)
                 contextid = pospasid
                 if answer1 in ["Yes", "YES", "yes"]:
                     answer_type = 0
