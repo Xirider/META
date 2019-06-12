@@ -411,6 +411,7 @@ class QBert():
                 start_time = time.time()
         else:
             raw_text = q
+            start_time = time.time()
 
         articlelist = self.search.searchandsplit(raw_text)
 
