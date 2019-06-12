@@ -235,7 +235,7 @@ def convert_to_full_text(spanstart, spanend, context, contextid, neg_pass_list, 
     """ takes in the important context and adds more negative passages to both sides randomly, also cuts them off if they are too long  """
 
     def create_cp_token(number, token_type):
-        if id < 50:
+        if number < 50:
             if token_type == "para":
                 return f"[Paragraph={number}]"
             elif token_type == "con":
