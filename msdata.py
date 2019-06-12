@@ -338,7 +338,7 @@ def convert_to_full_text(spanstart, spanend, context, contextid, neg_pass_list, 
     spanstart += spanmovement
     spanend += spanmovement
 
-    endrange = min(spanmovement + maxlen + 1, len(full_text) + 1)
+    endrange = min(startrange + maxlen + 1, len(full_text) + 1)
     immitext = full_text.copy()
     full_text = full_text[startrange:endrange]
 
