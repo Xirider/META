@@ -250,6 +250,7 @@ def convert_to_full_text(spanstart, spanend, context, contextid, neg_pass_list, 
     full_text = []
     left_ids = []
     right_ids = []
+    initial_context_len = len(context)
     if spanstart == -1:
         fixatespans = True
         
@@ -278,7 +279,7 @@ def convert_to_full_text(spanstart, spanend, context, contextid, neg_pass_list, 
 
     # fulltext = ["[ContextId=-1]", "[NoLongAnswer]", f"[ContextId={paracounter -1}]",f"[Paragraph={paracounter}]"]
 
-
+    context_len_increase = len(context) - initial_context_len
     # loop through neglist and add it to both sides
     for pasid in neg_pass_list:
         if pasid < contextid:
@@ -318,6 +319,8 @@ def convert_to_full_text(spanstart, spanend, context, contextid, neg_pass_list, 
     endrange = min(spanmovement + maxlen + 1, spanmovement + contextlen + tokens_added_right + 1)
     full_text = full_text[startrange:endrange]
 
+    spanstart += context_len_increase
+    spanend += context_len_increase
 
     if fixatespans:
         spanstart = -1
@@ -448,7 +451,9 @@ def get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train", no_answer = Fal
                 answer1 = ms["answers"][istr][0]
                 answer1 = tokenizer.tokenize(answer1)
                 spanstart, spanend = findspanmatch(context, answer1)
-
+                if spanstart:
+                    print("answer span that was found")
+                    print(context[spanstart: spanend+ 1])
                 contextid = pospasid
                 if answer1 in ["Yes", "YES", "yes"]:
                     answer_type = 0
