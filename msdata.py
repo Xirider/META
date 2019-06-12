@@ -259,7 +259,7 @@ def convert_to_full_text(spanstart, spanend, context, contextid, neg_pass_list, 
         context = [f"[ContextId={paracounter -1}]",f"[Paragraph={paracounter}]"] + context
             
     if 0 in neg_pass_list:
-        passages_obj[pasid]["text"] = ["[ContextId=-1]", "[NoLongAnswer]"] + passages_obj[pasid]["passage_text"]
+        passages_obj[pasid]["passage_text"] = ["[ContextId=-1]", "[NoLongAnswer]"] + passages_obj[pasid]["passage_text"]
     elif contextid == 0:
         context =  ["[ContextId=-1]", "[NoLongAnswer]"] + context
 
@@ -275,7 +275,7 @@ def convert_to_full_text(spanstart, spanend, context, contextid, neg_pass_list, 
     
     tokens_added_left = 0
     for left in left_ids:
-        text_to_add = passages_obj[left]["text"]
+        text_to_add = passages_obj[left]["passage_text"]
         lentext = len(text_to_add)
         full_text.extend(text_to_add)
         tokens_added_left += lentext
@@ -285,7 +285,7 @@ def convert_to_full_text(spanstart, spanend, context, contextid, neg_pass_list, 
 
     tokens_added_right = 0
     for right in right_ids:
-        text_to_add = passages_obj[right]["text"]
+        text_to_add = passages_obj[right]["passage_text"]
         lentext = len(text_to_add)
         full_text.extend(text_to_add)
         tokens_added_right += lentext
