@@ -482,6 +482,7 @@ def get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train", no_answer = Fal
                 spanend = -1
             
                 negative_count += 1
+
             if len(context) + 34 > tokenizer.max_len:
                 if positive_count < 1000:
                     print("skipped example because it was too long")
@@ -551,25 +552,23 @@ def get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train", no_answer = Fal
         tensor1 = torch.tensor(datadict["input_ids"])
         del datadict["input_ids"]
         print(f"model input tensor finished")
-        tensor2 = torch.tensor(datadict["start_label"])
-        del datadict["start_label"]
-        print(f"model input tensor finished")
-        tensor3 = torch.tensor(datadict["end_label"])
-        del datadict["end_label"]
-        print(f"model input tensor finished")
-        tensor4 = torch.tensor(datadict["answer_type_label"])
-        del datadict["answer_type_label"]
-        print(f"model input tensor finished")
-        tensor5 = torch.tensor(datadict["token_type_ids"])
+        tensor2 = torch.tensor(datadict["token_type_ids"])
         del datadict["token_type_ids"]
         print(f"model input tensor finished")
-        tensor6 = torch.tensor(datadict["input_mask"])
+        tensor3 = torch.tensor(datadict["input_mask"])
         del datadict["input_mask"]
+        print(f"model input tensor finished")
+        tensor4 = torch.tensor(datadict["start_label"])
+        del datadict["start_label"]
+        print(f"model input tensor finished")
+        tensor5 = torch.tensor(datadict["end_label"])
+        del datadict["end_label"]
+        print(f"model input tensor finished")
+        tensor6 = torch.tensor(datadict["answer_type_label"])
+        del datadict["answer_type_label"]
         print(f"model input tensor finished")
 
         datadict = 0
-
-        
 
         tdataset = TensorDataset(tensor1, tensor2, tensor3, tensor4, tensor5, tensor6)
 
