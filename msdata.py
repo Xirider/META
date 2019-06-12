@@ -471,7 +471,7 @@ def get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train", no_answer = Fal
                     pos_passage_list.append(ids)
 
             #pos_pass = passages_obj[random.randint(0, len(pos_passage_list))]
-            if len(pos_passage_list) > 0:
+            if len(pos_passage_list) > 0 and positive_count < negative_count + 1000:
 
                 if positive_count > negative_count + 1000:
                     skipcounter += 1
@@ -486,6 +486,12 @@ def get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train", no_answer = Fal
                 assert (pos_pass["is_selected"] == 1)
 
                 neg_pass_list = [x for x in range(number_passages) if x not in pos_passage_list]
+
+                rem_neg = random.choice(neg_pass_list)
+
+                neg_pass_list.remove(rem_neg)
+
+
                 assert (len(neg_pass_list) > 0)
                 passage = pos_pass
                 
@@ -538,7 +544,7 @@ def get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train", no_answer = Fal
                     continue
 
                 answerable = False
-                neg_pass_list = list(range(0, number_passages))
+                neg_pass_list = [x for x in range(number_passages) if x not in pos_passage_list]
                 negpasid = random.choice(neg_pass_list)
                 neg_pass_list.remove(negpasid)
                 neg_pass = passages_obj[negpasid]
