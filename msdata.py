@@ -267,7 +267,7 @@ def convert_to_full_text(spanstart, spanend, context, contextid, neg_pass_list, 
 
 
     # loop through neglist and add it to both sides
-    for pasid in neg_pass_list
+    for pasid in neg_pass_list:
         if pasid < contextid:
             left_ids.append(pasid)
         else:
