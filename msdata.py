@@ -204,7 +204,8 @@ def findspanmatch(context, answer, maxlen = 50, overlap = 20, max_misses = 10, m
                             bestoverlap = realoverlap
                             bestratio = realoverlap
                             beststart = start_index + doc_span.start
-                            bestend = end_index + doc_span.start + 1
+                            bestend = end_index + doc_span.start
+                            besttokens = doc_span.tokens
 
 
 
@@ -222,9 +223,30 @@ def findspanmatch(context, answer, maxlen = 50, overlap = 20, max_misses = 10, m
         
         # np.sum(doc_span.pos)
 
+    def check_overlap(besttokens, beststart, bestend, answer):
+        span_tokens = besttokens[beststart: bestend+ 1]
+        copied_answer = answer.copy()
+        realoverlap = 0
+        for ele in span_tokens:
+            if ele in copied_answer:
+                ele_index = copied_answer.index(ele)
+                del copied_answer[ele_index]
+
+                realoverlap += 1
+        return realoverlap
 
 
     if bestoverlap > 0:
+        for x in range(bestend-beststart+ 1):
+            overlap = check_overlap(besttokens, beststart + 1, bestend, answer)
+            if overlap == bestoverlap:
+                beststart += 1
+            else:
+                break
+
+
+
+
         return beststart, bestend
     else:
         return None, None
@@ -317,6 +339,7 @@ def convert_to_full_text(spanstart, spanend, context, contextid, neg_pass_list, 
     spanend += spanmovement
 
     endrange = min(spanmovement + maxlen + 1, spanmovement + contextlen + tokens_added_right + 1)
+    immitext = full_text.copy()
     full_text = full_text[startrange:endrange]
 
     spanstart += context_len_increase
