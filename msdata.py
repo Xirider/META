@@ -244,6 +244,16 @@ def findspanmatch(context, answer, maxlen = 50, overlap = 20, max_misses = 10, m
             else:
                 break
 
+        bestlen = len(besttokens) - beststart
+
+        for x in range(bestlen):
+            overlap = check_overlap(besttokens, beststart, bestend+1, answer)
+            if overlap > bestoverlap:
+                bestend += 1
+            else:
+                break
+
+
 
 
 
