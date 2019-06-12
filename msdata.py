@@ -425,7 +425,10 @@ def get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train", no_answer = Fal
                 neg_pass_list = [x for x in range(number_passages) if x not in pos_passage_list]
                 assert (len(neg_pass_list) > 0)
                 passage = pos_pass
-                context = passage["text"]
+                try:
+                    context = passage["text"]
+                except:
+                    import pdb; pdb.set_trace()
                 context = tokenizer.tokenize(context)
                 answer1 = ms["answers"][istr][0]
                 answer1 = tokenizer.tokenize(answer1)
