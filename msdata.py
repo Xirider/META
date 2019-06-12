@@ -234,6 +234,19 @@ def findspanmatch(context, answer, maxlen = 50, overlap = 20, max_misses = 5, mi
 def convert_to_full_text(spanstart, spanend, context, contextid, neg_pass_list, passages_obj, answerable, maxlen):
     """ takes in the important context and adds more negative passages to both sides randomly, also cuts them off if they are too long  """
 
+    def create_cp_token(number, token_type):
+        if id < 50:
+            if token_type == "para":
+                return f"[Paragraph={number}]"
+            elif token_type == "con":
+                return f"[ContextId={number}]"
+            else: raise Exception("need para or con as token type")
+        else:
+            return "[UNK]"
+
+
+
+
     full_text = []
     left_ids = []
     right_ids = []
@@ -249,14 +262,14 @@ def convert_to_full_text(spanstart, spanend, context, contextid, neg_pass_list, 
     for pasid in neg_pass_list:
         paracounter += 1
         if contextid < pasid and not contextfinished:
-            context = [f"[ContextId={paracounter -1}]",f"[Paragraph={paracounter}]"] + context
+            context = create_cp_token(paracounter -1, "con") + create_cp_token(paracounter, "para") + context
             paracounter += 1
             contextfinished = True
         passages_obj[pasid]["passage_text"] = tokenizer.tokenize(passages_obj[pasid]["passage_text"])
-        passages_obj[pasid]["passage_text"] = [f"[ContextId={paracounter -1}]",f"[Paragraph={paracounter}]"] + passages_obj[pasid]["passage_text"]
+        passages_obj[pasid]["passage_text"] = create_cp_token(paracounter -1, "con") + create_cp_token(paracounter, "para") + passages_obj[pasid]["passage_text"]
     if not contextfinished:
         paracounter += 1
-        context = [f"[ContextId={paracounter -1}]",f"[Paragraph={paracounter}]"] + context
+        context = create_cp_token(paracounter -1, "con") + create_cp_token(paracounter, "para") + context
             
     if 0 in neg_pass_list:
         passages_obj[pasid]["passage_text"] = ["[ContextId=-1]", "[NoLongAnswer]"] + passages_obj[pasid]["passage_text"]
@@ -493,7 +506,8 @@ def get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train", no_answer = Fal
                 continue
             # add all the contexts with their type, and move the start and end spans accordingly
             spanstart, spanend, start_position, full_text = convert_to_full_text(spanstart, spanend, context, contextid, neg_pass_list, passages_obj, answerable, maxlen=tokenizer.max_len)
-            
+            if full_text ==  []:
+                import pdb; pdb.set_trace()
             if positive_count < 1000:
                 print("after convert to full text")
                 print(spanstart)
