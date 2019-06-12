@@ -442,8 +442,12 @@ def get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train", no_answer = Fal
 
         logger.info("Build inputs and labels")
 
+        
+
         positive_count = 0
         negative_count = 0
+
+        skipcounter = 0
 
         number_questions = len(ms["query"])
         # half_questions = int((number_questions - (number_questions % 2)) / 2)
@@ -468,6 +472,10 @@ def get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train", no_answer = Fal
 
             #pos_pass = passages_obj[random.randint(0, len(pos_passage_list))]
             if len(pos_passage_list) > 0:
+
+                if positive_count > negative_count + 1000:
+                    skipcounter += 1
+                    continue
 
                 answerable = True
                 
@@ -513,7 +521,9 @@ def get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train", no_answer = Fal
                 else:
                     answer_type = 3
                     if not spanstart:
+                        skipcounter += 1
                         continue
+                        
                     if positive_count < 1000:
                         print(f"Here should be not none {spanstart}")
                         print(spanstart)
@@ -522,6 +532,11 @@ def get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train", no_answer = Fal
                 positive_count += 1
 
             else:
+
+                if negative_count > positive_count + 1000:
+                    skipcounter += 1
+                    continue
+
                 answerable = False
                 neg_pass_list = list(range(0, number_passages))
                 negpasid = random.choice(neg_pass_list)
@@ -546,6 +561,7 @@ def get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train", no_answer = Fal
                 if positive_count < 1000:
                     print("skipped example because it was too long")
                     print(len(context))
+                skipcounter += 1
                 continue
             # add all the contexts with their type, and move the start and end spans accordingly
             spanstart, spanend, start_position, full_text = convert_to_full_text(spanstart, spanend, context, contextid, neg_pass_list, passages_obj, answerable, maxlen=tokenizer.max_len)
