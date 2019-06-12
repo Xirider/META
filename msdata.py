@@ -293,7 +293,10 @@ def convert_to_full_text(spanstart, spanend, context, contextid, neg_pass_list, 
     maxlen = maxlen - 34
     startrangepoint = max(0, tokens_added_left - (maxlen - contextlen))
 
-    startrange = random.randrange(startrangepoint, tokens_added_left)
+    if tokens_added_left == 0:
+        startrange = 0
+    else:
+        startrange = random.randrange(startrangepoint, tokens_added_left)
 
     spanmovement = tokens_added_left - startrange
     spanstart += spanmovement
