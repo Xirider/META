@@ -252,14 +252,14 @@ def convert_to_full_text(spanstart, spanend, context, contextid, neg_pass_list, 
             context = [f"[ContextId={paracounter -1}]",f"[Paragraph={paracounter}]"] + context
             paracounter += 1
             contextfinished = True
-        passages_obj[pasid]["text"] = tokenizer.tokenize(passages_obj[pasid]["text"])
-        passages_obj[pasid]["text"] = [f"[ContextId={paracounter -1}]",f"[Paragraph={paracounter}]"] + passages_obj[pasid]["text"]
+        passages_obj[pasid]["passage_text"] = tokenizer.tokenize(passages_obj[pasid]["passage_text"])
+        passages_obj[pasid]["passage_text"] = [f"[ContextId={paracounter -1}]",f"[Paragraph={paracounter}]"] + passages_obj[pasid]["passage_text"]
     if not contextfinished:
         paracounter += 1
         context = [f"[ContextId={paracounter -1}]",f"[Paragraph={paracounter}]"] + context
             
     if 0 in neg_pass_list:
-        passages_obj[pasid]["text"] = ["[ContextId=-1]", "[NoLongAnswer]"] + passages_obj[pasid]["text"]
+        passages_obj[pasid]["text"] = ["[ContextId=-1]", "[NoLongAnswer]"] + passages_obj[pasid]["passage_text"]
     elif contextid == 0:
         context =  ["[ContextId=-1]", "[NoLongAnswer]"] + context
 
@@ -425,10 +425,9 @@ def get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train", no_answer = Fal
                 neg_pass_list = [x for x in range(number_passages) if x not in pos_passage_list]
                 assert (len(neg_pass_list) > 0)
                 passage = pos_pass
-                try:
-                    context = passage["text"]
-                except:
-                    import pdb; pdb.set_trace()
+                
+                context = passage["passage_text"]
+                
                 context = tokenizer.tokenize(context)
                 answer1 = ms["answers"][istr][0]
                 answer1 = tokenizer.tokenize(answer1)
@@ -474,7 +473,7 @@ def get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train", no_answer = Fal
 
                 passage = neg_pass
 
-                context = passage["text"]
+                context = passage["passage_text"]
                 context = tokenizer.tokenize(context)
                 answer1 = None
 
