@@ -613,6 +613,8 @@ def get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train", no_answer = Fal
         print(f"positive count: {positive_count}")
         print(f"negative count: {negative_count}")
 
+        print(f"Skipped questions, because of many factors {skipcounter}")
+
         print(f"Context too long were deleted, number: {passcounter}")
         ms = 0
         # tensor_dataset = []
