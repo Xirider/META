@@ -35,7 +35,7 @@ def create_stopper():
 
     stopper = ["[UNK]", "[SEP]", "[Q]", "[CLS]", "[ContextId=-1]", "[NoLongAnswer]"]
     for i in range(50):
-        stopper.extend([f"[ContextId={i}]",f"[Paragraph={i}]",f"[Table={i}]",f"[List={i}]" ])
+        stopper.extend([ f"[ContextId={i}]" , f"[Paragraph={i}]" , f"[Table={i}]" , f"[List={i}]" ])
     stopper = tuple(stopper)
     return stopper
 

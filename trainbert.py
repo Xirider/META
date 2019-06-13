@@ -172,7 +172,7 @@ def train():
     RunningAverage(output_transform=lambda x: x).attach(trainer, "loss")
     metrics = {"nll_start": Loss(torch.nn.CrossEntropyLoss(ignore_index=-1), output_transform=lambda x: (x[0][0], x[1][0])),
                "nll_end": Loss(torch.nn.CrossEntropyLoss(ignore_index=-1), output_transform=lambda x: (x[0][1], x[1][1])),
-               "accuracy": Accuracy(output_transform=lambda x: (x[0][1], x[2][2]))}
+               "accuracy": Accuracy(output_transform=lambda x: (x[0][2], x[1][2]))}
     metrics.update({"average_nll_start": MetricsLambda(average_distributed_scalar, metrics["nll_start"], args),
                     "average_nll_end": MetricsLambda(average_distributed_scalar, metrics["nll_end"], args),
                     "average_accuracy": MetricsLambda(average_distributed_scalar, metrics["accuracy"], args)})
