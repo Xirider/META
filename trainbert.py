@@ -176,7 +176,8 @@ def train():
     metrics.update({"average_nll_start": MetricsLambda(average_distributed_scalar, metrics["nll_start"], args),
                     "average_nll_end": MetricsLambda(average_distributed_scalar, metrics["nll_end"], args),
                     "average_accuracy": MetricsLambda(average_distributed_scalar, metrics["accuracy"], args)})
-    metrics["average_ppl"] = MetricsLambda(math.exp, metrics["average_nll"])
+    metrics["average_ppl_start"] = MetricsLambda(math.exp, metrics["average_nll_start"])
+    metrics["average_ppl_end"] = MetricsLambda(math.exp, metrics["average_nll_end"])
     for name, metric in metrics.items():
         metric.attach(evaluator, name)
 
