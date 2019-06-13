@@ -250,11 +250,14 @@ def findspanmatch(context, answer, maxlen = 50, overlap = 20, max_misses = 10, m
             overlap = check_overlap(besttokens, beststart, bestend+1, answer)
             if overlap > bestoverlap:
                 bestend += 1
+                bestoverlap = overlap
             else:
                 break
 
-
-
+        shiftoverlap = check_overlap(besttokens, beststart + 1, bestend + 1, answer)
+        if shiftoverlap == bestoverlap:
+            beststart += 1
+            bestend += 1
 
 
         return beststart, bestend
