@@ -75,15 +75,15 @@ def train():
 
     logger.info("Prepare tokenizer, pretrained model and optimizer ")
 
-    tokenizer_class = GPT2Tokenizer if "gpt2" in args.model_checkpoint else OpenAIGPTTokenizer
-    tokenizer = tokenizer_class.from_pretrained(args.model_checkpoint)
-    model_class = GPT2DoubleHeadsModel if "gpt2" in args.model_checkpoint else OpenAIGPTDoubleHeadsModel
-    model = model_class.from_pretrained(args.model_checkpoint)
-    tokenizer.set_special_tokens(SPECIAL_TOKENS)
-    tokenizer.max_len = 384 # if we want to change the maxlen, we need to delete the last part of the dataset cache
-    model.set_num_special_tokens(len(SPECIAL_TOKENS))
-    model.to(args.device)
-    optimizer = OpenAIAdam(model.parameters(), lr=args.lr)
+    # tokenizer_class = GPT2Tokenizer if "gpt2" in args.model_checkpoint else OpenAIGPTTokenizer
+    # tokenizer = tokenizer_class.from_pretrained(args.model_checkpoint)
+    # model_class = GPT2DoubleHeadsModel if "gpt2" in args.model_checkpoint else OpenAIGPTDoubleHeadsModel
+    # model = model_class.from_pretrained(args.model_checkpoint)
+    # tokenizer.set_special_tokens(SPECIAL_TOKENS)
+    # tokenizer.max_len = 384 # if we want to change the maxlen, we need to delete the last part of the dataset cache
+    # model.set_num_special_tokens(len(SPECIAL_TOKENS))
+    # model.to(args.device)
+    # optimizer = OpenAIAdam(model.parameters(), lr=args.lr)
 
     stopper = create_stopper()
     tokenizer = BertTokenizer.from_pretrained(args.model_checkpoint, never_split = stopper)
@@ -102,15 +102,15 @@ def train():
 
     logger.info("Prepare datasets")
     #train_loader, val_loader, train_sampler, valid_sampler = get_data_loaders(args, tokenizer)
-    train_loader, train_sampler = get_data_loaders_ms(args, tokenizer, mode="train")
-    val_loader, val_sampler = get_data_loaders_ms(args, tokenizer, mode="valid")
+    train_loader, train_sampler = get_data_loaders_ms_nqstyle(args, tokenizer, mode="train")
+    val_loader, val_sampler = get_data_loaders_ms_nqstyle(args, tokenizer, mode="valid")
 
     # Training function and trainer
     def update(engine, batch):
         model.train()
         batch = tuple(input_tensor.to(args.device) for input_tensor in batch)
-        lm_loss, mc_loss = model(*batch)
-        loss = (lm_loss * args.lm_coef + mc_loss * args.mc_coef) / args.gradient_accumulation_steps
+        loss = model(*batch)
+        loss = loss * args.gradient_accumulation_steps
         if args.fp16:
             with amp.scale_loss(loss, optimizer) as scaled_loss:
                 scaled_loss.backward()
@@ -129,15 +129,17 @@ def train():
         model.eval()
         with torch.no_grad():
             batch = tuple(input_tensor.to(args.device) for input_tensor in batch)
-            input_ids, mc_token_ids, lm_labels, mc_labels, token_type_ids = batch
-            
-            if engine.state.iteration % 500 == 0:
-                logger.info(tokenizer.decode(input_ids[0, 0, :].tolist()))
-            model_outputs = model(input_ids, mc_token_ids, token_type_ids=token_type_ids)
-            lm_logits, mc_logits = model_outputs[0], model_outputs[1]  # So we can also use GPT2 outputs
-            lm_logits_flat_shifted = lm_logits[..., :-1, :].contiguous().view(-1, lm_logits.size(-1))
-            lm_labels_flat_shifted = lm_labels[..., 1:].contiguous().view(-1)
-            return (lm_logits_flat_shifted, mc_logits), (lm_labels_flat_shifted, mc_labels)
+            # input_ids, mc_token_ids, lm_labels, mc_labels, token_type_ids = batch
+            input_ids, token_type_ids ,attention_mask, start_positions, end_positions, answer_type = batch
+            # if engine.state.iteration % 500 == 0:
+            #     logger.info(tokenizer.decode(input_ids[0, 0, :].tolist()))
+            # model_outputs = model(input_ids, mc_token_ids, token_type_ids=token_type_ids)
+            # lm_logits, mc_logits = model_outputs[0], model_outputs[1]  # So we can also use GPT2 outputs
+            # lm_logits_flat_shifted = lm_logits[..., :-1, :].contiguous().view(-1, lm_logits.size(-1))
+            # lm_labels_flat_shifted = lm_labels[..., 1:].contiguous().view(-1)
+            #(lm_logits_flat_shifted, mc_logits), (lm_labels_flat_shifted, mc_labels)
+            start_logits, end_logits, answer_type_logits = model(input_ids, token_type_ids, attention_mask)
+            return (start_logits, end_logits, answer_type_logits), (start_positions, end_positions, answer_type)
     evaluator = Engine(inference)
 
     # Attach evaluation to trainer: we evaluate when we start the training and at the end of each epoch
@@ -158,9 +160,11 @@ def train():
 
     # Prepare metrics - note how we compute distributed metrics 
     RunningAverage(output_transform=lambda x: x).attach(trainer, "loss")
-    metrics = {"nll": Loss(torch.nn.CrossEntropyLoss(ignore_index=-1), output_transform=lambda x: (x[0][0], x[1][0])),
-               "accuracy": Accuracy(output_transform=lambda x: (x[0][1], x[1][1]))}
-    metrics.update({"average_nll": MetricsLambda(average_distributed_scalar, metrics["nll"], args),
+    metrics = {"nll_start": Loss(torch.nn.CrossEntropyLoss(ignore_index=-1), output_transform=lambda x: (x[0][0], x[1][0])),
+               "nll_start": Loss(torch.nn.CrossEntropyLoss(ignore_index=-1), output_transform=lambda x: (x[0][1], x[1][1])),
+               "accuracy": Accuracy(output_transform=lambda x: (x[0][1], x[2][2]))}
+    metrics.update({"average_nll_start": MetricsLambda(average_distributed_scalar, metrics["nll_start"], args),
+                    "average_nll_end": MetricsLambda(average_distributed_scalar, metrics["nll_end"], args),
                     "average_accuracy": MetricsLambda(average_distributed_scalar, metrics["accuracy"], args)})
     metrics["average_ppl"] = MetricsLambda(math.exp, metrics["average_nll"])
     for name, metric in metrics.items():
