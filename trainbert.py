@@ -17,7 +17,7 @@ from ignite.metrics import Accuracy, Loss, MetricsLambda, RunningAverage
 from ignite.contrib.handlers import ProgressBar, PiecewiseLinear
 from ignite.contrib.handlers.tensorboard_logger import TensorboardLogger, OutputHandler, OptimizerParamsHandler
 
-from pytorch_pretrained_bert import BertTokenizer, BertAdam
+from pytorch_pretrained_bert import BertTokenizer, BertAdam, WEIGHTS_NAME, CONFIG_NAME
 from modeling import BertNQA
 
 
