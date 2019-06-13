@@ -17,7 +17,7 @@ from ignite.metrics import Accuracy, Loss, MetricsLambda, RunningAverage
 from ignite.contrib.handlers import ProgressBar, PiecewiseLinear
 from ignite.contrib.handlers.tensorboard_logger import TensorboardLogger, OutputHandler, OptimizerParamsHandler
 
-from pytorch_pretrained_bert import BertTokenizer
+from pytorch_pretrained_bert import BertTokenizer, BertAdam
 from modeling import BertNQA
 
 
@@ -48,12 +48,13 @@ def train():
     parser.add_argument("--max_history", type=int, default=2, help="Number of previous exchanges to keep in history")
     parser.add_argument("--train_batch_size", type=int, default=2, help="Batch size for training")
     parser.add_argument("--valid_batch_size", type=int, default=2, help="Batch size for validation")
-    parser.add_argument("--gradient_accumulation_steps", type=int, default=8, help="Accumulate gradients on several steps")
-    parser.add_argument("--lr", type=float, default=6.25e-5, help="Learning rate")
+    parser.add_argument("--gradient_accumulation_steps", type=int, default=4, help="Accumulate gradients on several steps")
+    parser.add_argument("--lr", type=float, default=0.005, help="Learning rate")
     parser.add_argument("--lm_coef", type=float, default=1.0, help="LM loss coefficient")
+    parser.add_argument("--warmup_proportion", type=float, default=0.1, help="warmup ratio")
     parser.add_argument("--mc_coef", type=float, default=1.0, help="Multiple-choice loss coefficient")
     parser.add_argument("--max_norm", type=float, default=1.0, help="Clipping gradient norm")
-    parser.add_argument("--n_epochs", type=int, default=3, help="Number of training epochs")
+    parser.add_argument("--n_epochs", type=int, default=1, help="Number of training epochs")
     parser.add_argument("--personality_permutations", type=int, default=1, help="Number of permutations of personality sentences")
     parser.add_argument("--eval_before_start", action='store_true', help="If true start with a first evaluation before training")
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device (cuda or cpu)")
@@ -92,6 +93,18 @@ def train():
     model.to(args.device)
     model.train()
 
+    logger.info("Prepare datasets")
+    #train_loader, val_loader, train_sampler, valid_sampler = get_data_loaders(args, tokenizer)
+    train_loader, train_sampler = get_data_loaders_ms_nqstyle(args, tokenizer, mode="train")
+    val_loader, val_sampler = get_data_loaders_ms_nqstyle(args, tokenizer, mode="valid")
+
+    num_train_optimization_steps = int(
+            len(train_loader) / args.train_batch_size / args.gradient_accumulation_steps) * args.n_epochs
+    optimizer = BertAdam(model.parameters(),
+                                 lr=args.lr,
+                                 warmup=args.warmup_proportion,
+                                 t_total=num_train_optimization_steps)
+
 
     # Prepare model for FP16 and distributed training if needed (order is important, distributed should be the last)
     if args.fp16:
@@ -100,10 +113,6 @@ def train():
     if args.distributed:
         model = DistributedDataParallel(model, device_ids=[args.local_rank], output_device=args.local_rank)
 
-    logger.info("Prepare datasets")
-    #train_loader, val_loader, train_sampler, valid_sampler = get_data_loaders(args, tokenizer)
-    train_loader, train_sampler = get_data_loaders_ms_nqstyle(args, tokenizer, mode="train")
-    val_loader, val_sampler = get_data_loaders_ms_nqstyle(args, tokenizer, mode="valid")
 
     # Training function and trainer
     def update(engine, batch):
@@ -155,8 +164,9 @@ def train():
         evaluator.add_event_handler(Events.EPOCH_STARTED, lambda engine: valid_sampler.set_epoch(engine.state.epoch))
 
     # Linearly decrease the learning rate from lr to zero
-    scheduler = PiecewiseLinear(optimizer, "lr", [(0, args.lr), (args.n_epochs * len(train_loader), 0.0)])
-    trainer.add_event_handler(Events.ITERATION_STARTED, scheduler)
+
+    # scheduler = PiecewiseLinear(optimizer, "lr", [(0, args.lr), (args.n_epochs * len(train_loader), 0.0)])
+    # trainer.add_event_handler(Events.ITERATION_STARTED, scheduler)
 
     # Prepare metrics - note how we compute distributed metrics 
     RunningAverage(output_transform=lambda x: x).attach(trainer, "loss")
