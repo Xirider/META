@@ -491,8 +491,9 @@ def get_data_loaders_ms_nqstyle(args, tokenizer, mode = "train", no_answer = Fal
 
                 neg_pass_list.remove(rem_neg)
 
-
-                assert (len(neg_pass_list) > 0)
+                # if len(neg_pass_list) == 0:
+                #     continue
+                # assert (len(neg_pass_list) > 0)
                 passage = pos_pass
                 
                 context = passage["passage_text"]
