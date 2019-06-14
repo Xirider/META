@@ -145,7 +145,8 @@ def compute_best_predictions(prediction_list, stopper, topk = 5,threshold = 0):
         # end_logits = end_logits.data.cpu().numpy()
         # answer_type_logits = answer_type_logits.data.cpu().numpy()
         print("batch at cpu")
-
+        loopfinmiddle = time.time() - loopstart
+        print(f"single batch best answer to cpu time {loopfinmiddle}")
         for b in range(batch_size):
             example = batch_article[b]
             example.start_logits = start_logits[b]
@@ -441,9 +442,12 @@ class QBert():
                     # print("next article \n\n")
                     # print(ba.article_id)
                     # print(ba.tokens)
+                tocudatime = time.time()
                 input_batch = input_batch.to(self.args.device)
                 input_mask = input_mask.to(self.args.device)
                 input_segment = input_segment.to(self.args.device)
+                tocudafin = time.time() - tocudatime
+                print(f"model finished after {tocudafin}")
                 print("model starts")
                 mts = time.time()
                 start_logits, end_logits, answer_type_logits = self.model(input_ids = input_batch, token_type_ids = input_segment, attention_mask = input_mask)
