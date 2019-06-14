@@ -197,6 +197,7 @@ def compute_best_predictions(prediction_list, stopper, topk = 5,threshold = 0):
             break
         #import pdb; pdb.set_trace()
         try:
+            import pdb; pdb.set_trace()
             current_example = score_list[counter]
         except:
             print("out of index error: counter and scorelist")
