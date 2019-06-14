@@ -33,7 +33,7 @@ def url_to_nq_inputlist(url):
   return {"text": text, "url": url}
 
 
-def build_input_batch(articlelist, question, tokenizer, batch_size, **kwargs):
+def build_input_batch(articlelist, question, tokenizer, batch_size, onlyone=True, **kwargs):
   """ Take in list of prepared articles and a question , convert to batches of tensor inputs """
   tt = time.time()
   # convert all text articles to list of objects with token ids
@@ -100,7 +100,8 @@ def build_input_batch(articlelist, question, tokenizer, batch_size, **kwargs):
 
 
         return_list.append((input_batch, input_mask, input_segment, batch_article))
-            
+        if onlyone:
+            break
 
     elif example_number == batch_size:
         batch_article_list.append(batch_article)
@@ -111,7 +112,8 @@ def build_input_batch(articlelist, question, tokenizer, batch_size, **kwargs):
 
 
         return_list.append((input_batch, input_mask, input_segment, batch_article))
-  
+        if onlyone:
+            break
 
   mid = time.time() - tt
   print(f"full time input batch function {mid}")
