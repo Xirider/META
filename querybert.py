@@ -129,10 +129,12 @@ def get_best_indexes(logits, n_best_size):
 
 
 def compute_best_predictions(prediction_list, stopper, topk = 5,threshold = 0):
+    funcstart = time.time()
     """ takes in list of predictions, creates list of prediction spans, returns the best span for the top spans """
     #articles = defaultdict(list)
     score_list = []
     for batch in prediction_list:
+        loopstart = time.time()
         print("new batch")
         [start_logits, end_logits, answer_type_logits, batch_article] = batch
         batch_size = len(batch_article)
@@ -152,8 +154,11 @@ def compute_best_predictions(prediction_list, stopper, topk = 5,threshold = 0):
             updated_example = score_short_spans(example, threshold=threshold)
             if updated_example != 0:
                 score_list.append(updated_example)
-
+        loopfin = time.time() - loopstart
+        print(f"single batch best answer getting time {loopfin}")
     print("finished putting examples into lists")
+    finaltime = time.time() - funcstart
+    print(f"Processing finished of all batches before cutting them out {finaltime}")
     score_list.sort(reverse=True, key= lambda x: x.score)
     # for ex in score_list:
     #     print(ex.score)
