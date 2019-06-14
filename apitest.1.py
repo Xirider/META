@@ -3,26 +3,37 @@ import time
 import requests
 # from urllib.request import urlopen
 
-headers = {
-    'apikey': 'bcfc0a80-87d0-11e9-a533-3901b97f6a9a',
-}
 
-params = (
-    ('q', 'how fast can google be?'),
-    ('location', 'United States'),
-    ('search_engine', 'google.com'),
-    ('hl', 'en'),
-    ('gl', 'US')
-)
+def zenapi(query):
+    headers = {
+        'apikey': 'bcfc0a80-87d0-11e9-a533-3901b97f6a9a',
+    }
 
+    params = (
+        ('q', query),
+        ('location', 'Germany'),
+        ('search_engine', 'google.com'),
+        ('hl', 'en'),
+        ('gl', 'DE')
+    )
+
+
+    response = requests.get('https://app.zenserp.com/api/v2/search', headers=headers, params=params)
+    results = response.json()
+    urllist = [ x["url"] for x in results["organic"] if "title" in x]
+    return urllist
+
+
+query = "where is kansas"
 start_time = time.time()
-response = requests.get('https://app.zenserp.com/api/v2/search', headers=headers, params=params)
 
-print(response.json())
+urllist = zenapi(query)
+
 
 finaltime = time.time() - start_time
 # print(response_body)
 
+print(urllist)
 print(f"Processing finished after {finaltime}")
 
 

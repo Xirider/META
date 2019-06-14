@@ -108,7 +108,7 @@ class Searcher():
 
         articlelist = []
 
-        timeout = 2.0
+        timeout = 1.5
 
         lasttime = time.time()
 

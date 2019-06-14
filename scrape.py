@@ -2,12 +2,14 @@ import time
 
 
 from googlesearch import search
+import requests
+
 from nltk import sent_tokenize
 
 from newspaper import Article, news_pool
 
 from concurrent.futures import TimeoutError
-from pebble import ProcessPool, ProcessExpired
+from pebble import ProcessPool, ProcessExpired, ThreadPool
 from nqdata import url_to_nq_inputlist
 
 
@@ -51,8 +53,46 @@ def artdownload(url):
     #print(f"Downloading finished after {downtime} seconds")
     return art
 
+def serpapi(query):
+    params = {
+                "q" : query,
+
+                "hl" : "en",
+                "gl" : "us",
+                "google_domain" : "google.com",
+                "api_key" : "d243cd857dad394fe6407afd0094bf9f05aaf775922193fe230b4ea415871576",
+            }
+    client = GoogleSearchResults(params)
+    results = client.get_dict()
+
+    urllist = [ x["link"] for x in results["organic_results"]]
+            #extended_urllist = [ (x["link"], x["titel"]) for x in results["organic_results"]]
+            #print(urllist)
+    return urllist
+
+
+def zenapi(query):
+    headers = {
+        'apikey': 'bcfc0a80-87d0-11e9-a533-3901b97f6a9a',
+    }
+
+    params = (
+        ('q', query),
+        ('location', 'United States'),
+        ('search_engine', 'google.com'),
+        ('hl', 'en'),
+        ('gl', 'DE')
+    )
+
+
+    response = requests.get('https://app.zenserp.com/api/v2/search', headers=headers, params=params)
+    results = response.json()
+    urllist = [ x["url"] for x in results["organic"] if "title" in x]
+    return urllist
+
+
 class Searcher():
-    def __init__(self, use_nq_scraper = False, use_api=False):
+    def __init__(self, use_nq_scraper = False, use_api=False, api_type="zenapi"):
         
         
         if use_nq_scraper:
@@ -60,6 +100,11 @@ class Searcher():
         else:
             self.scrape_function = artdownload
         self.use_api = use_api
+        self.api_type= api_type
+        if api_type == "zenapi":
+            self.searchfunction = zenapi
+        elif api_type == "serpapi":
+            self.searchfunction = serpapi
 
 
 
@@ -70,7 +115,7 @@ class Searcher():
         start_time = time.time()
         #query = "who is germans chancellor?"
         print("start searching")
-        self.pool = ProcessPool(max_workers=10)
+        # self.pool = ProcessPool(max_workers=10)
         urllist = []
         #urllist = search(query, stop=10, pause = 31.0, only_standard = True)
 
@@ -78,20 +123,23 @@ class Searcher():
 
         if self.use_api:
             
-            params = {
-                "q" : query,
+            # params = {
+            #     "q" : query,
 
-                "hl" : "en",
-                "gl" : "us",
-                "google_domain" : "google.com",
-                "api_key" : "d243cd857dad394fe6407afd0094bf9f05aaf775922193fe230b4ea415871576",
-            }
-            client = GoogleSearchResults(params)
-            results = client.get_dict()
+            #     "hl" : "en",
+            #     "gl" : "us",
+            #     "google_domain" : "google.com",
+            #     "api_key" : "d243cd857dad394fe6407afd0094bf9f05aaf775922193fe230b4ea415871576",
+            # }
+            # client = GoogleSearchResults(params)
+            # results = client.get_dict()
 
-            urllist = [ x["link"] for x in results["organic_results"]]
-            #extended_urllist = [ (x["link"], x["titel"]) for x in results["organic_results"]]
-            #print(urllist)
+            # urllist = [ x["link"] for x in results["organic_results"]]
+            # #extended_urllist = [ (x["link"], x["titel"]) for x in results["organic_results"]]
+            # #print(urllist)
+            urllist = self.searchfunction(query)
+
+
         else:
             for urlr in search(query, stop= 10, pause = 0.0,only_standard = True):
                 urllist.append(urlr)
@@ -108,13 +156,16 @@ class Searcher():
 
         articlelist = []
 
-        timeout = 1.0
+        timeout = 1.5
 
         lasttime = time.time()
 
-        finishedmap = self.pool.map(self.scrape_function, urllist, timeout=timeout)
+        # finishedmap = self.pool.map(self.scrape_function, urllist, timeout=timeout)
+        with ThreadPool() as pool:
+            future = pool.map(self.scrape_function, urllist, timeout=timeout)
 
-        iterator = finishedmap.result()
+
+        iterator = future.result()
 
 
 
@@ -196,8 +247,8 @@ class Searcher():
         # print(f"Processing finished after {processingtime}")
 
         
-        self.pool.close()
-        self.pool.join()
+        # self.pool.close()
+        # self.pool.join()
         return articlelist
 
                     
