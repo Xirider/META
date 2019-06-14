@@ -360,7 +360,7 @@ class QBert():
         parser.add_argument("--dataset_cache", type=str, default='./dataset_cache', help="Path or url of the dataset cache")
         parser.add_argument("--model_checkpoint", type=str, default="savedmodel", help="Path, url or short name of the model")
         parser.add_argument("--max_history", type=int, default=2, help="Number of previous utterances to keep in history")
-        parser.add_argument("--batch_size", type=int, default=16, help="batch size for prediction")
+        parser.add_argument("--batch_size", type=int, default=8, help="batch size for prediction")
         parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device (cuda or cpu)")
 
         parser.add_argument("--no_sample", action='store_true', help="Set to use greedy decoding instead of sampling")
@@ -447,7 +447,7 @@ class QBert():
                 input_mask = input_mask.to(self.args.device)
                 input_segment = input_segment.to(self.args.device)
                 tocudafin = time.time() - tocudatime
-                print(f"model finished after {tocudafin}")
+                print(f"model to cuda after {tocudafin}")
                 print("model starts")
                 mts = time.time()
                 start_logits, end_logits, answer_type_logits = self.model(input_ids = input_batch, token_type_ids = input_segment, attention_mask = input_mask)
