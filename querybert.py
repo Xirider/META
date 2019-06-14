@@ -196,13 +196,9 @@ def compute_best_predictions(prediction_list, stopper, topk = 5,threshold = 0):
         if lenlist == 0:
             break
         #import pdb; pdb.set_trace()
-        try:
-            import pdb; pdb.set_trace()
-            current_example = score_list[counter]
-        except:
-            print("out of index error: counter and scorelist")
-            print(counter)
-            print(len(score_list))
+
+        current_example = score_list[counter]
+
         
         skip = False
 
@@ -268,7 +264,7 @@ def compute_best_predictions(prediction_list, stopper, topk = 5,threshold = 0):
 
         top_results.append(current_example)
         counter += 1
-        if counter == lenlist - 1:
+        if counter == lenlist:
             break
 
 
