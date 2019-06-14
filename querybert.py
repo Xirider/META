@@ -138,14 +138,29 @@ def compute_best_predictions(prediction_list, stopper, topk = 5,threshold = 0):
         print("new batch")
         [start_logits, end_logits, answer_type_logits, batch_article] = batch
         batch_size = len(batch_article)
+        
+        start = torch.cuda.Event(enable_timing=True)
+        end = torch.cuda.Event(enable_timing=True)
+
+        start.record()
+    
         torch.cuda.synchronize()
+
+        elapsed = start.elapsed_time(end)
+
+
         start_logits = start_logits.cpu()
         end_logits = end_logits.cpu()
         answer_type_logits = answer_type_logits.cpu()
 
+        end.record()
+
+        torch.cuda.synchronize()
+
+        elapsed = start.elapsed_time(end)
         justcpu = time.time() - loopstart
         print(f"single batch best answer JUST to cpu time {justcpu}")
-
+        print(f"elapsed time acc to cuda sync {elapsed}")
         start_logits = start_logits.tolist()
         end_logits = end_logits.tolist()
         answer_type_logits = answer_type_logits.tolist()
