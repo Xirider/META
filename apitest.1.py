@@ -6,25 +6,27 @@ import requests
 
 def zenapi(query):
     headers = {
-        'apikey': 'bcfc0a80-87d0-11e9-a533-3901b97f6a9a',
+        'apikey': '87851550-8ed4-11e9-a8aa-154e791e94a2',
     }
 
     params = (
-        ('q', query),
-        ('location', 'Germany'),
-        ('search_engine', 'google.com'),
-        ('hl', 'en'),
-        ('gl', 'DE')
+    ('q', query),
+    ('location', 'United States'),
+    ('search_engine', 'google.com'),
+    ('hl', 'en'),
+    ('gl', 'US')
     )
 
 
     response = requests.get('https://app.zenserp.com/api/v2/search', headers=headers, params=params)
     results = response.json()
-    urllist = [ x["url"] for x in results["organic"] if "title" in x]
+    print(results)
+    #urllist = [ x["url"] for x in results["organic"] if "title" in x]
+    urllist = "abc"
     return urllist
 
 
-query = "where is kansas"
+query = "current president"
 start_time = time.time()
 
 urllist = zenapi(query)
@@ -33,7 +35,7 @@ urllist = zenapi(query)
 finaltime = time.time() - start_time
 # print(response_body)
 
-print(urllist)
+#print(urllist)
 print(f"Processing finished after {finaltime}")
 
 

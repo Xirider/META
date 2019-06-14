@@ -73,7 +73,7 @@ def serpapi(query):
 
 def zenapi(query):
     headers = {
-        'apikey': 'bcfc0a80-87d0-11e9-a533-3901b97f6a9a',
+        'apikey': '87851550-8ed4-11e9-a8aa-154e791e94a2',
     }
 
     params = (
@@ -87,12 +87,15 @@ def zenapi(query):
 
     response = requests.get('https://app.zenserp.com/api/v2/search', headers=headers, params=params)
     results = response.json()
-    urllist = [ x["url"] for x in results["organic"] if "title" in x]
+    try:
+        urllist = [ x["url"] for x in results["organic"] if "title" in x]
+    except: 
+        raise Exception("Zenserp api returns error")
     return urllist
 
 
 class Searcher():
-    def __init__(self, use_nq_scraper = False, use_api=False, api_type="zenapi"):
+    def __init__(self, use_nq_scraper = False, use_api=False, api_type="serpapi"):
         
         
         if use_nq_scraper:
