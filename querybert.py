@@ -144,9 +144,6 @@ def compute_best_predictions(prediction_list, stopper, topk = 5,threshold = 0):
 
         start.record()
     
-        torch.cuda.synchronize()
-
-        elapsed = start.elapsed_time(end)
 
 
         start_logits = start_logits.cpu()
