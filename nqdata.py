@@ -122,7 +122,7 @@ def build_input_batch(articlelist, question, tokenizer, batch_size, onlyone=Fals
 
 
 
-def convert_single_example(article, question, tokenizer, article_id, max_query_length=30, max_seq_length = 384, doc_stride = 128, 
+def convert_single_example(article, question, tokenizer, article_id, max_query_length=30, max_seq_length = 384, doc_stride = 384, 
                             already_tokenized=False, url=None, answer_start=None, answer_end=None, answer_type=None, mode="inference"):
   """Converts a single NqExample into a list of InputFeatures."""
   # tok_to_orig_index = []
