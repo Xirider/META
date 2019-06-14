@@ -142,7 +142,7 @@ def compute_best_predictions(prediction_list, stopper, topk = 5,threshold = 0):
         start = torch.cuda.Event(enable_timing=True)
         end = torch.cuda.Event(enable_timing=True)
 
-        start.record()
+        # start.record()
     
 
 
@@ -150,14 +150,14 @@ def compute_best_predictions(prediction_list, stopper, topk = 5,threshold = 0):
         end_logits = end_logits.cpu()
         answer_type_logits = answer_type_logits.cpu()
 
-        end.record()
+        # end.record()
 
-        torch.cuda.synchronize()
+        # torch.cuda.synchronize()
 
-        elapsed = start.elapsed_time(end)
+        # elapsed = start.elapsed_time(end)
         justcpu = time.time() - loopstart
         print(f"single batch best answer JUST to cpu time {justcpu}")
-        print(f"elapsed time acc to cuda sync {elapsed}")
+        # print(f"elapsed time acc to cuda sync {elapsed}")
         start_logits = start_logits.tolist()
         end_logits = end_logits.tolist()
         answer_type_logits = answer_type_logits.tolist()
@@ -380,7 +380,7 @@ class QBert():
         parser.add_argument("--dataset_cache", type=str, default='./dataset_cache', help="Path or url of the dataset cache")
         parser.add_argument("--model_checkpoint", type=str, default="savedmodel", help="Path, url or short name of the model")
         parser.add_argument("--max_history", type=int, default=2, help="Number of previous utterances to keep in history")
-        parser.add_argument("--batch_size", type=int, default=86, help="batch size for prediction")
+        parser.add_argument("--batch_size", type=int, default=64, help="batch size for prediction")
         parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device (cuda or cpu)")
 
         parser.add_argument("--no_sample", action='store_true', help="Set to use greedy decoding instead of sampling")
