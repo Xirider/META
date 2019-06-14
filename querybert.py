@@ -453,7 +453,7 @@ class QBert():
         # threshold = 0.01
         prediction_list = []
         print("starting encoding")
-        batch_list = build_input_batch(articlelist = articlelist, question= query, tokenizer = self.tokenizer, batch_size = self.args.batch_size, only_one=args.more_than_one)
+        batch_list = build_input_batch(articlelist = articlelist, question= query, tokenizer = self.tokenizer, batch_size = self.args.batch_size, only_one=self.args.more_than_one)
         print("finished encoding")
         with torch.no_grad():
             for batch in batch_list:
