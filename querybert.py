@@ -138,9 +138,9 @@ def compute_best_predictions(prediction_list, stopper, topk = 5,threshold = 0):
         print("new batch")
         [start_logits, end_logits, answer_type_logits, batch_article] = batch
         batch_size = len(batch_article)
-        start_logits = start_logits.tolist()
-        end_logits = end_logits.tolist()
-        answer_type_logits = answer_type_logits.tolist()
+        start_logits = start_logits.cpu().tolist()
+        end_logits = end_logits.cpu().tolist()
+        answer_type_logits = answer_type_logits.cpu().tolist()
         # start_logits = start_logits.data.cpu().numpy()
         # end_logits = end_logits.data.cpu().numpy()
         # answer_type_logits = answer_type_logits.data.cpu().numpy()
