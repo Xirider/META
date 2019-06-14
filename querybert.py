@@ -138,7 +138,7 @@ def compute_best_predictions(prediction_list, stopper, topk = 5,threshold = 0):
         print("new batch")
         [start_logits, end_logits, answer_type_logits, batch_article] = batch
         batch_size = len(batch_article)
-
+        torch.cuda.synchronize()
         start_logits = start_logits.cpu()
         end_logits = end_logits.cpu()
         answer_type_logits = answer_type_logits.cpu()
