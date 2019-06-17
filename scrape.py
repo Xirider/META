@@ -95,7 +95,7 @@ def zenapi(query):
 
 
 class Searcher():
-    def __init__(self, use_nq_scraper = False, use_api=False, api_type="serpapi"):
+    def __init__(self, use_nq_scraper = False, use_api=False, api_type="zenapi"):
         
         
         if use_nq_scraper:

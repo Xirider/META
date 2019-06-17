@@ -26,7 +26,7 @@ def zenapi(query):
     return urllist
 
 
-query = "flying carpet"
+query = "error: cannot open .git/FETCH_HEAD: Permission denied"
 start_time = time.time()
 
 urllist = zenapi(query)

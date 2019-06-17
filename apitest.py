@@ -8,10 +8,10 @@ start_time = time.time()
 
 
 params = {
-    "q" : "where to fish in the summer",
+    "q" : "error: cannot open .git/FETCH_HEAD: Permission denied",
 
     "hl" : "en",
-    "gl" : "us",
+    "gl" : "de",
     "google_domain" : "google.com",
     "api_key" : "d243cd857dad394fe6407afd0094bf9f05aaf775922193fe230b4ea415871576",
 }
@@ -65,6 +65,6 @@ results = client.get_dict()
 
 
 finaltime = time.time() - start_time
-print(f"Processing finished after {finaltime}")
 print(results)
+print(f"Processing finished after {finaltime}")
 #print(json.dumps(result, indent=2, sort_keys=True))

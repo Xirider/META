@@ -383,7 +383,7 @@ class QBert():
         parser.add_argument("--dataset_cache", type=str, default='./dataset_cache', help="Path or url of the dataset cache")
         parser.add_argument("--model_checkpoint", type=str, default="savedmodel", help="Path, url or short name of the model")
         parser.add_argument("--max_history", type=int, default=2, help="Number of previous utterances to keep in history")
-        parser.add_argument("--batch_size", type=int, default=32, help="batch size for prediction")
+        parser.add_argument("--batch_size", type=int, default=64, help="batch size for prediction")
         parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device (cuda or cpu)")
 
         parser.add_argument("--no_sample", action='store_true', help="Set to use greedy decoding instead of sampling")
@@ -393,13 +393,14 @@ class QBert():
         parser.add_argument("--temperature", type=int, default=0.7, help="Sampling softmax temperature")
         parser.add_argument("--top_k", type=int, default=0, help="Filter top-k tokens before sampling (<=0: no filtering)")
         parser.add_argument("--top_p", type=float, default=0.9, help="Nucleus filtering (top-p) before sampling (<=0.0: no filtering)")
-        parser.add_argument("--more_than_one", action='store_true', help= "")
+        parser.add_argument("--more_than_one", action='store_false', help= "")
         self.args = parser.parse_args()
+        
 
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__file__)
         self.logger.info(pformat(self.args))
-
+        print(f"Only is : {args.more_than_one}")
         # if args.model_checkpoint == "":
         #     args.model_checkpoint = download_pretrained_model()
 
