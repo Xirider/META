@@ -73,7 +73,7 @@ def serpapi(query):
 
 def zenapi(query):
     headers = {
-        'apikey': '87851550-8ed4-11e9-a8aa-154e791e94a2',
+        'apikey': '325864d0-8efc-11e9-b84e-393b768a5ed9',
     }
 
     params = (

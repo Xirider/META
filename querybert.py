@@ -400,7 +400,7 @@ class QBert():
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__file__)
         self.logger.info(pformat(self.args))
-        print(f"Only is : {args.more_than_one}")
+        print(f"Only is : {self.args.more_than_one}")
         # if args.model_checkpoint == "":
         #     args.model_checkpoint = download_pretrained_model()
 
