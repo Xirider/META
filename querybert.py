@@ -428,7 +428,7 @@ class QBert():
         #examplepara = tokenizer.encode(examplepara)
 
         self.search = Searcher(use_nq_scraper = True, use_api = True)
-        self.threshold = -1
+        self.threshold = -100
 
 
     def get_answer(self, q = None):
