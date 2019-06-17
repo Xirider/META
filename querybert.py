@@ -267,7 +267,7 @@ def compute_best_predictions(prediction_list, stopper, topk = 5,threshold = 0):
         if counter == lenlist:
             break
 
-    import pdb; pdb.set_trace()
+
     return top_results
 
 
@@ -520,8 +520,8 @@ class QBert():
                 
                 answer_dict = {}            
 
-                if result.type_index == 2:
-                    continue
+                # if result.type_index == 2:
+                #     continue
 
 
                 if result.type_index == 0:
