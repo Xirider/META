@@ -236,7 +236,7 @@ def compute_best_predictions(prediction_list, stopper, topk = 5,threshold = 0):
 
 
 
-        if type_index == 4 or type_index == 0 or type_index == 1 or type_index == 3:
+        if type_index == 4 or type_index == 0 or type_index == 1 or type_index == 3 or type_index == 2:
 
             # add a long answer
             tok_counter = 0
@@ -533,11 +533,11 @@ class QBert():
 
 
 
-                if result.type_index == 3:
+                if result.type_index == 3 or result.type_index == 2:
                     answer_dict["short"] = decode(self.tokenizer, result.short_text)
                 
 
-                if result.type_index == 4 or result.type_index == 0 or result.type_index == 1 or result.type_index == 3:
+                if result.type_index == 4 or result.type_index == 0 or result.type_index == 1 or result.type_index == 3 or result.type_index == 2:
                     answer_dict["long"] = decode(self.tokenizer, result.long_text[1:])
 
                 if result.type_index == 4:
