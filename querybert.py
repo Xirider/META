@@ -277,7 +277,7 @@ def score_short_spans(example, top_scores = 10, threshold = 0):
     end_logits = example.end_logits
     predictions = []
     n_best_size = top_scores
-    max_answer_length = 30
+    max_answer_length = 100
     best_score = threshold
     example.score = -1000
 
