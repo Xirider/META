@@ -164,7 +164,7 @@ class Searcher():
         lasttime = time.time()
 
         # finishedmap = self.pool.map(self.scrape_function, urllist, timeout=timeout)
-        with ThreadPool() as pool:
+        with ProcessPool() as pool:
             future = pool.map(self.scrape_function, urllist, timeout=timeout)
 
 
