@@ -99,7 +99,7 @@ def train():
     val_loader, val_sampler = get_data_loaders_ms_nqstyle(args, tokenizer, mode="valid")
 
     num_train_optimization_steps = int(
-            len(train_loader) / args.train_batch_size / args.gradient_accumulation_steps) * args.n_epochs
+            len(train_loader)  / args.gradient_accumulation_steps) * args.n_epochs
     optimizer = BertAdam(model.parameters(),
                                  lr=args.lr,
                                  warmup=args.warmup_proportion,
@@ -109,7 +109,7 @@ def train():
     # Prepare model for FP16 and distributed training if needed (order is important, distributed should be the last)
     if args.fp16:
         from apex import amp  # Apex is only required if we use fp16 training
-        model, optimizer = amp.initialize(model, optimizer, opt_level=args.fp16)
+        model, optimizer = amp.initialize(model, optimizer, opt_level=args.fp16, loss_scale = 128)
     if args.distributed:
         model = DistributedDataParallel(model, device_ids=[args.local_rank], output_device=args.local_rank)
 

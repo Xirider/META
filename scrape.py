@@ -60,7 +60,7 @@ def serpapi(query):
                 "hl" : "en",
                 "gl" : "us",
                 "google_domain" : "google.com",
-                "api_key" : "d243cd857dad394fe6407afd0094bf9f05aaf775922193fe230b4ea415871576",
+                "api_key" : "325864d0-8efc-11e9-b84e-393b768a5ed9",
             }
     client = GoogleSearchResults(params)
     results = client.get_dict()
