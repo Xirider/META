@@ -73,7 +73,7 @@ def serpapi(query):
 
 def zenapi(query):
     headers = {
-        'apikey': '325864d0-8efc-11e9-b84e-393b768a5ed9',
+        'apikey': '1a9f9b10-94c4-11e9-a1b3-91ebf8eab926',
     }
 
     params = (
@@ -84,9 +84,11 @@ def zenapi(query):
         ('gl', 'DE')
     )
 
-
-    response = requests.get('https://app.zenserp.com/api/v2/search', headers=headers, params=params)
-    results = response.json()
+    try:
+        response = requests.get('https://app.zenserp.com/api/v2/search', headers=headers, params=params)
+        results = response.json()
+    except:
+        raise Exception("Response error during request error")
     try:
         urllist = [ x["url"] for x in results["organic"] if "title" in x]
     except: 

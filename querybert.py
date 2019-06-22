@@ -220,6 +220,9 @@ def compute_best_predictions(prediction_list, stopper, topk = 5,threshold = 0):
                 elif current_example.start_position <= top.end_position and top.start_position <= current_example.end_position:
                     counter += 1
                     skip = True
+                elif type_index == 2:
+                    counter += 1
+                    skip = True
                 else:
                     pass
         if skip:
@@ -277,9 +280,9 @@ def score_short_spans(example, top_scores = 10, threshold = 0):
     end_logits = example.end_logits
     predictions = []
     n_best_size = top_scores
-    max_answer_length = 100
+    max_answer_length = 30
     best_score = threshold
-    example.score = -1000
+    example.score = threshold
 
     start_indexes = get_best_indexes(start_logits, n_best_size)
     end_indexes = get_best_indexes(end_logits, n_best_size)
@@ -428,7 +431,7 @@ class QBert():
         #examplepara = tokenizer.encode(examplepara)
 
         self.search = Searcher(use_nq_scraper = True, use_api = True)
-        self.threshold = -100
+        self.threshold = 0
 
 
     def get_answer(self, q = None):

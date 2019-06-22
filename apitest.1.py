@@ -6,7 +6,7 @@ import requests
 
 def zenapi(query):
     headers = {
-        'apikey': '325864d0-8efc-11e9-b84e-393b768a5ed9',
+        'apikey': '1a9f9b10-94c4-11e9-a1b3-91ebf8eab926',
     }
 
     params = (
@@ -19,14 +19,15 @@ def zenapi(query):
 
 
     response = requests.get('https://app.zenserp.com/api/v2/search', headers=headers, params=params)
+    print(response)
     results = response.json()
-    print(results)
+    #print(results)
     urllist = [ x["url"] for x in results["organic"] if "title" in x]
     
     return urllist
 
 
-query = "error: cannot open .git/FETCH_HEAD: Permission denied"
+query = "how fast is an api"
 start_time = time.time()
 
 urllist = zenapi(query)
@@ -35,7 +36,7 @@ urllist = zenapi(query)
 finaltime = time.time() - start_time
 # print(response_body)
 
-#print(urllist)
+print(urllist)
 print(f"Processing finished after {finaltime}")
 
 
