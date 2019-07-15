@@ -551,6 +551,16 @@ def main():
         # elif output_mode == "regression":
         #     preds = np.squeeze(preds)
         # result = compute_metrics(task_name, preds, out_label_ids)
+        bestf1 = 0
+        bestf1name = ""
+        for key in sorted(result.keys()):
+            if "f1" in key:
+                if result[key] > bestf1:
+                    bestf1 = result[key]
+                    bestf1name = key
+        result["zbestf1_"+bestf1name] = bestf1
+
+
 
         loss = tr_loss/global_step if args.do_train else None
         #result = {}
