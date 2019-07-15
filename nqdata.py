@@ -123,7 +123,7 @@ def build_input_batch(articlelist, question, tokenizer, batch_size, onlyone=Fals
 
 
 def convert_single_example(article, question, tokenizer, article_id, max_query_length=30, max_seq_length = 384, doc_stride = 384, 
-                            already_tokenized=False, url=None, answer_start=None, answer_end=None, answer_type=None, mode="inference"):
+                            already_tokenized=False, url=None, answer_start=None, answer_end=None, answer_type=None, webdata = False, mode="inference"):
   """Converts a single NqExample into a list of InputFeatures."""
   # tok_to_orig_index = []
   # orig_to_tok_index = []
@@ -173,6 +173,9 @@ def convert_single_example(article, question, tokenizer, article_id, max_query_l
   # The -3 accounts for [CLS], [SEP] and [SEP]
   max_tokens_for_doc = max_seq_length - len(query_tokens) - 3
 
+  if webdata:
+      max_tokens_for_doc -= 2
+
   # We can have documents that are longer than the maximum sequence length.
   # To deal with this we do a sliding window approach, where we take chunks
   # of up to our max length with a stride of `doc_stride`.
@@ -197,6 +200,8 @@ def convert_single_example(article, question, tokenizer, article_id, max_query_l
     tokens.append("[CLS]")
     segment_ids.append(0)
     question_length = len(query_tokens) + 2
+    if webdata:
+        question_length += 2 # for seg and newline token
     tokens.extend(query_tokens)
     segment_ids.extend([0] * len(query_tokens))
     tokens.append("[SEP]")
@@ -212,6 +217,19 @@ def convert_single_example(article, question, tokenizer, article_id, max_query_l
     #   tokens.append(all_doc_tokens[split_token_index])
     #   segment_ids.append(1)
 
+    if webdata:
+        try:
+            if doc_span_index < 31:
+            
+                segmentindex = f"{doc_span_index:02d}"
+            else:
+                segmentindex = "XX"
+            tokens.append(f"[Segment={segmentindex}]")
+            segment_ids.append(1)
+            tokens.append(f"[Newline]")
+            segment_ids.append(1)
+        except:
+            import pdb; pdb.set_trace()
     context = all_doc_tokens[doc_span.start : doc_span.start+doc_span.length]
     
     tokens.extend(context)
@@ -300,7 +318,9 @@ def convert_single_example(article, question, tokenizer, article_id, max_query_l
         url=url,
         answer_start = answer_start,
         answer_end = answer_end,
-        answer_type = answer_type
+        answer_type = answer_type,
+        
+
 
         # answer_text=answer_text,
         # answer_type=answer_type
@@ -387,6 +407,7 @@ class InputOutputs(object):
 
 
 
+
 class WithTagOutputFormatter(OutputFormatter):
 
 
@@ -430,15 +451,17 @@ class WithTagOutputFormatter(OutputFormatter):
                 numberlis = 0
                 txt = unescape(txt)
 
-                if paracounter < 49:
+                if paracounter < 51:
                     paratoken = f"[Paragraph={paracounter}]"
                 else:
-                    paratoken = "[UNK]"
+                    #paratoken = "[UNK]"
+                    paratoken = "[Paragraph=over]"
 
-                if topcounter < 49:
+                if topcounter < 51:
                     contexttoken = f"[ContextId={topcounter}]"
                 else:
-                    contexttoken = "[UNK]"
+                    # contexttoken = "[UNK]"
+                    contexttoken = "[ContextID=over]"
 
 
                 if "[Lis" in txt[:8] or "[Tab" in txt[:8]:
@@ -474,10 +497,11 @@ class WithTagOutputFormatter(OutputFormatter):
             counter = 0
             topcounter += 1
             lenlis = len(li_list)
-            if topcounter < 49:
+            if topcounter < 51:
                 listtoken = f"[List={topcounter}] "
             else:
-                listtoken = "[UNK] "
+                # listtoken = "[UNK] "
+                listtoken = "[List=over] "
             for li in li_list[:-1]:
                 counter += 1
                 if counter == 1:
@@ -494,10 +518,11 @@ class WithTagOutputFormatter(OutputFormatter):
             counter = 0
             topcounter += 1
             lenlis = len(li_list)
-            if topcounter < 49:
+            if topcounter < 51:
                 tabletoken = f"[Table={topcounter}] "
             else:
-                tabletoken = "[UNK] "
+                # tabletoken = "[UNK] "
+                tabletoken = "[Table=over] "
 
             for li in li_list[:-1]:
                 counter += 1

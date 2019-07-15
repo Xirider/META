@@ -12,8 +12,16 @@ from concurrent.futures import TimeoutError
 from pebble import ProcessPool, ProcessExpired, ThreadPool
 from nqdata import url_to_nq_inputlist
 
+from newscrape import get_html
+from inscriptis_p import get_text
 
 from lib.google_search_results import GoogleSearchResults
+
+def webscraper(url):
+    html = get_html(url)
+    text = get_text(html)
+    return {"text": text, "url": url}
+
 
 def artdownload(url):
     ltime = time.time()
@@ -97,11 +105,13 @@ def zenapi(query):
 
 
 class Searcher():
-    def __init__(self, use_nq_scraper = False, use_api=False, api_type="zenapi"):
+    def __init__(self, use_nq_scraper = False, use_api=False, api_type="zenapi", use_webscraper=False):
         
         
         if use_nq_scraper:
             self.scrape_function = url_to_nq_inputlist
+        elif use_webscraper:
+            self.scrape_function = webscraper
         else:
             self.scrape_function = artdownload
         self.use_api = use_api
@@ -114,7 +124,7 @@ class Searcher():
 
 
 
-    def searchandsplit(self, query):
+    def searchandsplit(self, query, timeout = 1.5):
 
 
         start_time = time.time()
@@ -161,7 +171,6 @@ class Searcher():
 
         articlelist = []
 
-        timeout = 1.5
 
         lasttime = time.time()
 

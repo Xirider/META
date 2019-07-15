@@ -1,0 +1,10 @@
+{
+    "theme": "basic",
+    "custom_theme": {
+        "largeText": "1.5rem",
+        "mediumText": "1.5rem",
+        "smallText": "1.5rem",
+        "cardMaxWidth": "1500px"
+
+    }
+}
