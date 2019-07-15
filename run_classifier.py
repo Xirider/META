@@ -138,6 +138,8 @@ def main():
     parser.add_argument('--server_port', type=str, default='', help="Can be used for distant debugging.")
     args = parser.parse_args()
 
+    experiment.log_parameters(vars(args))
+
     if args.server_ip and args.server_port:
         # Distant debugging - see https://code.visualstudio.com/docs/python/debugging#_attach-to-a-local-script
         import ptvsd
@@ -221,6 +223,195 @@ def main():
     global_step = 0
     nb_tr_steps = 0
     tr_loss = 0
+
+
+    ### Evaluation
+    if args.do_eval and (args.local_rank == -1 or torch.distributed.get_rank() == 0):
+        eval_examples = processor.get_dev_examples(args.data_dir)
+        eval_features =  eval_examples
+        
+
+        logger.info("***** Running evaluation *****")
+        logger.info("  Num examples = %d", len(eval_examples))
+        logger.info("  Batch size = %d", args.eval_batch_size)
+        
+        
+
+        
+        all_input_ids = torch.tensor([f["input_ids"] for f in eval_features], dtype=torch.long)
+        all_input_mask = torch.tensor([f["input_mask"] for f in eval_features], dtype=torch.long)
+        all_segment_ids = torch.tensor([f["segment_ids"] for f in eval_features], dtype=torch.long)
+
+        input_len = all_input_ids.size(1)
+
+        def index2onehot(features, keyname):
+            returnlist = []
+            for f in features:
+                cur_list = []
+                for position_i in range(input_len):
+                    if position_i in f[keyname]:
+                        cur_list.append(1)
+                    else:
+                        cur_list.append(0)
+                returnlist.append(cur_list)
+            return returnlist
+
+        def labelindex2binary(label, newline_mask, input_len, ignore=0):
+            zeros = [ignore]* input_len
+
+            for maskid, mask in enumerate(newline_mask):
+                zeros[mask] = label[maskid]
+            return zeros
+
+
+
+        
+        newline_mask = torch.tensor(index2onehot(eval_features, "[Newline]"), dtype=torch.long)
+        #newline_mask = torch.tensor([f["Newline"] for f in train_features], dtype=torch.long)
+
+        list_binary_labels = []
+        for lb in label_list[0]:
+            list_binary_labels.append(torch.tensor([labelindex2binary(f[lb], f["[Newline]"], input_len=input_len) for f in eval_features], dtype=torch.long))
+
+        list_span_labels = []
+        for lb in label_list[1]:
+            list_span_labels.append(torch.tensor([f[lb] for f in eval_features], dtype=torch.long))
+
+
+        list_multi_labels = []
+        for lb in label_list[2]:
+            list_multi_labels.append(torch.tensor([labelindex2binary(f[lb[0]], f["[Newline]"], input_len=input_len, ignore=-1) for f in eval_features], dtype=torch.long))
+
+
+
+        eval_data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, newline_mask, *list_binary_labels, *list_span_labels, *list_multi_labels)
+
+        # Run prediction for full data
+        if args.local_rank == -1:
+            eval_sampler = SequentialSampler(eval_data)
+        else:
+            eval_sampler = DistributedSampler(eval_data)  # Note that this sampler samples randomly
+        eval_dataloader = DataLoader(eval_data, sampler=eval_sampler, batch_size=args.eval_batch_size)
+
+
+
+        def evaluate(number_of_epochs=0):
+
+                model.eval()
+                eval_loss = 0
+                bce_loss = 0
+                cross_loss = 0
+                token_loss = 0
+                nb_eval_steps = 0
+                preds = []
+                out_label_ids = None
+                result = 0
+                result = defaultdict(float)
+                len_bce = len(eval_dataloader)
+                
+                thresholds = np.around(np.arange(-10,10, 0.1), decimals=1).tolist()
+                thresholds= list(dict.fromkeys(thresholds))
+
+                for batch in tqdm(eval_dataloader, desc="Evaluating"):
+                    batch = tuple(t.to(device) for t in batch)
+                    input_ids, input_mask, segment_ids, newline_mask, *label_id_list = batch
+                    with torch.no_grad():
+                        logits, loss, loss_list = model(input_ids, token_type_ids=segment_ids, attention_mask=input_mask, newline_mask= newline_mask, labels=label_id_list)
+
+                    
+                    eval_loss += loss.mean().item()
+                    bce_loss += loss_list[0].mean().item()
+                    cross_loss += loss_list[1].mean().item()
+                    token_loss += loss_list[2].mean().item()
+
+                    bce_logits = logits[0]
+                
+                    for l_id, label in enumerate(label_list[0]):
+                        cur_labels = label_id_list[l_id]
+
+                        cur_logits = bce_logits[:, :, l_id]
+                        
+                        
+                        for thresh in thresholds:
+                            threshed_logs = cur_logits > thresh
+
+                            threshed_logs = ((cur_logits == 0).float() * -100).float() + (cur_logits != 0).float() * threshed_logs.float()
+                            
+                            
+                            cur_labels_cpu = ((cur_logits == 0).float() * -100.0).float() + (cur_logits != 0).float() * cur_labels.float()
+                            cur_labels_cpu = cur_labels_cpu.detach().cpu().numpy()
+                            threshed_logs = threshed_logs.detach().cpu().numpy()
+                            ignoring= (cur_logits == 0).sum().detach().cpu().numpy()
+                            threshed_logs = threshed_logs[threshed_logs != -100]
+                            cur_labels_cpu = cur_labels_cpu[cur_labels_cpu != -100]
+                            # acc = ((cur_labels_cpu == threshed_logs).sum() - ignoring) / (cur_labels_cpu.size - ignoring)
+                            acc = (cur_labels_cpu == threshed_logs).sum() / cur_labels_cpu.size
+                            f1= f1_score(cur_labels_cpu, threshed_logs)
+                            #import pdb; pdb.set_trace()
+                            #acc = compute_metrics("meta", threshed_logs, cur_labels_cpu, ignoring)
+                            # if label == "new_topic" and thresh == -1.0:
+                            #import pdb; pdb.set_trace()
+                            result[str(thresh)+ "_" + label + "_f1"] += f1 / len_bce
+                            result[str(thresh)+ "_" + label + "_acc"] += acc / len_bce
+
+
+
+
+
+                    nb_eval_steps += 1
+                #     if len(preds) == 0:
+                #         preds.append(logits.detach().cpu().numpy())
+                #         out_label_ids = label_ids.detach().cpu().numpy()
+                #     else:
+                #         preds[0] = np.append(
+                #             preds[0], logits.detach().cpu().numpy(), axis=0)
+                #         out_label_ids = np.append(
+                #             out_label_ids, label_ids.detach().cpu().numpy(), axis=0)
+
+                # eval_loss = eval_loss / nb_eval_steps
+                # preds = preds[0]
+                # if output_mode == "classification":
+                #     preds = np.argmax(preds, axis=1)
+                # elif output_mode == "regression":
+                #     preds = np.squeeze(preds)
+                # result = compute_metrics(task_name, preds, out_label_ids)
+                bestf1 = 0
+                bestf1name = ""
+                for key in sorted(result.keys()):
+                    if "f1" in key:
+                        if result[key] > bestf1:
+                            bestf1 = result[key]
+                            bestf1name = key
+
+                result = 0
+                result = defaultdict(float)
+                result["zbestf1_"] = bestf1
+
+                result["zbestf1_threshold"] = bestf1name
+
+
+                if global_step == 0:
+                    loss = tr_loss/1
+                else:
+                    loss = tr_loss/global_step if args.do_train else None
+                #result = {}
+                result['eval_loss'] = eval_loss
+                result["bce_loss"] = bce_loss
+                result["cross_loss"] = cross_loss
+                result["token_loss"] = token_loss
+                result['global_step'] = global_step
+                result['loss'] = loss
+
+                for key in sorted(result.keys()):
+                    experiment.log_metric(key,result[key], number_of_epochs)
+
+                # output_eval_file = os.path.join(args.output_dir, "eval_results.txt")
+                # with open(output_eval_file, "w") as writer:
+                #     logger.info("***** Eval results *****")
+                #     for key in sorted(result.keys()):
+                #         logger.info("  %s = %s", key, str(result[key]))
+                #         writer.write("%s = %s\n" % (key, str(result[key])))
+
 
     if args.do_train:
         if args.local_rank in [-1, 0]:
@@ -342,11 +533,14 @@ def main():
         logger.info("  Num examples = %d", len(train_examples))
         logger.info("  Batch size = %d", args.train_batch_size)
         logger.info("  Num steps = %d", num_train_optimization_steps)
-
+        number_of_epochs = -1
         model.train()
         for _ in trange(int(args.num_train_epochs), desc="Epoch", disable=args.local_rank not in [-1, 0]):
             tr_loss = 0
+            number_of_epochs += 1
             nb_tr_examples, nb_tr_steps = 0, 0
+            evaluate(number_of_epochs=number_of_epochs)
+            model.train()
             for step, batch in enumerate(tqdm(train_dataloader, desc="Iteration", disable=args.local_rank not in [-1, 0])):
                 batch = tuple(t.to(device) for t in batch)
                 input_ids, input_mask, segment_ids, newline_mask, *label_id_list = batch
@@ -380,6 +574,9 @@ def main():
                     if args.local_rank in [-1, 0]:
                         tb_writer.add_scalar('lr', optimizer.get_lr()[0], global_step)
                         tb_writer.add_scalar('loss', loss.item(), global_step)
+                        experiment.log_metric("lr",optimizer.get_lr()[0], global_step)
+                        experiment.log_metric("train_loss",loss.item(), global_step)
+                        
 
     ### Saving best-practices: if you use defaults names for the model, you can reload it using from_pretrained()
     ### Example:
@@ -407,176 +604,8 @@ def main():
 
     model.to(device)
 
-    ### Evaluation
-    if args.do_eval and (args.local_rank == -1 or torch.distributed.get_rank() == 0):
-        eval_examples = processor.get_dev_examples(args.data_dir)
-        eval_features =  eval_examples
-        
 
-        logger.info("***** Running evaluation *****")
-        logger.info("  Num examples = %d", len(eval_examples))
-        logger.info("  Batch size = %d", args.eval_batch_size)
-        
-        
-
-        
-        all_input_ids = torch.tensor([f["input_ids"] for f in eval_features], dtype=torch.long)
-        all_input_mask = torch.tensor([f["input_mask"] for f in eval_features], dtype=torch.long)
-        all_segment_ids = torch.tensor([f["segment_ids"] for f in eval_features], dtype=torch.long)
-
-        input_len = all_input_ids.size(1)
-
-        def index2onehot(features, keyname):
-            returnlist = []
-            for f in features:
-                cur_list = []
-                for position_i in range(input_len):
-                    if position_i in f[keyname]:
-                        cur_list.append(1)
-                    else:
-                        cur_list.append(0)
-                returnlist.append(cur_list)
-            return returnlist
-
-        def labelindex2binary(label, newline_mask, input_len, ignore=0):
-            zeros = [ignore]* input_len
-
-            for maskid, mask in enumerate(newline_mask):
-                zeros[mask] = label[maskid]
-            return zeros
-
-
-
-        
-        newline_mask = torch.tensor(index2onehot(eval_features, "[Newline]"), dtype=torch.long)
-        #newline_mask = torch.tensor([f["Newline"] for f in train_features], dtype=torch.long)
-
-        list_binary_labels = []
-        for lb in label_list[0]:
-            list_binary_labels.append(torch.tensor([labelindex2binary(f[lb], f["[Newline]"], input_len=input_len) for f in eval_features], dtype=torch.long))
-
-        list_span_labels = []
-        for lb in label_list[1]:
-            list_span_labels.append(torch.tensor([f[lb] for f in eval_features], dtype=torch.long))
-
-
-        list_multi_labels = []
-        for lb in label_list[2]:
-            list_multi_labels.append(torch.tensor([labelindex2binary(f[lb[0]], f["[Newline]"], input_len=input_len, ignore=-1) for f in eval_features], dtype=torch.long))
-
-
-
-        eval_data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, newline_mask, *list_binary_labels, *list_span_labels, *list_multi_labels)
-
-        # Run prediction for full data
-        if args.local_rank == -1:
-            eval_sampler = SequentialSampler(eval_data)
-        else:
-            eval_sampler = DistributedSampler(eval_data)  # Note that this sampler samples randomly
-        eval_dataloader = DataLoader(eval_data, sampler=eval_sampler, batch_size=args.eval_batch_size)
-
-        model.eval()
-        eval_loss = 0
-        bce_loss = 0
-        cross_loss = 0
-        token_loss = 0
-        nb_eval_steps = 0
-        preds = []
-        out_label_ids = None
-        result = defaultdict(float)
-        len_bce = len(eval_dataloader)
-        
-
-
-        for batch in tqdm(eval_dataloader, desc="Evaluating"):
-            batch = tuple(t.to(device) for t in batch)
-            input_ids, input_mask, segment_ids, newline_mask, *label_id_list = batch
-            with torch.no_grad():
-                logits, loss, loss_list = model(input_ids, token_type_ids=segment_ids, attention_mask=input_mask, newline_mask= newline_mask, labels=label_id_list)
-
-            
-            eval_loss += loss.mean().item()
-            bce_loss += loss_list[0].mean().item()
-            cross_loss += loss_list[1].mean().item()
-            token_loss += loss_list[2].mean().item()
-
-            bce_logits = logits[0]
-        
-            for l_id, label in enumerate(label_list[0]):
-                cur_labels = label_id_list[l_id]
-
-                cur_logits = bce_logits[:, :, l_id]
-                
-                
-                for thresh in [0.5, 0.0, -1.0, -2.0, -2.1, -2.15, -2.2, -2.3, -3.0, -0.1 , -0.2, -0.3, -0.4, -0.5, -0.6, -0.7, -0.8,-0.9 , -3.5, -4.0 , -4.5, -5.0, -5.1, -5.2, -5.3, -5.4, -5.5, -5.6]:
-                    threshed_logs = cur_logits > thresh
-
-                    threshed_logs = ((cur_logits == 0).float() * -100).float() + (cur_logits != 0).float() * threshed_logs.float()
-                    
-                    
-                    cur_labels_cpu = ((cur_logits == 0).float() * -100.0).float() + (cur_logits != 0).float() * cur_labels.float()
-                    cur_labels_cpu = cur_labels_cpu.detach().cpu().numpy()
-                    threshed_logs = threshed_logs.detach().cpu().numpy()
-                    ignoring= (cur_logits == 0).sum().detach().cpu().numpy()
-                    threshed_logs = threshed_logs[threshed_logs != -100]
-                    cur_labels_cpu = cur_labels_cpu[cur_labels_cpu != -100]
-                    # acc = ((cur_labels_cpu == threshed_logs).sum() - ignoring) / (cur_labels_cpu.size - ignoring)
-                    acc = (cur_labels_cpu == threshed_logs).sum() / cur_labels_cpu.size
-                    f1= f1_score(cur_labels_cpu, threshed_logs)
-                    #import pdb; pdb.set_trace()
-                    #acc = compute_metrics("meta", threshed_logs, cur_labels_cpu, ignoring)
-                    # if label == "new_topic" and thresh == -1.0:
-                    #import pdb; pdb.set_trace()
-                    result[str(thresh)+ "_" + label + "_f1"] += f1 / len_bce
-                    result[str(thresh)+ "_" + label + "_acc"] += acc / len_bce
-
-
-
-
-
-            nb_eval_steps += 1
-        #     if len(preds) == 0:
-        #         preds.append(logits.detach().cpu().numpy())
-        #         out_label_ids = label_ids.detach().cpu().numpy()
-        #     else:
-        #         preds[0] = np.append(
-        #             preds[0], logits.detach().cpu().numpy(), axis=0)
-        #         out_label_ids = np.append(
-        #             out_label_ids, label_ids.detach().cpu().numpy(), axis=0)
-
-        # eval_loss = eval_loss / nb_eval_steps
-        # preds = preds[0]
-        # if output_mode == "classification":
-        #     preds = np.argmax(preds, axis=1)
-        # elif output_mode == "regression":
-        #     preds = np.squeeze(preds)
-        # result = compute_metrics(task_name, preds, out_label_ids)
-        bestf1 = 0
-        bestf1name = ""
-        for key in sorted(result.keys()):
-            if "f1" in key:
-                if result[key] > bestf1:
-                    bestf1 = result[key]
-                    bestf1name = key
-        result["zbestf1_"+bestf1name] = bestf1
-
-
-
-        loss = tr_loss/global_step if args.do_train else None
-        #result = {}
-        result['eval_loss'] = eval_loss
-        result["bce_loss"] = bce_loss
-        result["cross_loss"] = cross_loss
-        result["token_loss"] = token_loss
-        result['global_step'] = global_step
-        result['loss'] = loss
-
-        output_eval_file = os.path.join(args.output_dir, "eval_results.txt")
-        with open(output_eval_file, "w") as writer:
-            logger.info("***** Eval results *****")
-            for key in sorted(result.keys()):
-                logger.info("  %s = %s", key, str(result[key]))
-                writer.write("%s = %s\n" % (key, str(result[key])))
+    
 
         
         
