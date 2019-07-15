@@ -10,6 +10,7 @@ dataset_cache_msmarco_trainOpenAIGPTTokenizer
 dataset_cache_msmarco_trainOpenAIGPTTokenizer_backup
 *.gz
 savedmodel/pytorch_model.bin
+logfiles/
 logfiles/training_args.bin
 logfiles/config.json
 logfiles/eval_results.txt

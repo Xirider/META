@@ -1,6 +1,11 @@
 
 from __future__ import absolute_import, division, print_function
 
+# import comet_ml in the top of your file
+from comet_ml import Experiment
+    
+
+
 import argparse
 import logging
 import os
@@ -32,6 +37,10 @@ import pickle
 from sklearn.metrics import f1_score
 
 logger = logging.getLogger(__name__)
+
+# Add the following code anywhere in your machine learning file
+experiment = Experiment(api_key="zMVSRiUzF89hdX5u7uWrSW5og",
+                        project_name="general", workspace="xirider")
 
 
 def main():
@@ -475,7 +484,8 @@ def main():
         preds = []
         out_label_ids = None
         result = defaultdict(float)
-        len_bce = len(label_list[0])
+        len_bce = len(eval_data)
+
 
         for batch in tqdm(eval_dataloader, desc="Evaluating"):
             batch = tuple(t.to(device) for t in batch)
