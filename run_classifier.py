@@ -331,7 +331,8 @@ def main():
 
                         cur_logits = bce_logits[:, :, l_id]
                         
-                        
+                        cur_logits = cur_logits.cpu()
+                        cur_labels = cur_labels.cpu()
                         for thresh in thresholds:
                             threshed_logs = cur_logits > thresh
 
@@ -339,9 +340,9 @@ def main():
                             
                             
                             cur_labels_cpu = ((cur_logits == 0).float() * -100.0).float() + (cur_logits != 0).float() * cur_labels.float()
-                            cur_labels_cpu = cur_labels_cpu.detach().cpu().numpy()
-                            threshed_logs = threshed_logs.detach().cpu().numpy()
-                            ignoring= (cur_logits == 0).sum().detach().cpu().numpy()
+                            cur_labels_cpu = cur_labels_cpu.detach().numpy()
+                            threshed_logs = threshed_logs.detach().numpy()
+                            ignoring= (cur_logits == 0).sum().detach().numpy()
                             threshed_logs = threshed_logs[threshed_logs != -100]
                             cur_labels_cpu = cur_labels_cpu[cur_labels_cpu != -100]
                             # acc = ((cur_labels_cpu == threshed_logs).sum() - ignoring) / (cur_labels_cpu.size - ignoring)
@@ -378,10 +379,10 @@ def main():
                 bestf1 = 0
                 bestf1name = ""
                 for key in sorted(result.keys()):
-                    if "f1" in key:
+                    if "f1" in key and "new_topic" in key:
                         if result[key] > bestf1:
                             bestf1 = result[key]
-                            bestf1name = key
+                            bestf1name = float(key.replace("_f1", "").replace("new_topic", "").replace("_", ""))
 
                 result = 0
                 result = defaultdict(float)
