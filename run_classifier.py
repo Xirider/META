@@ -563,8 +563,8 @@ def main():
             else:
                 ratio = 1.0
             pos_weights.append(ratio)
-        pos_weights = torch.tensor(pos_weights).cuda()
-
+        #pos_weights = torch.tensor(pos_weights).cuda()
+        pos_weights = None
         model.pos_weights = pos_weights
 
         list_span_labels = []

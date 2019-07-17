@@ -1328,8 +1328,9 @@ class BertForMetaClassification(BertPreTrainedModel):
         self.bert = BertModel(config, output_attentions=output_attentions,
                                       keep_multihead_output=keep_multihead_output)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
-        self.newline_classifier = nn.Linear(config.hidden_size, num_binary_labels + num_multi_labels * multi_classes)
-        self.token_classifier = nn.Linear(config.hidden_size, num_span_labels)
+        #self.newline_classifier = nn.Linear(config.hidden_size, num_binary_labels + num_multi_labels * multi_classes)
+        #self.token_classifier = nn.Linear(config.hidden_size, num_span_labels)
+        self.single_classifier = nn.Linear(config.hidden_size, 2)
         self.apply(self.init_bert_weights)
 
     def forward(self, input_ids, token_type_ids=None, attention_mask=None, newline_mask = None, labels=None, head_mask=None):
@@ -1340,42 +1341,63 @@ class BertForMetaClassification(BertPreTrainedModel):
             sequence_output, _ = outputs
         sequence_output = self.dropout(sequence_output)
 
-        newline_logits = self.newline_classifier(sequence_output)
-        
-        token_logits = self.token_classifier(sequence_output)
 
-        cross_fct = CrossEntropyLoss(ignore_index=-1)
-        bce_fct = BCEWithLogitsLoss(pos_weight = self.pos_weights)
-        token_fct = BCEWithLogitsLoss()
-        # Only keep active parts of the loss
+        logits = self.single_classifier(sequence_output)
+        labels = labels[0]
 
-        # binary classification
-        
-        binary_logits = newline_logits[:,:,: self.num_binary_labels] * newline_mask.unsqueeze(2).float()
-        binary_stack = torch.stack(labels[:self.num_binary_labels], dim=2).float()
-        
-        bce_loss = bce_fct(binary_logits.view(-1,binary_logits.size(2)), binary_stack.view(-1, binary_stack.size(2)))
+        loss_fct = CrossEntropyLoss()
 
-        #bce_loss = bce_fct(binary_logits[:,:,0].view(-1,1), binary_stack[:,:,0].view(-1,1))
+        active_loss = newline_mask.view(-1) == 1
+        active_logits = logits.view(-1, 2)[active_loss]
+        active_labels = labels.view(-1)[active_loss]
+        loss = loss_fct(active_logits, active_labels)
 
         
+        
+        binary_logits = torch.zeros([logits.size(0), logits.size(1), self.num_binary_labels - 1])
+        reduced_logits = logits[:,:,1].unsqueeze(2)
+        binary_logits = torch.cat((reduced_logits, binary_logits), 2)
 
-        # multi class classification
-        multi_logits = newline_logits[:,:,self.num_binary_labels:] * newline_mask.unsqueeze(2).float()
-        multi_logits = multi_logits.view(multi_logits.size(0)*self.num_multi_labels * multi_logits.size(1), self.multi_classes)
-        multi_labels_reshaped = torch.stack(labels[-self.num_multi_labels:], dim=2).view(multi_logits.size(0))
-        cross_loss = cross_fct(multi_logits, multi_labels_reshaped)
+        tt = torch.tensor([1.01])
 
-        # token binary classification
-        token_stack = torch.stack(labels[self.num_binary_labels:self.num_binary_labels+self.num_span_labels], dim=2) * attention_mask.unsqueeze(2)
-        token_logits = token_logits * attention_mask.unsqueeze(2).float()
-        token_loss = token_fct(token_logits.view(token_logits.size(0)*token_logits.size(1), token_logits.size(2)), token_stack.view(token_stack.size(0)*token_stack.size(1), token_stack.size(2)).float()) 
+        return (binary_logits, tt, tt), loss, (loss,tt,tt)
 
-        cross_loss = cross_loss * 0
-        token_loss = token_loss *0
+        # newline_logits = self.newline_classifier(sequence_output)
+        
+        # token_logits = self.token_classifier(sequence_output)
 
-        #total_loss = (bce_loss + cross_loss + token_loss)/3
-        total_loss = bce_loss
+        # cross_fct = CrossEntropyLoss(ignore_index=-1)
+        # bce_fct = BCEWithLogitsLoss(pos_weight = self.pos_weights)
+        # token_fct = BCEWithLogitsLoss()
+        # # Only keep active parts of the loss
+
+        # # binary classification
+        
+        # binary_logits = newline_logits[:,:,: self.num_binary_labels] * newline_mask.unsqueeze(2).float()
+        # binary_stack = torch.stack(labels[:self.num_binary_labels], dim=2).float()
+        
+        # bce_loss = bce_fct(binary_logits.view(-1,binary_logits.size(2)), binary_stack.view(-1, binary_stack.size(2)))
+
+        # #####bce_loss = bce_fct(binary_logits[:,:,0].view(-1,1), binary_stack[:,:,0].view(-1,1))
+
+        
+
+        # # multi class classification
+        # multi_logits = newline_logits[:,:,self.num_binary_labels:] * newline_mask.unsqueeze(2).float()
+        # multi_logits = multi_logits.view(multi_logits.size(0)*self.num_multi_labels * multi_logits.size(1), self.multi_classes)
+        # multi_labels_reshaped = torch.stack(labels[-self.num_multi_labels:], dim=2).view(multi_logits.size(0))
+        # cross_loss = cross_fct(multi_logits, multi_labels_reshaped)
+
+        # # token binary classification
+        # token_stack = torch.stack(labels[self.num_binary_labels:self.num_binary_labels+self.num_span_labels], dim=2) * attention_mask.unsqueeze(2)
+        # token_logits = token_logits * attention_mask.unsqueeze(2).float()
+        # token_loss = token_fct(token_logits.view(token_logits.size(0)*token_logits.size(1), token_logits.size(2)), token_stack.view(token_stack.size(0)*token_stack.size(1), token_stack.size(2)).float()) 
+
+        # cross_loss = cross_loss * 0
+        # token_loss = token_loss *0
+
+        # ##total_loss = (bce_loss + cross_loss + token_loss)/3
+        # total_loss = bce_loss
 
 
         # active_loss = attention_mask.view(-1) == 1
@@ -1384,7 +1406,11 @@ class BertForMetaClassification(BertPreTrainedModel):
         # loss = loss_fct(active_logits, active_labels)
         
         #loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
-        return (binary_logits, multi_logits, token_logits), total_loss, (bce_loss, cross_loss, token_loss)
+
+
+
+
+        #return (binary_logits, multi_logits, token_logits), total_loss, (bce_loss, cross_loss, token_loss)
 
 
 class BertForQuestionAnswering(BertPreTrainedModel):
