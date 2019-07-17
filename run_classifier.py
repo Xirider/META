@@ -346,8 +346,9 @@ def main():
                 
                 thresholds = np.around(np.arange(-10,10, 0.1), decimals=1).tolist()
                 thresholds= list(dict.fromkeys(thresholds))
-
+                bnum = 0
                 for batch in tqdm(eval_dataloader, desc="Evaluating"):
+                    bnum += 1
                     batch = tuple(t.to(device) for t in batch)
                     input_ids, input_mask, segment_ids, newline_mask, *label_id_list = batch
                     with torch.no_grad():
@@ -374,7 +375,7 @@ def main():
                         evaldict[label +"logits"] = np.append(evaldict[label +"logits"], cur_logits_n)
                         evaldict[label +"labels"]= np.append(evaldict[label +"labels"], cur_labels_n)
 
-                        if l_id == 0:
+                        if l_id == 0 and bnum < 5:
                             mask = newline_mask[0].detach().cpu().numpy()
                             text = " ".join(tokenizer.convert_ids_to_tokens(input_ids.cpu().numpy().tolist()[0]))
                             print("\n\n1. TEXT:\n")
