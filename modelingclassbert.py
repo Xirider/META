@@ -1354,11 +1354,11 @@ class BertForMetaClassification(BertPreTrainedModel):
 
         
         
-        binary_logits = torch.zeros([logits.size(0), logits.size(1), self.num_binary_labels - 1])
+        binary_logits = torch.zeros([logits.size(0), logits.size(1), self.num_binary_labels - 1]).cuda()
         reduced_logits = logits[:,:,1].unsqueeze(2)
         binary_logits = torch.cat((reduced_logits, binary_logits), 2)
 
-        tt = torch.tensor([1.01])
+        tt = torch.tensor([1.01]).cuda()
 
         return (binary_logits, tt, tt), loss, (loss,tt,tt)
 
