@@ -1345,7 +1345,7 @@ class BertForMetaClassification(BertPreTrainedModel):
         token_logits = self.token_classifier(sequence_output)
 
         cross_fct = CrossEntropyLoss(ignore_index=-1)
-        bce_fct = BCEWithLogitsLoss(pos_weight = self.pos_weights)
+        bce_fct = BCEWithLogitsLoss(pos_weight = self.pos_weights[0])
         token_fct = BCEWithLogitsLoss()
         # Only keep active parts of the loss
 
@@ -1354,7 +1354,11 @@ class BertForMetaClassification(BertPreTrainedModel):
         binary_logits = newline_logits[:,:,: self.num_binary_labels] * newline_mask.unsqueeze(2).float()
         binary_stack = torch.stack(labels[:self.num_binary_labels], dim=2).float()
         
-        bce_loss = bce_fct(binary_logits.view(-1,binary_logits.size(2)), binary_stack.view(-1, binary_stack.size(2)))
+        #bce_loss = bce_fct(binary_logits.view(-1,binary_logits.size(2)), binary_stack.view(-1, binary_stack.size(2)))
+
+        bce_loss = bce_fct(binary_logits[:,:,0].view(-1,1), binary_stack[:,:,0].view(-1,1))
+
+        bce_loss * 3
 
         # multi class classification
         multi_logits = newline_logits[:,:,self.num_binary_labels:] * newline_mask.unsqueeze(2).float()

@@ -32,9 +32,33 @@ from run_classifier_dataset_utils import processors, output_modes, convert_examp
 
 from collections import defaultdict
 
+from collections import defaultdict
+from functools import partial
+
+
+
+stopper = ["[Newline]" , "[UNK]" , "[SEP]" , "[Q]" , "[CLS]" , "[WebLinkStart]" , "[LocalLinkStart]" , "[RelativeLinkStart]" ,
+    "[WebLinkEnd]" , "[LocalLinkEnd]" , "[RelativeLinkEnd]" , "[VideoStart]" , "[VideoEnd]" , "[TitleStart]" , 
+    "[NavStart]" , "[AsideStart]" , "[FooterStart]" , "[IframeStart]" , "[IframeEnd]" , "[NavEnd]" , "[AsideEnd]" , 
+    "[FooterEnd]" , "[CodeStart]" , "[H1Start]" , "[H2Start]" , "[H3Start]" , "[H4Start]" , "[H5Start]" , "[H6Start]" ,
+    "[CodeEnd]" , "[UnorderedList=1]" , "[UnorderedList=2]" , "[UnorderedList=3]" , "[UnorderedList=4]" , "[OrderedList]"
+    , "[UnorderedListEnd=1]" , "[UnorderedListEnd=2]" , "[UnorderedListEnd=3]" , "[UnorderedListEnd=4]" , 
+    "[OrderedListEnd]" , "[TableStart]" , "[RowStart]" , "[CellStart]" , "[TableEnd]" , "[RowEnd]" , "[CellEnd]" ,
+    "[LineBreak]" , "[Paragraph]" , "[StartImage]" , "[EndImage]" , "[Segment=00]" , "[Segment=01]" , "[Segment=02]" ,
+        "[Segment=03]" , "[Segment=04]" , "[Segment=05]" , "[Segment=06]" , "[Segment=07]" , "[Segment=08]" ,
+        "[Segment=09]" , "[Segment=10]" , "[Segment=11]" , "[Segment=12]" , "[Segment=13]" , "[Segment=14]" ,
+        "[Segment=15]" , "[Segment=16]" , "[Segment=17]" , "[Segment=18]" , "[Segment=19]" , "[Segment=20]" , 
+        "[Segment=21]" , "[Segment=22]" , "[Segment=23]" , "[Segment=24]" , "[Segment=25]" , "[Segment=26]" , 
+        "[Segment=27]" , "[Segment=28]" , "[Segment=29]" , "[Segment=30]" , "[Segment=XX]", "\n"]
+
+
+
 import pickle
 
 from sklearn.metrics import f1_score
+
+from sklearn.metrics import precision_recall_curve, auc, precision_score, recall_score
+
 
 logger = logging.getLogger(__name__)
 
@@ -202,7 +226,8 @@ def main():
     if args.local_rank not in [-1, 0]:
         torch.distributed.barrier()  # Make sure only the first process in distributed training will download model & vocab
 
-    tokenizer = BertTokenizer.from_pretrained(args.bert_model, do_lower_case=args.do_lower_case)
+    tokenizer = BertTokenizer.from_pretrained(args.bert_model, never_split = stopper, cache_dir="savedmodel")
+
 
     model = BertForMetaClassification.from_pretrained(args.bert_model, num_binary_labels=num_binary_labels, num_span_labels=num_span_labels, num_multi_labels=num_multi_labels)
 
@@ -223,6 +248,10 @@ def main():
     global_step = 0
     nb_tr_steps = 0
     tr_loss = 0
+
+    def sigmoid(x):
+        sigm = 1. / (1. + np.exp(-x))
+        return sigm
 
 
     ### Evaluation
@@ -293,9 +322,12 @@ def main():
             eval_sampler = DistributedSampler(eval_data)  # Note that this sampler samples randomly
         eval_dataloader = DataLoader(eval_data, sampler=eval_sampler, batch_size=args.eval_batch_size)
 
+        def f1_calculate(precision, recall):
+            f1 = 2 * precision * recall / (precision + recall + 0.0001)
+            return f1
 
 
-        def evaluate(number_of_epochs=0):
+        def evaluate(number_of_epochs=0, show_examples=True):
 
                 model.eval()
                 eval_loss = 0
@@ -308,6 +340,9 @@ def main():
                 result = 0
                 result = defaultdict(float)
                 len_bce = len(eval_dataloader)
+
+                evaldict = defaultdict(partial(np.ndarray, 0))
+
                 
                 thresholds = np.around(np.arange(-10,10, 0.1), decimals=1).tolist()
                 thresholds= list(dict.fromkeys(thresholds))
@@ -325,35 +360,53 @@ def main():
                     token_loss += loss_list[2].mean().item()
 
                     bce_logits = logits[0]
+
+                    evaldict["binary_mask"] = np.append(evaldict["binary_mask"], newline_mask.detach().cpu().numpy())
                 
                     for l_id, label in enumerate(label_list[0]):
                         cur_labels = label_id_list[l_id]
 
                         cur_logits = bce_logits[:, :, l_id]
                         
-                        cur_logits = cur_logits.cpu()
-                        cur_labels = cur_labels.cpu()
-                        for thresh in thresholds:
-                            threshed_logs = cur_logits > thresh
+                        cur_logits_n = cur_logits.detach().cpu().numpy()
+                        cur_labels_n = cur_labels.detach().cpu().numpy()
 
-                            threshed_logs = ((cur_logits == 0).float() * -100).float() + (cur_logits != 0).float() * threshed_logs.float()
+                        evaldict[label +"logits"] = np.append(evaldict[label +"logits"], cur_logits_n)
+                        evaldict[label +"labels"]= np.append(evaldict[label +"labels"], cur_labels_n)
+
+                        if l_id == 0:
+                            mask = newline_mask[0].detach().cpu().numpy()
+                            text = " ".join(tokenizer.convert_ids_to_tokens(input_ids.cpu().numpy().tolist()[0]))
+                            print("\n\n1. TEXT:\n")
+                            print(text)
+                            print("\n\n2. LOGITS: \n")
+                            print(sigmoid(cur_logits[0].cpu().numpy())[mask == 1])
+                            print("\n\n3. LABELS: \n")
+                            print(cur_labels[0].cpu().numpy()[mask == 1])
+                            print("\n\n\n")
+
+
+                        # for thresh in thresholds:
+                        #     threshed_logs = cur_logits > thresh
+
+                        #     threshed_logs = ((cur_logits == 0).float() * -100).float() + (cur_logits != 0).float() * threshed_logs.float()
                             
                             
-                            cur_labels_cpu = ((cur_logits == 0).float() * -100.0).float() + (cur_logits != 0).float() * cur_labels.float()
-                            cur_labels_cpu = cur_labels_cpu.detach().numpy()
-                            threshed_logs = threshed_logs.detach().numpy()
-                            ignoring= (cur_logits == 0).sum().detach().numpy()
-                            threshed_logs = threshed_logs[threshed_logs != -100]
-                            cur_labels_cpu = cur_labels_cpu[cur_labels_cpu != -100]
-                            # acc = ((cur_labels_cpu == threshed_logs).sum() - ignoring) / (cur_labels_cpu.size - ignoring)
-                            acc = (cur_labels_cpu == threshed_logs).sum() / cur_labels_cpu.size
-                            f1= f1_score(cur_labels_cpu, threshed_logs)
-                            #import pdb; pdb.set_trace()
-                            #acc = compute_metrics("meta", threshed_logs, cur_labels_cpu, ignoring)
-                            # if label == "new_topic" and thresh == -1.0:
-                            #import pdb; pdb.set_trace()
-                            result[str(thresh)+ "_" + label + "_f1"] += f1 / len_bce
-                            result[str(thresh)+ "_" + label + "_acc"] += acc / len_bce
+                        #     cur_labels_cpu = ((cur_logits == 0).float() * -100.0).float() + (cur_logits != 0).float() * cur_labels.float()
+                        #     cur_labels_cpu = cur_labels_cpu.detach().numpy()
+                        #     threshed_logs = threshed_logs.detach().numpy()
+                        #     ignoring= (cur_logits == 0).sum().detach().numpy()
+                        #     threshed_logs = threshed_logs[threshed_logs != -100]
+                        #     cur_labels_cpu = cur_labels_cpu[cur_labels_cpu != -100]
+                        #     # acc = ((cur_labels_cpu == threshed_logs).sum() - ignoring) / (cur_labels_cpu.size - ignoring)
+                        #     acc = (cur_labels_cpu == threshed_logs).sum() / cur_labels_cpu.size
+                        #     f1= f1_score(cur_labels_cpu, threshed_logs)
+                        #     #import pdb; pdb.set_trace()
+                        #     #acc = compute_metrics("meta", threshed_logs, cur_labels_cpu, ignoring)
+                        #     # if label == "new_topic" and thresh == -1.0:
+                        #     #import pdb; pdb.set_trace()
+                        #     result[str(thresh)+ "_" + label + "_f1"] += f1 / len_bce
+                        #     result[str(thresh)+ "_" + label + "_acc"] += acc / len_bce
 
 
 
@@ -376,19 +429,56 @@ def main():
                 # elif output_mode == "regression":
                 #     preds = np.squeeze(preds)
                 # result = compute_metrics(task_name, preds, out_label_ids)
-                bestf1 = 0
-                bestf1name = ""
-                for key in sorted(result.keys()):
-                    if "f1" in key and "new_topic" in key:
-                        if result[key] > bestf1:
-                            bestf1 = result[key]
-                            bestf1name = float(key.replace("_f1", "").replace("new_topic", "").replace("_", ""))
+ 
+                # bestf1 = 0
+                # bestf1name = ""
+                # for key in sorted(result.keys()):
+                #     if "f1" in key and "new_topic" in key:
+                #         if result[key] > bestf1:
+                #             bestf1 = result[key]
+                #             bestf1name = float(key.replace("_f1", "").replace("new_topic", "").replace("_", ""))
 
-                result = 0
-                result = defaultdict(float)
-                result["zbestf1_"] = bestf1
+                # result = 0
+                # result = defaultdict(float)
+                # result["zbestf1_"] = bestf1
 
-                result["zbestf1_threshold"] = bestf1name
+                # result["zbestf1_threshold"] = bestf1name
+
+                for l_id, label in enumerate(label_list[0]):
+                    binary_mask = evaldict["binary_mask"]
+                    cur_labels = evaldict[label +"labels"]
+                    cur_preds = evaldict[label+"logits"]
+
+                    cur_labels = cur_labels[binary_mask == 1]
+                    cur_preds = cur_preds[binary_mask == 1]
+
+                    cur_preds = sigmoid(cur_preds)
+
+                    precision, recall, thresh = precision_recall_curve(cur_labels, cur_preds)
+
+                    all_f1 = f1_calculate(precision, recall)
+
+                    maxindex = np.argmax(all_f1)
+
+                    result[label+"_best_thresh"] = thresh[maxindex]
+
+                    result[label+"_best_f1"] = all_f1[maxindex]
+
+                    result[label+"atbf1_best_precision"] = precision[maxindex]
+                    result[label+"atbf1_best_recall"] = recall[maxindex]
+
+
+                    result[label +"_pr_auc_score"]  = auc(recall, precision)
+
+                    cur_preds = cur_preds > 0.5
+
+                    result[label+ "_precision50"] = precision_score(cur_labels, cur_preds)
+
+                    result[label+ "_recall50"] = recall_score(cur_labels, cur_preds)
+
+
+
+
 
 
                 if global_step == 0:
@@ -540,7 +630,7 @@ def main():
             tr_loss = 0
             number_of_epochs += 1
             nb_tr_examples, nb_tr_steps = 0, 0
-            if number_of_epochs % 10 == 0:
+            if number_of_epochs % 5 == 0:
                 evaluate(number_of_epochs=number_of_epochs)
             model.train()
             for step, batch in enumerate(tqdm(train_dataloader, desc="Iteration", disable=args.local_rank not in [-1, 0])):
@@ -596,7 +686,7 @@ def main():
 
         # Load a trained model and vocabulary that you have fine-tuned
         model = BertForMetaClassification.from_pretrained(args.output_dir, num_binary_labels=num_binary_labels, num_span_labels=num_span_labels, num_multi_labels=num_multi_labels)
-        tokenizer = BertTokenizer.from_pretrained(args.output_dir, do_lower_case=args.do_lower_case)
+        tokenizer = BertTokenizer.from_pretrained(args.bert_model, never_split = stopper, cache_dir="savedmodel")
 
         # Good practice: save your training arguments together with the trained model
         output_args_file = os.path.join(args.output_dir, 'training_args.bin')
