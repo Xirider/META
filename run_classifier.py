@@ -226,7 +226,7 @@ def main():
     if args.local_rank not in [-1, 0]:
         torch.distributed.barrier()  # Make sure only the first process in distributed training will download model & vocab
 
-    tokenizer = BertTokenizer.from_pretrained(args.bert_model, never_split = stopper, cache_dir="savedmodel")
+    tokenizer = BertTokenizer("savedmodel/vocab.txt", never_split = stopper)
 
 
     model = BertForMetaClassification.from_pretrained(args.bert_model, num_binary_labels=num_binary_labels, num_span_labels=num_span_labels, num_multi_labels=num_multi_labels)
@@ -687,7 +687,7 @@ def main():
 
         # Load a trained model and vocabulary that you have fine-tuned
         model = BertForMetaClassification.from_pretrained(args.output_dir, num_binary_labels=num_binary_labels, num_span_labels=num_span_labels, num_multi_labels=num_multi_labels)
-        tokenizer = BertTokenizer.from_pretrained(args.bert_model, never_split = stopper, cache_dir="savedmodel")
+        tokenizer = BertTokenizer("savedmodel/vocab.txt", never_split = stopper)
 
         # Good practice: save your training arguments together with the trained model
         output_args_file = os.path.join(args.output_dir, 'training_args.bin')

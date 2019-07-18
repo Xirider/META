@@ -46,7 +46,7 @@ def spans2label(spans, label, input_ids):
 
 if __name__ == "__main__":
 
-    filename = "outputsv1/d1.jsonl"
+    filename = "outputsv1/d2.jsonl"
 
     example_iterator = JSONL(filename)
     new_example_list = []
@@ -69,8 +69,8 @@ if __name__ == "__main__":
 
         new_example_list.append(example)
 
-    full_filename = "processed_examples/train.jsonl"
-    test_filename = "processed_examples/test.jsonl"
+    full_filename = "processed_test/train.jsonl"
+    test_filename = "processed_test/test.jsonl"
     writecounter = 0
     test_prob = 0.3
     train_example_list = []
