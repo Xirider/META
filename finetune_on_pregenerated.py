@@ -224,7 +224,7 @@ def main():
     for i in range(args.epochs):
         # The modulo takes into account the fact that we may loop over limited epochs of data
         total_train_examples += samples_per_epoch[i % len(samples_per_epoch)]
-    import pdb; pdb.set_trace()
+
     num_train_optimization_steps = int(
         total_train_examples / args.train_batch_size / args.gradient_accumulation_steps)
     if args.local_rank != -1:
