@@ -292,7 +292,7 @@ def main():
     tokenizer = BertTokenizer.from_pretrained(args.bert_model, do_lower_case=args.do_lower_case)
     vocab_list = list(tokenizer.vocab.keys())
     with DocumentDatabase(reduce_memory=args.reduce_memory) as docs:
-        with args.train_corpus.open() as f:
+        with args.train_corpus.open(encoding="utf-8") as f:
             doc = []
             for line in tqdm(f, desc="Loading Dataset", unit=" lines"):
                 line = line.strip()
@@ -315,7 +315,7 @@ def main():
         for epoch in trange(args.epochs_to_generate, desc="Epoch"):
             epoch_filename = args.output_dir / f"epoch_{epoch}.json"
             num_instances = 0
-            with epoch_filename.open('w') as epoch_file:
+            with epoch_filename.open('w', encoding="utf-8") as epoch_file:
                 for doc_idx in trange(len(docs), desc="Document"):
                     doc_instances = create_instances_from_document(
                         docs, doc_idx, max_seq_length=args.max_seq_len, short_seq_prob=args.short_seq_prob,
