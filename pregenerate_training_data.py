@@ -17,7 +17,7 @@ class DocumentDatabase:
             self.working_dir = Path(self.temp_dir.name)
             self.document_shelf_filepath = self.working_dir / 'shelf.db'
             self.document_shelf = shelve.open(str(self.document_shelf_filepath),
-                                              flag='n', protocol=-1)
+                                              flag='n', protocol=-1, encoding="utf-8")
             self.documents = None
         else:
             self.documents = []
@@ -342,7 +342,7 @@ def main():
                         epoch_file.write(instance + '\n')
                         num_instances += 1
             metrics_file = args.output_dir / f"epoch_{epoch}_metrics.json"
-            with metrics_file.open('w') as metrics_file:
+            with metrics_file.open('w', encoding="utf-8") as metrics_file:
                 metrics = {
                     "num_training_examples": num_instances,
                     "max_seq_len": args.max_seq_len

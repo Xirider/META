@@ -13,7 +13,7 @@ from nqdata import convert_single_example
 import json
 
 
-def create_text(articlelist, tokenizer, filename="corpus.txt", minlen = 300):
+def create_text_with_tok(articlelist, tokenizer, filename="corpus.txt", minlen = 300):
     # check for beginning para, then copy, modify and append
     
     updated_list = []
@@ -37,6 +37,44 @@ def create_text(articlelist, tokenizer, filename="corpus.txt", minlen = 300):
     
         cur_text = " ".join(cur_sentence)
         afile.write(cur_text)
+    
+    afile.close()
+
+def insert_string(source_str, insert_str, pos):
+    return source_str[:pos]+insert_str+source_str[pos:]
+
+def add_linebreak_to_newline(string):
+
+    newtok = "[Newline]"
+    lb = "\n"
+    newlen = len(newtok)
+    last_found = -1 -newlen  # Begin at -1 so the next position to search from is 0
+    while True:
+        # Find next index of substring, by starting after its last known position
+        last_found = string.find(newtok, last_found + 1 + newlen)
+        
+        if last_found == -1:  
+            break  # All occurrences have been found
+        string = insert_string(string, lb, last_found )
+    return string
+
+def create_text(articlelist, tokenizer, filename="corpus.txt", minlen = 300):
+    # check for beginning para, then copy, modify and append
+    
+    updated_list = []
+
+    afile = open(filename, "a+", encoding="utf-8")
+
+    for article_id, article in enumerate(articlelist):
+        #tokens = tokenizer.tokenize(article["text"])
+        text = article["text"]
+        if len(text.split()) < minlen:
+            continue
+        text = add_linebreak_to_newline(text)
+        text = text + "\n"
+
+        print("added new article line")
+        afile.write(text)
     
     afile.close()
 
