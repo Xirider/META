@@ -290,7 +290,7 @@ class Searcher():
 if __name__ == "__main__":
     
 
-    searcher = Searcher(use_nq_scraper = True, use_api=True)
+    searcher = Searcher(use_webscraper = True, use_api=True)
 
     ulist = searcher.searchandsplit("what is the reason of my life")
 
