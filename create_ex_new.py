@@ -13,6 +13,16 @@ from nqdata import convert_single_example
 import json
 
 
+from tqdm import tqdm
+import time
+import langid
+import random
+from scrape import Searcher
+from prep_ft_text import create_text
+from pytorch_pretrained_bert import BertTokenizer
+
+
+
 def create_single_para_examples(articlelist, query, stopper, tokenizer, question_number, duplication_mode = False):
     # check for beginning para, then copy, modify and append
     
@@ -257,7 +267,7 @@ def create_prodigy_file(examples, label_list, clas_task, filename, foldername="d
             
         
     #     full_filename = f'{foldername}doc_in-{clas_task}-{filename}-{label}.jsonl'
-    full_filename = f'{foldername}prodfile.jsonl'
+    full_filename = f'{foldername}{filename}prodfile.jsonl'
     writecounter = 0
     with open(full_filename, 'w') as outfile:
         for line in examples:
@@ -295,51 +305,189 @@ if __name__ == "__main__":
            "[Segment=21]" , "[Segment=22]" , "[Segment=23]" , "[Segment=24]" , "[Segment=25]" , "[Segment=26]" , 
            "[Segment=27]" , "[Segment=28]" , "[Segment=29]" , "[Segment=30]" , "[Segment=XX]", "\n"]
 
-    binary_labels = ["is new topic in the article" , "next para same topic" , "next para same real para" , "prev para same topic" , "prev para same real para" , "is option (is part of a larger option)" , "answers the query directly (primary relevance)" , "gives related information to the query (secondary relevance)" , "is summary" , "is opinion" , "is definition" , "is non-content"]
 
-    span_labels = ["important words for extractive summary identity","topic words"]
+
+    binary_labels =["self_con_s", "new_real_para"  , "is_option" , "primary_relevance" , "secondary_relevance" , "is_summary" , "is_opinion" , "is_definition" , "is_navigation" ,  "is_non_content"]
+    #binary_labels =["new_topic", "new_real_para"  , "is_option" , "primary_relevance" , "secondary_relevance" , "is_summary" , "is_opinion" , "is_definition" , "is_navigation" ,  "is_non_content"]
+
+    #binary_labels =["is_headline", "new_real_para"  , "is_option" , "primary_relevance" , "secondary_relevance" , "is_summary" , "is_opinion" , "is_definition" , "is_navigation" ,  "is_non_content"]
+    span_labels = ["identity_words", "topic_words"]
+    multi_labels = [["is_comment", "is_article", "is_wikipedia_level"], ["quality_low", "quality_medium", "quality_high"], ["detail_low", "detail_medium", "detail_high"]]
+
+
+
+
+
+
+
+
+
+
+
+
+
+    sfile = "savedhistory.html"
+
+    saveto = "prodcreate_queries"
+
+    filename = "examples_rdy_for_annotation"
+
+    vocab = "savedmodel/vocab.txt"
+
+
+    tokenizer = BertTokenizer(vocab, never_split = stopper)
+
+
     
-    multi_labels = [["is comment", "is article", "is wikipedia level"], ["quality low", "quality medium", "quality high"], ["detail low", "detail medium", "detail high"]]
+
+
+    def create_data(extracting_queries= False, num_q = 200, download= False, samples = 200):
+        
+        if extracting_queries:
+            with open(sfile, "r", encoding="utf-8") as f:
+                samples = 10000
+                maximum = 40000
+                counter = 0
+                contents = f.read()
+                querylist = []
+                langid.set_languages(["en", "de"])
+                for id, item in enumerate(contents.split("Searched for")[1:]):
+                    searchstring = item.split("\">")[1].split("</a")[0]
+                    #print(searchstring)
+                    language = langid.classify(searchstring)[0]
+                    if counter > maximum:
+                        break
+                    if language == "en":
+                        counter +=1
+                        querylist.append(searchstring + "\n")
+            querylist = list(dict.fromkeys(querylist))
+            print(len(querylist))
+
+            samples = min(samples, len(querylist))
+            querylist = random.sample(querylist, k=samples)
+            
+            print("writing querys")
+            with open(saveto, "w", encoding="utf-8")as f:
+                f.writelines(querylist)
+
+
+        with open(saveto, "r", encoding="utf-8") as f:
+            
+            qlist = f.readlines()
+        
+        
+        searcher = Searcher(use_webscraper = True, use_api=True)
+        print("downloading and saving text")
+        qlist = qlist[0:num_q]
+
+        example_list = []
+        question_number = 0
+
+        if download:
+            for qid, query in enumerate(tqdm(qlist)):
+                try:
+                    article_list = searcher.searchandsplit(query, timeout = 10)
+                except:
+                    print("couldn't get articles, maybe because of api failure, skipping query now")
+                    time.sleep(10)
+                    continue
+
+                example_result = create_single_para_examples(article_list, query, stopper, tokenizer, question_number)
+
+                question_number += 1
+                example_list.extend(example_result)
+            
+            pickle.dump( example_list, open( "example_list_for_annotations.p", "wb" ) )
+        
+        example_list = pickle.load( open( "example_list_for_annotations.p", "rb" ) )
+
+        samples = min(samples, num_q)
+        print("number of samples")
+        print(samples)
+        sampled_list = random.sample(example_list, k =samples)
+
+
+        return sampled_list
 
 
 
 
+    example_list = create_data(extracting_queries=True, num_q=210, download=True, samples=200)
+
+
+    create_prodigy_file(example_list, multi_labels, "multi", filename)
 
 
 
 
-
-
-
-
-
-
-
-
-    bert_type = "bert-large-uncased-whole-word-masking"
-
-
-    tokenizer = BertTokenizer.from_pretrained(bert_type, never_split = stopper, cache_dir="savedmodel")
-
-    model = BertModel.from_pretrained(bert_type, cache_dir="savedmodel")
 
     
-    querylist = [#"current president",
-                "carrot cake recipes"
-                #"mark zuckerberg podcast",
-                # "flixbus",
-                # "linux search file",
-                # "snorkel metal",
-                #"india tourism visa",
-                # "why is google so fast",
-                #"flask get request example"]
-                ]
-    example_list = []
-    for query in querylist:
-        #article_list = searcher.searchandsplit(query, timeout=5.0)
+    # querylist = [#"current president",
+    #             "carrot cake recipes"
+    #             #"mark zuckerberg podcast",
+    #             # "flixbus",
+    #             # "linux search file",
+    #             # "snorkel metal",
+    #             #"india tourism visa",
+    #             # "why is google so fast",
+    #             #"flask get request example"]
+    #             ]
+    # example_list = []
+    # for query in querylist:
+    #     #article_list = searcher.searchandsplit(query, timeout=5.0)
 
-        #pickle.dump( article_list, open( "createnewexinterm.p", "wb" ) )
-        article_list = pickle.load( open( "createnewexinterm.p", "rb" ) )
+    #     #pickle.dump( article_list, open( "createnewexinterm.p", "wb" ) )
+    #     article_list = pickle.load( open( "createnewexinterm.p", "rb" ) )
+
+
+
+    #     example_result = create_single_para_examples(article_list, query, stopper, tokenizer, question_number)
+    #     question_number += 1
+    #     example_list.extend(example_result)
+    
+    #filename = "v1"
+
+    # #print("converting to meta format for doccano")
+
+    # #example_list = doccano_meta_format(example_list)
+
+    # print("start with creation of label files")
+
+    # # create_doccano_files(example_list,binary_labels, "binary", filename)
+    # # create_doccano_files(example_list, span_labels, "span", filename)
+    # # create_doccano_files(example_list, multi_labels, "multi", filename)
+
+
+
+    
+
+
+    
+
+
+
+
+
+
+
+
+
+
+    # with open('output.jsonl', 'w') as outfile:
+    #     for entry in example_list:
+    #         try:
+    #             json.dump(entry, outfile)
+    #         except:
+    #             import pdb; pdb.set_trace()
+    #         outfile.write('\n')
+    #print(ulist)
+
+    # with open('justjson.json', 'w') as outfile:
+    #     json.dump(example_list, outfile)
+
+
+    # print(f"Wordcounter: {wordcounter}")
+    # print(f"Tokencounter: {tokencounter}")
 
         # article_list.extend(article_result)
 
@@ -398,44 +546,3 @@ if __name__ == "__main__":
     # with open('data.json', 'w') as outfile:
     # json.dump(data, outfile)
 
-
-
-
-        example_result = create_single_para_examples(article_list, query, stopper, tokenizer, question_number)
-        question_number += 1
-        example_list.extend(example_result)
-    
-    filename = "v1"
-
-    print("converting to meta format for doccano")
-
-    #example_list = doccano_meta_format(example_list)
-
-    print("start with creation of label files")
-
-    # create_doccano_files(example_list,binary_labels, "binary", filename)
-    # create_doccano_files(example_list, span_labels, "span", filename)
-    # create_doccano_files(example_list, multi_labels, "multi", filename)
-
-    create_prodigy_file(example_list, multi_labels, "multi", filename)
-
-
-    
-
-
-
-    # with open('output.jsonl', 'w') as outfile:
-    #     for entry in example_list:
-    #         try:
-    #             json.dump(entry, outfile)
-    #         except:
-    #             import pdb; pdb.set_trace()
-    #         outfile.write('\n')
-    #print(ulist)
-
-    # with open('justjson.json', 'w') as outfile:
-    #     json.dump(example_list, outfile)
-
-
-    # print(f"Wordcounter: {wordcounter}")
-    # print(f"Tokencounter: {tokencounter}")

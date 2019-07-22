@@ -319,6 +319,7 @@ def convert_single_example(article, question, tokenizer, article_id, max_query_l
         answer_start = answer_start,
         answer_end = answer_end,
         answer_type = answer_type,
+        question_tokens = question
         
 
 
@@ -363,8 +364,8 @@ class InputOutputs(object):
                type_index = None,
                url = None,
                answer_start = None,
-               answer_end = None
-
+               answer_end = None,
+               question_tokens = None
 
 
 
@@ -400,7 +401,7 @@ class InputOutputs(object):
     self.answer_start = answer_start
     self.answer_end = answer_end
     self.answer_type = answer_type
-
+    self.question_tokens = question_tokens
 
 
 

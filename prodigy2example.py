@@ -1,9 +1,19 @@
 from prodigy.components.loaders import JSONL
 
-from prodlabel import binary_labels, span_labels, multi_labels
 from collections import defaultdict
 import json
 import random
+import os
+
+
+#binary_labels =["self_con_s", "new_real_para"  , "is_option" , "primary_relevance" , "secondary_relevance" , "is_summary" , "is_opinion" , "is_definition" , "is_navigation" ,  "is_non_content"]
+binary_labels =["new_topic", "new_real_para"  , "is_option" , "primary_relevance" , "secondary_relevance" , "is_summary" , "is_opinion" , "is_definition" , "is_navigation" ,  "is_non_content"]
+
+#binary_labels =["is_headline", "new_real_para"  , "is_option" , "primary_relevance" , "secondary_relevance" , "is_summary" , "is_opinion" , "is_definition" , "is_navigation" ,  "is_non_content"]
+span_labels = ["identity_words", "topic_words"]
+multi_labels = [["is_comment", "is_article", "is_wikipedia_level"], ["quality_low", "quality_medium", "quality_high"], ["detail_low", "detail_medium", "detail_high"]]
+
+
 
 def spans2newlinelabel(spans, labels, newline_pos, tok2newline):
     
@@ -46,13 +56,24 @@ def spans2label(spans, label, input_ids):
 
 if __name__ == "__main__":
 
-    filename = "outputsv1/d2.jsonl"
+    db = "d3"
+    foldername = "processed_3"
+
+
+
+
+    filename = f"outputsv1/{db}.jsonl"
 
     example_iterator = JSONL(filename)
     new_example_list = []
 
     for example in example_iterator:
         # convert spans into newline labels
+        if "answer" in example:
+            if example["answer"] != "accept":
+                print("skipped example as the answer field was either empty or doesnt have accept")
+                continue
+
         if "spans" in example:
             spanlist = example["spans"]
         else:
@@ -69,8 +90,12 @@ if __name__ == "__main__":
 
         new_example_list.append(example)
 
-    full_filename = "processed_test/train.jsonl"
-    test_filename = "processed_test/test.jsonl"
+    
+    if not os.path.exists(foldername):
+        os.makedirs(foldername)
+
+    full_filename = f"{foldername}/train.jsonl"
+    test_filename = f"{foldername}/test.jsonl"
     writecounter = 0
     test_prob = 0.3
     train_example_list = []
