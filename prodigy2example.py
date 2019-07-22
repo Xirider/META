@@ -56,8 +56,8 @@ def spans2label(spans, label, input_ids):
 
 if __name__ == "__main__":
 
-    db = "d3"
-    foldername = "processed_3"
+    db = "d1"
+    foldername = "processed_reworked_1"
 
 
 
