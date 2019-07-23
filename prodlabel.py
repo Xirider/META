@@ -7,12 +7,7 @@ from prodigy.components.preprocess import add_tokens
 from prodigy.util import split_string
 import spacy
 
-binary_labels =["self_con_s", "new_real_para"  , "is_option" , "primary_relevance" , "secondary_relevance" , "is_summary" , "is_opinion" , "is_definition" , "is_navigation" ,  "is_non_content"]
-
-#binary_labels =["is_headline", "new_real_para"  , "is_option" , "primary_relevance" , "secondary_relevance" , "is_summary" , "is_opinion" , "is_definition" , "is_navigation" ,  "is_non_content"]
-span_labels = ["identity_words", "topic_words"]
-multi_labels = [["is_comment", "is_article", "is_wikipedia_level"], ["quality_low", "quality_medium", "quality_high"], ["detail_low", "detail_medium", "detail_high"]]
-
+from labels import binary_labels, span_labels, multi_labels
 
 # Recipe decorator with argument annotations: (description, argument type,
 # shortcut, type / converter function called on value before it's passed to
@@ -29,7 +24,7 @@ def manual(dataset, label_type, labelid, exclude=None):
     recognizer, and doesn't do any active learning.
     """
     
-    source = "doc_input/prodfile.jsonl"
+    source = "doc_input/examples_rdy_for_annotationprodfile.jsonl"
     # Load the spaCy model for tokenization
     # nlp = spacy.load(spacy_model)
 

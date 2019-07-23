@@ -5,14 +5,7 @@ import json
 import random
 import os
 
-
-#binary_labels =["self_con_s", "new_real_para"  , "is_option" , "primary_relevance" , "secondary_relevance" , "is_summary" , "is_opinion" , "is_definition" , "is_navigation" ,  "is_non_content"]
-binary_labels =["new_topic", "new_real_para"  , "is_option" , "primary_relevance" , "secondary_relevance" , "is_summary" , "is_opinion" , "is_definition" , "is_navigation" ,  "is_non_content"]
-
-#binary_labels =["is_headline", "new_real_para"  , "is_option" , "primary_relevance" , "secondary_relevance" , "is_summary" , "is_opinion" , "is_definition" , "is_navigation" ,  "is_non_content"]
-span_labels = ["identity_words", "topic_words"]
-multi_labels = [["is_comment", "is_article", "is_wikipedia_level"], ["quality_low", "quality_medium", "quality_high"], ["detail_low", "detail_medium", "detail_high"]]
-
+from labels import binary_labels, span_labels, multi_labels
 
 
 def spans2newlinelabel(spans, labels, newline_pos, tok2newline):
@@ -56,8 +49,8 @@ def spans2label(spans, label, input_ids):
 
 if __name__ == "__main__":
 
-    db = "d1"
-    foldername = "processed_reworked_1"
+    db = "d3"
+    foldername = "processed_3"
 
 
 
@@ -73,7 +66,9 @@ if __name__ == "__main__":
             if example["answer"] != "accept":
                 print("skipped example as the answer field was either empty or doesnt have accept")
                 continue
-
+        else:
+            print("There was no answer in example, so the second skipping condition was executed")
+            continue
         if "spans" in example:
             spanlist = example["spans"]
         else:

@@ -21,6 +21,7 @@ from scrape import Searcher
 from prep_ft_text import create_text
 from pytorch_pretrained_bert import BertTokenizer
 
+from labels import binary_labels, span_labels, multi_labels
 
 
 def create_single_para_examples(articlelist, query, stopper, tokenizer, question_number, duplication_mode = False):
@@ -307,14 +308,6 @@ if __name__ == "__main__":
 
 
 
-    binary_labels =["self_con_s", "new_real_para"  , "is_option" , "primary_relevance" , "secondary_relevance" , "is_summary" , "is_opinion" , "is_definition" , "is_navigation" ,  "is_non_content"]
-    #binary_labels =["new_topic", "new_real_para"  , "is_option" , "primary_relevance" , "secondary_relevance" , "is_summary" , "is_opinion" , "is_definition" , "is_navigation" ,  "is_non_content"]
-
-    #binary_labels =["is_headline", "new_real_para"  , "is_option" , "primary_relevance" , "secondary_relevance" , "is_summary" , "is_opinion" , "is_definition" , "is_navigation" ,  "is_non_content"]
-    span_labels = ["identity_words", "topic_words"]
-    multi_labels = [["is_comment", "is_article", "is_wikipedia_level"], ["quality_low", "quality_medium", "quality_high"], ["detail_low", "detail_medium", "detail_high"]]
-
-
 
 
 
@@ -412,7 +405,7 @@ if __name__ == "__main__":
 
 
 
-    example_list = create_data(extracting_queries=True, num_q=210, download=True, samples=200)
+    example_list = create_data(extracting_queries=False, num_q=210, download=False, samples=200)
 
 
     create_prodigy_file(example_list, multi_labels, "multi", filename)
