@@ -285,7 +285,7 @@ def main():
                 returnlist.append(cur_list)
             return returnlist
 
-        def labelindex2binary(label, newline_mask, input_len, ignore=0):
+        def labelindex2binary(label, newline_mask, input_len, ignore= -1):
             zeros = [ignore]* input_len
 
             for maskid, mask in enumerate(newline_mask):
@@ -300,7 +300,7 @@ def main():
 
         list_binary_labels = []
         for lb in label_list[0]:
-            list_binary_labels.append(torch.tensor([labelindex2binary(f[lb], f["[Newline]"], input_len=input_len) for f in eval_features], dtype=torch.long))
+            list_binary_labels.append(torch.tensor([labelindex2binary(f[lb], f["[Newline]"], input_len=input_len, ignore=-1) for f in eval_features], dtype=torch.long))
 
         list_span_labels = []
         for lb in label_list[1]:
@@ -323,7 +323,13 @@ def main():
         eval_dataloader = DataLoader(eval_data, sampler=eval_sampler, batch_size=args.eval_batch_size)
 
         def f1_calculate(precision, recall):
-            f1 = 2 * precision * recall / (precision + recall + 0.0001)
+
+            num =(2 * precision * recall).astype(float) 
+            den = (precision + recall).astype(float)
+            try:
+                f1 = np.divide(num, den, out=np.zeros_like(num), where=den>0.0001)
+            except:
+                import pdb; pdb.set_trace()
             return f1
 
 
@@ -375,7 +381,7 @@ def main():
                         evaldict[label +"logits"] = np.append(evaldict[label +"logits"], cur_logits_n)
                         evaldict[label +"labels"]= np.append(evaldict[label +"labels"], cur_labels_n)
 
-                        if l_id == 0 and bnum < 5:
+                        if (l_id == 0 or l_id == 1) and bnum < 5:
                             mask = newline_mask[0].detach().cpu().numpy()
                             text = " ".join(tokenizer.convert_ids_to_tokens(input_ids.cpu().numpy().tolist()[0]))
                             print("\n\n1. TEXT:\n")
@@ -449,13 +455,24 @@ def main():
                     binary_mask = evaldict["binary_mask"]
                     cur_labels = evaldict[label +"labels"]
                     cur_preds = evaldict[label+"logits"]
-
+                    
                     cur_labels = cur_labels[binary_mask == 1]
                     cur_preds = cur_preds[binary_mask == 1]
 
-                    cur_preds = sigmoid(cur_preds)
+                    cur_ignore = cur_labels != -1
+                    cur_labels = cur_labels[cur_ignore]
+                    cur_preds = cur_preds[cur_ignore]
 
-                    precision, recall, thresh = precision_recall_curve(cur_labels, cur_preds)
+                    cur_preds = sigmoid(cur_preds)
+                    try:
+                        if len(cur_labels) == 0:
+                            precision = np.array([0.0])
+                            recall = np.array([0.0])
+                            thresh = np.array([0.0])
+                        else:
+                            precision, recall, thresh = precision_recall_curve(cur_labels, cur_preds)
+                    except:
+                        import pdb; pdb.set_trace()
 
                     all_f1 = f1_calculate(precision, recall)
 
@@ -467,15 +484,11 @@ def main():
 
                     result[label+"atbf1_best_precision"] = precision[maxindex]
                     result[label+"atbf1_best_recall"] = recall[maxindex]
+                    if len(cur_labels) == 0:
+                        result[label +"_pr_auc_score"] = 0.0
+                    else:
+                        result[label +"_pr_auc_score"]  = auc(recall, precision)
 
-
-                    result[label +"_pr_auc_score"]  = auc(recall, precision)
-
-                    cur_preds = cur_preds > 0.5
-
-                    result[label+ "_precision50"] = precision_score(cur_labels, cur_preds)
-
-                    result[label+ "_recall50"] = recall_score(cur_labels, cur_preds)
 
 
 

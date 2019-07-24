@@ -390,9 +390,9 @@ if __name__ == "__main__":
                 question_number += 1
                 example_list.extend(example_result)
             
-            pickle.dump( example_list, open( "example_list_for_annotations.p", "wb" ) )
+            pickle.dump( example_list, open( "example_list_for_annotations.p", "wb", encoding="utf-8" ) )
         
-        example_list = pickle.load( open( "example_list_for_annotations.p", "rb" ) )
+        example_list = pickle.load( open( "example_list_for_annotations.p", "rb", encoding="utf-8" ) )
 
         samples = min(samples, num_q)
         print("number of samples")
