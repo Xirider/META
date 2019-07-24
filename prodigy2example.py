@@ -62,7 +62,7 @@ def list_duplicates(seq, key):
     return ddict
 
 if __name__ == "__main__":
-    db_prefix = "d3"
+    #db_prefix = "d3"
     db = "d3_merged"
     foldername = "processed_d3_merged"
     mainfolder = "traindata"
