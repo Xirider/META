@@ -4,7 +4,7 @@ from __future__ import absolute_import, division, print_function
 # import comet_ml in the top of your file
 from comet_ml import Experiment
     
-
+from sklearn.metrics import confusion_matrix
 
 import argparse
 import logging
@@ -479,6 +479,13 @@ def main():
                     maxindex = np.argmax(all_f1)
 
                     result[label+"_best_thresh"] = thresh[maxindex]
+
+                    best_tresh = thresh[maxindex]
+
+                    if len(cur_labels) > 0:
+                        threshed_val = cur_preds > best_tresh
+                        conf = confusion_matrix(cur_labels, threshed_val)
+                        print(conf)
 
                     result[label+"_best_f1"] = all_f1[maxindex]
 
