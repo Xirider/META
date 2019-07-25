@@ -105,7 +105,7 @@ def zenapi(query):
 
 
 class Searcher():
-    def __init__(self, use_nq_scraper = False, use_api=False, api_type="zenapi", use_webscraper=False):
+    def __init__(self, use_nq_scraper = False, use_api=False, api_type="zenapi", use_webscraper=False, a_number = 10):
         
         
         if use_nq_scraper:
@@ -120,7 +120,7 @@ class Searcher():
             self.searchfunction = zenapi
         elif api_type == "serpapi":
             self.searchfunction = serpapi
-
+        self.a_number = a_number
 
 
 
@@ -173,6 +173,7 @@ class Searcher():
 
 
         lasttime = time.time()
+        urllist = urllist[0:self.a_number]
 
         # finishedmap = self.pool.map(self.scrape_function, urllist, timeout=timeout)
         with ProcessPool() as pool:
@@ -187,7 +188,7 @@ class Searcher():
         print(f"Map  finished after {downloadtime} seconds")
 
         timeoutcounter = 0
-        for i in range(10):
+        for i in range(self.a_number):
             try:
                 #shorttime = time.time()
                 result = next(iterator)

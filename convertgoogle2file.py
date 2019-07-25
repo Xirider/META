@@ -70,7 +70,7 @@ def search_data(extracting_queries= False):
         qlist = f.readlines()
     
     tokenizer = BertTokenizer("savedmodel/vocab.txt", never_split = stopper)
-    searcher = Searcher(use_webscraper = True, use_api=True)
+    searcher = Searcher(use_webscraper = True, use_api=True, a_number=10)
     print("downloading and saving text")
     qlist = qlist[0:200]
     for qid, query in enumerate(tqdm(qlist)):

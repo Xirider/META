@@ -315,6 +315,28 @@ def main():
 
         eval_data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, newline_mask, *list_binary_labels, *list_span_labels, *list_multi_labels)
 
+        pos_weights = []
+        for lb in label_list[0]:
+            pos_cases = 0
+            neg_cases = 0
+            for example in eval_features:
+                cur_arr = np.array(example[lb])
+                cur_arr = cur_arr[cur_arr != -1]
+                size = cur_arr.size
+                pos = cur_arr.sum()
+                pos_cases += pos
+                neg_cases = neg_cases + size - pos
+            if pos_cases > 0:
+                ratio = neg_cases / pos_cases
+            else:
+                ratio = 1.0
+            pos_weights.append(ratio)
+            experiment.log_metric(f"positive test labels for class: {lb}",pos_cases)
+            experiment.log_metric(f"negative test labels for class: {lb}",neg_cases)
+
+
+
+
         # Run prediction for full data
         if args.local_rank == -1:
             eval_sampler = SequentialSampler(eval_data)
@@ -485,7 +507,7 @@ def main():
                     if len(cur_labels) > 0:
                         threshed_val = cur_preds > best_tresh
                         conf = confusion_matrix(cur_labels, threshed_val)
-                        print(f"Confusion Matrix for {label}")
+                        print(f"Confusion Matrix for {label}\n")
                         print(conf)
 
                     result[label+"_best_f1"] = all_f1[maxindex]
@@ -575,6 +597,7 @@ def main():
             neg_cases = 0
             for example in train_features:
                 cur_arr = np.array(example[lb])
+                cur_arr = cur_arr[cur_arr != -1]
                 size = cur_arr.size
                 pos = cur_arr.sum()
                 pos_cases += pos
@@ -584,6 +607,8 @@ def main():
             else:
                 ratio = 1.0
             pos_weights.append(ratio)
+            experiment.log_metric(f"positive training labels for class: {lb}",pos_cases)
+            experiment.log_metric(f"negative training labels for class: {lb}",neg_cases)
         #pos_weights = torch.tensor(pos_weights).cuda()
         pos_weights = None
         model.pos_weights = pos_weights

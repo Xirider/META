@@ -334,7 +334,7 @@ if __name__ == "__main__":
     
 
 
-    def create_data(extracting_queries= False, num_q = 200, download= False, samples = 200):
+    def create_data(extracting_queries= False, num_q = 200, download= False, samples = 200, a_number=3):
         
         if extracting_queries:
             with open(sfile, "r", encoding="utf-8") as f:
@@ -368,8 +368,23 @@ if __name__ == "__main__":
             
             qlist = f.readlines()
         
+
+            querylist = ["current president",
+                "carrot cake recipes",
+                "mark zuckerberg podcast",
+                "flixbus",
+                "linux search file",
+                "snorkel metal",
+                "india tourism visa",
+                "why is google so fast",
+                "flask get request example"]
+                
+            qlist = querylist
+
+
+
         
-        searcher = Searcher(use_webscraper = True, use_api=True)
+        searcher = Searcher(use_webscraper = True, use_api=True, a_number=a_number)
         print("downloading and saving text")
         qlist = qlist[0:num_q]
 
@@ -390,9 +405,9 @@ if __name__ == "__main__":
                 question_number += 1
                 example_list.extend(example_result)
             
-            pickle.dump( example_list, open( "example_list_for_annotations.p", "wb", encoding="utf-8" ) )
+            pickle.dump( example_list, open( "example_list_for_annotations.p", "wb") )
         
-        example_list = pickle.load( open( "example_list_for_annotations.p", "rb", encoding="utf-8" ) )
+        example_list = pickle.load( open( "example_list_for_annotations.p", "rb") )
 
         samples = min(samples, num_q)
         print("number of samples")
@@ -405,7 +420,7 @@ if __name__ == "__main__":
 
 
 
-    example_list = create_data(extracting_queries=False, num_q=210, download=False, samples=200)
+    example_list = create_data(extracting_queries=False, num_q=210, download=False, samples=200, a_number=3)
 
 
     create_prodigy_file(example_list, multi_labels, "multi", filename)
