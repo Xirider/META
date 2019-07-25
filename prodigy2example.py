@@ -66,7 +66,7 @@ if __name__ == "__main__":
     db = "d3_merged"
     foldername = "processed_d3_merged"
     mainfolder = "traindata"
-    test_prob = 0.3
+    test_prob = 0.4
 
 
 
