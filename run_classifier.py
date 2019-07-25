@@ -485,6 +485,7 @@ def main():
                     if len(cur_labels) > 0:
                         threshed_val = cur_preds > best_tresh
                         conf = confusion_matrix(cur_labels, threshed_val)
+                        print(f"Confusion Matrix for {label}")
                         print(conf)
 
                     result[label+"_best_f1"] = all_f1[maxindex]
