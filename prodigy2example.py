@@ -63,8 +63,8 @@ def list_duplicates(seq, key):
 
 if __name__ == "__main__":
     #db_prefix = "d3"
-    db = "d3_merged"
-    foldername = "processed_d3_merged"
+    db = "d3_1"
+    foldername = "processed_d3_1"
     mainfolder = "traindata"
     test_prob = 0.3
 
