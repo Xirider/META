@@ -379,7 +379,10 @@ if __name__ == "__main__":
             #     "why is google so fast",
             #     "flask get request example"]
                 
-            querylist = ["s1: error: cannot open .git/FETCH_HEAD: Permission denied", "Snorkel Metal", "linux search file", "meta", "carrot cake recipe"]
+            #querylist = ["s1: error: cannot open .git/FETCH_HEAD: Permission denied", "Snorkel Metal", "linux search file", "meta", "carrot cake recipe"]
+
+        querylist = ["Sri lanka to do", "get keys from dictionary python", "mirai no mirai","Mecha animes" , "acillary justice", "sleep vs hibernate windows 10" ,"metric for imbalanced data"  ]
+
 
         qlist = querylist
 
