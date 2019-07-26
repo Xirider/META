@@ -334,7 +334,7 @@ if __name__ == "__main__":
     
 
 
-    def create_data(extracting_queries= False, num_q = 200, download= False, samples = 200, a_number=3):
+    def create_data(extracting_queries= False, num_q = 200, download= False, samples = 200, a_number=3, return_all=False):
         
         if extracting_queries:
             with open(sfile, "r", encoding="utf-8") as f:
@@ -369,17 +369,19 @@ if __name__ == "__main__":
             qlist = f.readlines()
         
 
-            querylist = ["current president",
-                "carrot cake recipes",
-                "mark zuckerberg podcast",
-                "flixbus",
-                "linux search file",
-                "snorkel metal",
-                "india tourism visa",
-                "why is google so fast",
-                "flask get request example"]
+            # querylist = ["current president",
+            #     "carrot cake recipes",
+            #     "mark zuckerberg podcast",
+            #     "flixbus",
+            #     "linux search file",
+            #     "snorkel metal",
+            #     "india tourism visa",
+            #     "why is google so fast",
+            #     "flask get request example"]
                 
-            qlist = querylist
+            querylist = ["s1: error: cannot open .git/FETCH_HEAD: Permission denied", "Snorkel Metal", "linux search file", "meta", "carrot cake recipe"]
+
+        qlist = querylist
 
 
 
@@ -409,18 +411,23 @@ if __name__ == "__main__":
         
         example_list = pickle.load( open( "example_list_for_annotations.p", "rb") )
 
-        samples = min(samples, num_q)
-        print("number of samples")
-        print(samples)
-        sampled_list = random.sample(example_list, k =samples)
+        if return_all:
+            print("number of samples")
+            print(len(example_list))
+            return example_list
+        else:
+            samples = min(samples, num_q)
+            print("number of samples")
+            print(samples)
+            sampled_list = random.sample(example_list, k =samples)
 
 
-        return sampled_list
+            return sampled_list
 
 
 
 
-    example_list = create_data(extracting_queries=False, num_q=210, download=False, samples=200, a_number=3)
+    example_list = create_data(extracting_queries=False, num_q=210, download=True, samples=200, a_number=3, return_all=True)
 
 
     create_prodigy_file(example_list, multi_labels, "multi", filename)
