@@ -1316,7 +1316,7 @@ class BertForMetaClassification(BertPreTrainedModel):
     logits = model(input_ids, token_type_ids, input_mask)
     ```
     """
-    def __init__(self, config,  output_attentions=False, keep_multihead_output=False, num_binary_labels=None, num_span_labels=None, num_multi_labels=None, multi_classes = 3, pos_weights=None, use_bce_loss = True):
+    def __init__(self, config,  output_attentions=False, keep_multihead_output=False, num_binary_labels=None, num_span_labels=None, num_multi_labels=None, multi_classes = 3, pos_weights=None, use_bce_loss = False):
         super(BertForMetaClassification, self).__init__(config)
         self.output_attentions = output_attentions
 
