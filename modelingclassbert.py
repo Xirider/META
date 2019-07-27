@@ -1340,8 +1340,8 @@ class BertForMetaClassification(BertPreTrainedModel):
         self.single_classifier = nn.Linear(config.hidden_size, out_unit_size)
         self.apply(self.init_bert_weights)
 
-    def forward(self, input_ids, token_type_ids=None, attention_mask=None, newline_mask = None, labels=None, head_mask=None):
-        outputs = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False, head_mask=head_mask, pos_weights = pos_weights)
+    def forward(self, input_ids, token_type_ids=None, attention_mask=None, newline_mask = None, labels=None, head_mask=None, pos_weights = pos_weights):
+        outputs = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False, head_mask=head_mask)
         if self.output_attentions:
             all_attentions, sequence_output, _ = outputs
         else:
