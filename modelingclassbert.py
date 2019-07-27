@@ -1365,6 +1365,8 @@ class BertForMetaClassification(BertPreTrainedModel):
             binary_stack = torch.stack(labels[:self.num_binary_labels], dim=2)
 
             active_loss = binary_stack.view(-1) != -1
+
+            binary_logits = binary_logits.float()
             # active_logits = binary_logits.view(-1)[active_loss]
             # active_labels = binary_stack.view(-1)[active_loss]
             
