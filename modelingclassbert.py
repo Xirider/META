@@ -1316,7 +1316,7 @@ class BertForMetaClassification(BertPreTrainedModel):
     logits = model(input_ids, token_type_ids, input_mask)
     ```
     """
-    def __init__(self, config,  output_attentions=False, keep_multihead_output=False, num_binary_labels=None, num_span_labels=None, num_multi_labels=None, multi_classes = 3, pos_weights=None, use_bce_loss = False):
+    def __init__(self, config,  output_attentions=False, keep_multihead_output=False, num_binary_labels=None, num_span_labels=None, num_multi_labels=None, multi_classes = 3, use_bce_loss = True):
         super(BertForMetaClassification, self).__init__(config)
         self.output_attentions = output_attentions
 
@@ -1324,7 +1324,7 @@ class BertForMetaClassification(BertPreTrainedModel):
         self.num_span_labels = num_span_labels
         self.num_multi_labels = num_multi_labels
         self.multi_classes = multi_classes
-        self.pos_weights = pos_weights
+        
         self.bert = BertModel(config, output_attentions=output_attentions,
                                       keep_multihead_output=keep_multihead_output)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
@@ -1341,14 +1341,14 @@ class BertForMetaClassification(BertPreTrainedModel):
         self.apply(self.init_bert_weights)
 
     def forward(self, input_ids, token_type_ids=None, attention_mask=None, newline_mask = None, labels=None, head_mask=None):
-        outputs = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False, head_mask=head_mask)
+        outputs = self.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False, head_mask=head_mask, pos_weights = pos_weights)
         if self.output_attentions:
             all_attentions, sequence_output, _ = outputs
         else:
             sequence_output, _ = outputs
         sequence_output = self.dropout(sequence_output)
 
-
+        self.pos_weights = pos_weights
         logits = self.single_classifier(sequence_output)
 
         #labels = labels[0]

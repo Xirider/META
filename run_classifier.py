@@ -313,7 +313,7 @@ def main():
 
 
 
-        eval_data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, newline_mask, *list_binary_labels, *list_span_labels, *list_multi_labels)
+        
 
         pos_weights = []
         for lb in label_list[0]:
@@ -333,9 +333,12 @@ def main():
             pos_weights.append(ratio)
             experiment.log_metric(f"positive test labels for class: {lb}",pos_cases)
             experiment.log_metric(f"negative test labels for class: {lb}",neg_cases)
+        pos_weights = torch.tensor(pos_weights)
+        pos_weights = [pos_weights] * len(eval_features)
+            
 
 
-
+        eval_data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, newline_mask, pos_weights, *list_binary_labels, *list_span_labels, *list_multi_labels)
 
         # Run prediction for full data
         if args.local_rank == -1:
@@ -378,9 +381,9 @@ def main():
                 for batch in tqdm(eval_dataloader, desc="Evaluating"):
                     bnum += 1
                     batch = tuple(t.to(device) for t in batch)
-                    input_ids, input_mask, segment_ids, newline_mask, *label_id_list = batch
+                    input_ids, input_mask, segment_ids, newline_mask, pos_weights,  *label_id_list = batch
                     with torch.no_grad():
-                        logits, loss, loss_list = model(input_ids, token_type_ids=segment_ids, attention_mask=input_mask, newline_mask= newline_mask, labels=label_id_list)
+                        logits, loss, loss_list = model(input_ids, token_type_ids=segment_ids, attention_mask=input_mask, newline_mask= newline_mask, labels=label_id_list, pos_weights=pos_weights)
 
                     
                     eval_loss += loss.mean().item()
@@ -609,9 +612,11 @@ def main():
             pos_weights.append(ratio)
             experiment.log_metric(f"positive training labels for class: {lb}",pos_cases)
             experiment.log_metric(f"negative training labels for class: {lb}",neg_cases)
-        #pos_weights = torch.tensor(pos_weights).cuda()
-        pos_weights = None
-        model.pos_weights = pos_weights
+            
+        pos_weights = torch.tensor(pos_weights)
+        pos_weights = [pos_weights] * len(train_features)
+        #pos_weights = None
+        
 
         list_span_labels = []
         for lb in label_list[1]:
@@ -625,7 +630,7 @@ def main():
 
 
 
-        train_data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, newline_mask, *list_binary_labels, *list_span_labels, *list_multi_labels)
+        train_data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, newline_mask, pos_weights, *list_binary_labels, *list_span_labels, *list_multi_labels)
         if args.local_rank == -1:
             train_sampler = RandomSampler(train_data)
         else:
@@ -682,10 +687,10 @@ def main():
             model.train()
             for step, batch in enumerate(tqdm(train_dataloader, desc="Iteration", disable=args.local_rank not in [-1, 0])):
                 batch = tuple(t.to(device) for t in batch)
-                input_ids, input_mask, segment_ids, newline_mask, *label_id_list = batch
+                input_ids, input_mask, segment_ids, newline_mask, pos_weights, *label_id_list = batch
 
                 # define a new function to compute loss values for both output_modes
-                logits, loss, loss_list = model(input_ids, token_type_ids=segment_ids, attention_mask=input_mask, newline_mask= newline_mask, labels=label_id_list)
+                logits, loss, loss_list = model(input_ids, token_type_ids=segment_ids, attention_mask=input_mask, newline_mask= newline_mask, labels=label_id_list, pos_weights=pos_weights)
 
                 if n_gpu > 1:
                     loss = loss.mean() # mean() to average on multi-gpu.
