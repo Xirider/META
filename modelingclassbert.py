@@ -1370,7 +1370,7 @@ class BertForMetaClassification(BertPreTrainedModel):
             # active_logits = binary_logits.view(-1)[active_loss]
             # active_labels = binary_stack.view(-1)[active_loss]
 
-
+            import pdb; pdb.set_trace()
             
             bce_loss = bce_fct(binary_logits.view(-1,binary_logits.size(-1)), binary_stack.view(-1, binary_stack.size(-1)))
 
