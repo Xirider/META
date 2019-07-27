@@ -1355,7 +1355,7 @@ class BertForMetaClassification(BertPreTrainedModel):
 
         if self.use_bce_loss:
             
-            bce_fct = BCEWithLogitsLoss(reduction = "none" ,pos_weight = self.pos_weights)
+            bce_fct = BCEWithLogitsLoss(reduction = "none" ,pos_weight = self.pos_weights[0,:])
 
             # Only keep active parts of the loss
 
