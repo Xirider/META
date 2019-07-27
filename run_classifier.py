@@ -334,7 +334,8 @@ def main():
             experiment.log_metric(f"positive test labels for class: {lb}",pos_cases)
             experiment.log_metric(f"negative test labels for class: {lb}",neg_cases)
         pos_weights = torch.tensor(pos_weights)
-        pos_weights = [pos_weights] * len(eval_features)
+        #pos_weights = [pos_weights] * len(eval_features)
+        pos_weights = pos_weights.expand(all_input_ids.size(0), -1)
             
 
 
@@ -614,8 +615,9 @@ def main():
             experiment.log_metric(f"negative training labels for class: {lb}",neg_cases)
             
         pos_weights = torch.tensor(pos_weights)
-        pos_weights = [pos_weights] * len(train_features)
+        #pos_weights = [pos_weights] * len(train_features)
         #pos_weights = None
+        pos_weights = pos_weights.expand(all_input_ids.size(0), -1)
         
 
         list_span_labels = []
