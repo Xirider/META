@@ -578,7 +578,7 @@ def main():
                 returnlist.append(cur_list)
             return returnlist
 
-        def labelindex2binary(label, newline_mask, input_len, ignore=0):
+        def labelindex2binary(label, newline_mask, input_len, ignore=-1):
             zeros = [ignore]* input_len
 
             for maskid, mask in enumerate(newline_mask):
@@ -634,6 +634,22 @@ def main():
 
         train_data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, newline_mask, pos_weights, *list_binary_labels, *list_span_labels, *list_multi_labels)
         if args.local_rank == -1:
+            # if args.weighted_sampling:
+            #     class_weightings = []
+            #     for f in train_features:
+            #         for lblist in label_list:
+            #             for lb in lblist:
+            #                 if type(lb) == list:
+            #                     lb = lb[0]
+
+
+            #                 f["activelist"]
+                    
+
+
+                #train_sampler = RandomWeightedSampler(train_data)
+            #else:
+
             train_sampler = RandomSampler(train_data)
         else:
             train_sampler = DistributedSampler(train_data)

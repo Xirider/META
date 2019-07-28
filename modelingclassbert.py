@@ -1329,7 +1329,6 @@ class BertForMetaClassification(BertPreTrainedModel):
                                       keep_multihead_output=keep_multihead_output)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
         #self.newline_classifier = nn.Linear(config.hidden_size, num_binary_labels + num_multi_labels * multi_classes)
-        #self.token_classifier = nn.Linear(config.hidden_size, num_span_labels)
         self.use_bce_loss = use_bce_loss
 
         if self.use_bce_loss:
@@ -1338,6 +1337,7 @@ class BertForMetaClassification(BertPreTrainedModel):
             out_unit_size = num_binary_labels * 2
         
         self.single_classifier = nn.Linear(config.hidden_size, out_unit_size)
+        self.token_classifier = nn.Linear(config.hidden_size, num_span_labels * 2)
         self.apply(self.init_bert_weights)
 
     def forward(self, input_ids, token_type_ids=None, attention_mask=None, newline_mask = None, labels=None, head_mask=None, pos_weights = None):
@@ -1402,6 +1402,33 @@ class BertForMetaClassification(BertPreTrainedModel):
             # binary_logits = torch.zeros([logits.size(0), logits.size(1), self.num_binary_labels - 1]).cuda()
             # reduced_logits = logits[:,:,1].unsqueeze(2)
             # binary_logits = torch.cat((reduced_logits, binary_logits), 2)
+
+
+        # token loss
+
+            
+            # # active_loss = newline_mask.view(-1) == 1
+            # # active_logits = logits.view(-1, 2)[active_loss]
+            # # active_labels = labels.view(-1)[active_loss]
+
+            # binary_label_stack = torch.stack(labels[:self.num_binary_labels], dim=2)
+            # binary_logits_stack = logits
+
+
+            # active_logits = binary_logits_stack.view(-1, 2)
+            # active_labels = binary_label_stack.view(-1)
+
+
+            # loss = loss_fct(active_logits, active_labels)
+
+            # modified_binary_logits = binary_logits_stack.view(-1,2)[:,1].view(binary_label_stack.size(0), binary_label_stack.size(1), binary_label_stack.size(2))
+            
+            # # binary_logits = torch.zeros([logits.size(0), logits.size(1), self.num_binary_labels - 1]).cuda()
+            # # reduced_logits = logits[:,:,1].unsqueeze(2)
+            # # binary_logits = torch.cat((reduced_logits, binary_logits), 2)
+
+
+
 
         tt = torch.tensor([1.01]) #.cuda()
 
