@@ -1316,7 +1316,7 @@ class BertForMetaClassification(BertPreTrainedModel):
     logits = model(input_ids, token_type_ids, input_mask)
     ```
     """
-    def __init__(self, config,  output_attentions=False, keep_multihead_output=False, num_binary_labels=None, num_span_labels=None, num_multi_labels=None, multi_classes = 3, use_bce_loss = True, use_pos_weights = True):
+    def __init__(self, config,  output_attentions=False, keep_multihead_output=False, num_binary_labels=None, num_span_labels=None, num_multi_labels=None, multi_classes = 3, use_bce_loss = True, use_pos_weights = False):
         super(BertForMetaClassification, self).__init__(config)
         self.output_attentions = output_attentions
 
@@ -1337,7 +1337,7 @@ class BertForMetaClassification(BertPreTrainedModel):
             out_unit_size = num_binary_labels * 2
         
         self.single_classifier = nn.Linear(config.hidden_size, out_unit_size)
-        self.token_classifier = nn.Linear(config.hidden_size, num_span_labels * 2)
+        self.token_classifier = nn.Linear(config.hidden_size, num_span_labels)
         self.apply(self.init_bert_weights)
 
     def forward(self, input_ids, token_type_ids=None, attention_mask=None, newline_mask = None, labels=None, head_mask=None, pos_weights = None):
@@ -1407,6 +1407,29 @@ class BertForMetaClassification(BertPreTrainedModel):
         # token loss
 
             
+        
+            span_logits = self.token_classifier(sequence_output)
+
+            span_stack = torch.stack(labels[self.num_binary_labels:self.num_span_labels], dim=2)
+
+
+            
+            active_loss = span_stack.view(-1) != -1
+
+            span_stack = span_stack.float()
+            # active_logits = binary_logits.view(-1)[active_loss]
+            # active_labels = binary_stack.view(-1)[active_loss]
+
+            
+            token_loss = bce_fct(span_logits.view(-1,span_logits.size(-1)), span_stack.view(-1, span_stack.size(-1)))
+
+            #####bce_loss = bce_fct(binary_logits[:,:,0].view(-1,1), binary_stack[:,:,0].view(-1,1))
+            tokenloss = token_loss.view(-1)[active_loss].mean()
+        
+            modified_binary_logits = logits
+
+
+
             # # active_loss = newline_mask.view(-1) == 1
             # # active_logits = logits.view(-1, 2)[active_loss]
             # # active_labels = labels.view(-1)[active_loss]
@@ -1503,11 +1526,10 @@ class BertForQuestionAnswering(BertPreTrainedModel):
         `token_type_ids`: an optional torch.LongTensor of shape [batch_size, sequence_length] with the token
             types indices selected in [0, 1]. Type 0 corresponds to a `sentence A` and type 1 corresponds to
             a `sentence B` token (see BERT paper for more details).
-        `attention_mask`: an optional torch.LongTensor of shape [batch_size, sequence_length] with indices
-            selected in [0, 1]. It's a mask to be used if the input sequence length is smaller than the max
-            input sequence length in the current batch. It's the mask that we typically use for attention when
+        `attention_mask`: an optional torch.LongTensor of shape [batch_size, sequence_length] with indices0´pü+
+        ä#
             a batch has varying length sentences.
-        `start_positions`: position of the first token for the labeled span: torch.LongTensor of shape [batch_size].
+        # `start_positions`: position of the first token for the labeled span: torch.LongTensor of shape [batch_size].
             Positions are clamped to the length of the sequence and position outside of the sequence are not taken
             into account for computing the loss.
         `end_positions`: position of the last token for the labeled span: torch.LongTensor of shape [batch_size].
