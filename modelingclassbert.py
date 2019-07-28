@@ -1349,6 +1349,7 @@ class BertForMetaClassification(BertPreTrainedModel):
         sequence_output = self.dropout(sequence_output)
         if self.use_pos_weights:
             self.pos_weights = pos_weights
+            self.pos_weights = self.pos_weights[0,:]
         else:
             self.pos_weights = None
         logits = self.single_classifier(sequence_output)
@@ -1357,7 +1358,7 @@ class BertForMetaClassification(BertPreTrainedModel):
 
         if self.use_bce_loss:
             
-            bce_fct = BCEWithLogitsLoss(reduction = "none" ,pos_weight = self.pos_weights[0,:])
+            bce_fct = BCEWithLogitsLoss(reduction = "none" ,pos_weight = self.pos_weights)
 
             # Only keep active parts of the loss
 
