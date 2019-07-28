@@ -67,7 +67,7 @@ if __name__ == "__main__":
     db = db_name
     foldername = f"processed_{db_name}"
     mainfolder = "traindata"
-    test_prob = 0.30
+    test_prob = 0.50
 
 
 
