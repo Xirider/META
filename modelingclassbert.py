@@ -1316,7 +1316,7 @@ class BertForMetaClassification(BertPreTrainedModel):
     logits = model(input_ids, token_type_ids, input_mask)
     ```
     """
-    def __init__(self, config,  output_attentions=False, keep_multihead_output=False, num_binary_labels=None, num_span_labels=None, num_multi_labels=None, multi_classes = 3, use_bce_loss = True, use_pos_weights = False):
+    def __init__(self, config,  output_attentions=False, keep_multihead_output=False, num_binary_labels=None, num_span_labels=None, num_multi_labels=None, multi_classes = 3, use_bce_loss = False, use_pos_weights = False):
         super(BertForMetaClassification, self).__init__(config)
         self.output_attentions = output_attentions
 
@@ -1374,10 +1374,10 @@ class BertForMetaClassification(BertPreTrainedModel):
             # active_labels = binary_stack.view(-1)[active_loss]
 
             
-            bce_loss = bce_fct(binary_logits.view(-1,binary_logits.size(-1)), binary_stack.view(-1, binary_stack.size(-1)))
+            binary_loss = bce_fct(binary_logits.view(-1,binary_logits.size(-1)), binary_stack.view(-1, binary_stack.size(-1)))
 
             #####bce_loss = bce_fct(binary_logits[:,:,0].view(-1,1), binary_stack[:,:,0].view(-1,1))
-            loss = bce_loss.view(-1)[active_loss].mean()
+            binary_loss = binary_loss.view(-1)[active_loss].mean()
         
             modified_binary_logits = logits
         else:
@@ -1396,7 +1396,7 @@ class BertForMetaClassification(BertPreTrainedModel):
             active_labels = binary_label_stack.view(-1)
 
 
-            loss = loss_fct(active_logits, active_labels)
+            binary_loss = loss_fct(active_logits, active_labels)
 
             modified_binary_logits = binary_logits_stack.view(-1,2)[:,1].view(binary_label_stack.size(0), binary_label_stack.size(1), binary_label_stack.size(2))
             
@@ -1407,56 +1407,62 @@ class BertForMetaClassification(BertPreTrainedModel):
 
         # token loss
 
-            
+        token_fct = BCEWithLogitsLoss(reduction = "none" ,pos_weight = self.pos_weights)
+    
+        span_logits = self.token_classifier(sequence_output)
+
         
-            span_logits = self.token_classifier(sequence_output)
+        span_stack = torch.stack(labels[self.num_binary_labels:self.num_span_labels +self.num_binary_labels], dim=2)
 
-            span_stack = torch.stack(labels[self.num_binary_labels:self.num_span_labels], dim=2)
-
-
-            
-            active_loss = span_stack.view(-1) != -1
-
-            span_stack = span_stack.float()
-            # active_logits = binary_logits.view(-1)[active_loss]
-            # active_labels = binary_stack.view(-1)[active_loss]
-
-            
-            token_loss = bce_fct(span_logits.view(-1,span_logits.size(-1)), span_stack.view(-1, span_stack.size(-1)))
-
-            #####bce_loss = bce_fct(binary_logits[:,:,0].view(-1,1), binary_stack[:,:,0].view(-1,1))
-            tokenloss = token_loss.view(-1)[active_loss].mean()
         
-            modified_binary_logits = logits
+        active_loss = span_stack.view(-1) != -1
+
+        span_stack = span_stack.float()
+
+        #span_logits = span_logits[:,:span_stack.size(1),:]
+        # active_logits = binary_logits.view(-1)[active_loss]
+        # active_labels = binary_stack.view(-1)[active_loss]
+
+        
+        token_loss = token_fct(span_logits.view(-1,span_logits.size(-1)), span_stack.view(-1, span_stack.size(-1)))
+
+        #####bce_loss = bce_fct(binary_logits[:,:,0].view(-1,1), binary_stack[:,:,0].view(-1,1))
+
+        if active_loss.sum() == 0:
+            token_loss = token_loss.view(-1)[0]* 0.0
+        else:
+            token_loss = token_loss.view(-1)[active_loss].mean()
+    
+        
 
 
 
-            # # active_loss = newline_mask.view(-1) == 1
-            # # active_logits = logits.view(-1, 2)[active_loss]
-            # # active_labels = labels.view(-1)[active_loss]
+        # # active_loss = newline_mask.view(-1) == 1
+        # # active_logits = logits.view(-1, 2)[active_loss]
+        # # active_labels = labels.view(-1)[active_loss]
 
-            # binary_label_stack = torch.stack(labels[:self.num_binary_labels], dim=2)
-            # binary_logits_stack = logits
-
-
-            # active_logits = binary_logits_stack.view(-1, 2)
-            # active_labels = binary_label_stack.view(-1)
+        # binary_label_stack = torch.stack(labels[:self.num_binary_labels], dim=2)
+        # binary_logits_stack = logits
 
 
-            # loss = loss_fct(active_logits, active_labels)
-
-            # modified_binary_logits = binary_logits_stack.view(-1,2)[:,1].view(binary_label_stack.size(0), binary_label_stack.size(1), binary_label_stack.size(2))
-            
-            # # binary_logits = torch.zeros([logits.size(0), logits.size(1), self.num_binary_labels - 1]).cuda()
-            # # reduced_logits = logits[:,:,1].unsqueeze(2)
-            # # binary_logits = torch.cat((reduced_logits, binary_logits), 2)
+        # active_logits = binary_logits_stack.view(-1, 2)
+        # active_labels = binary_label_stack.view(-1)
 
 
+        # loss = loss_fct(active_logits, active_labels)
 
+        # modified_binary_logits = binary_logits_stack.view(-1,2)[:,1].view(binary_label_stack.size(0), binary_label_stack.size(1), binary_label_stack.size(2))
+        
+        # # binary_logits = torch.zeros([logits.size(0), logits.size(1), self.num_binary_labels - 1]).cuda()
+        # # reduced_logits = logits[:,:,1].unsqueeze(2)
+        # # binary_logits = torch.cat((reduced_logits, binary_logits), 2)
+
+
+        loss = (binary_loss + token_loss )
 
         tt = torch.tensor([1.01]) #.cuda()
 
-        return (modified_binary_logits, tt, tt), loss, (loss,tt,tt)
+        return (modified_binary_logits, span_logits, tt), loss, (binary_loss,token_loss,tt)
 
         # newline_logits = self.newline_classifier(sequence_output)
         
