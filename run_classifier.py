@@ -389,16 +389,18 @@ def main():
                     
                     eval_loss += loss.mean().item()
                     bce_loss += loss_list[0].mean().item()
-                    cross_loss += loss_list[1].mean().item()
-                    token_loss += loss_list[2].mean().item()
+                    cross_loss += loss_list[2].mean().item()
+                    token_loss += loss_list[1].mean().item()
 
                     bce_logits = logits[0]
+
+                    token_logits = logits[1]
 
                     evaldict["binary_mask"] = np.append(evaldict["binary_mask"], newline_mask.detach().cpu().numpy())
                 
                     for l_id, label in enumerate(label_list[0]):
                         cur_labels = label_id_list[l_id]
-
+                        bin_label_len = len(cur_labels)
                         cur_logits = bce_logits[:, :, l_id]
                         
                         cur_logits_n = cur_logits.detach().cpu().numpy()
@@ -441,6 +443,28 @@ def main():
                         #     result[str(thresh)+ "_" + label + "_f1"] += f1 / len_bce
                         #     result[str(thresh)+ "_" + label + "_acc"] += acc / len_bce
 
+                    for l_id, label in enumerate(label_list[1]):
+
+                                            cur_labels = label_id_list[l_id +bin_label_len]
+
+                                            cur_logits = token_logits[:, :, l_id]
+                                            
+                                            cur_logits_n = cur_logits.detach().cpu().numpy()
+                                            cur_labels_n = cur_labels.detach().cpu().numpy()
+
+                                            evaldict[label +"logits"] = np.append(evaldict[label +"logits"], cur_logits_n)
+                                            evaldict[label +"labels"]= np.append(evaldict[label +"labels"], cur_labels_n)
+
+                                            if (l_id == 0) and bnum < 5:
+                                                
+                                                text = " ".join(tokenizer.convert_ids_to_tokens(input_ids.cpu().numpy().tolist()[0]))
+                                                print("\n\n1. TEXT:\n")
+                                                print(text)
+                                                print("\n\n2. LOGITS: \n")
+                                                print(sigmoid(cur_logits[0].cpu().numpy()))
+                                                print("\n\n3. LABELS: \n")
+                                                print(cur_labels[0].cpu().numpy())
+                                                print("\n\n\n")
 
 
 
@@ -523,6 +547,50 @@ def main():
                     else:
                         result[label +"_pr_auc_score"]  = auc(recall, precision)
 
+                # token metrics
+
+                for l_id, label in enumerate(label_list[1]):
+                    
+                    cur_labels = evaldict[label +"labels"]
+                    cur_preds = evaldict[label+"logits"]
+                    
+                    cur_ignore = cur_labels != -1
+                    cur_labels = cur_labels[cur_ignore]
+                    cur_preds = cur_preds[cur_ignore]
+
+                    cur_preds = sigmoid(cur_preds)
+                    try:
+                        if len(cur_labels) == 0:
+                            precision = np.array([0.0])
+                            recall = np.array([0.0])
+                            thresh = np.array([0.0])
+                        else:
+                            precision, recall, thresh = precision_recall_curve(cur_labels, cur_preds)
+                    except:
+                        import pdb; pdb.set_trace()
+
+                    all_f1 = f1_calculate(precision, recall)
+
+                    maxindex = np.argmax(all_f1)
+
+                    result[label+"_best_thresh"] = thresh[maxindex]
+
+                    best_tresh = thresh[maxindex]
+
+                    if len(cur_labels) > 0:
+                        threshed_val = cur_preds > best_tresh
+                        conf = confusion_matrix(cur_labels, threshed_val)
+                        print(f"Confusion Matrix for {label}\n")
+                        print(conf)
+
+                    result[label+"_best_f1"] = all_f1[maxindex]
+
+                    result[label+"_f1_best_precision"] = precision[maxindex]
+                    result[label+"_f1_best_recall"] = recall[maxindex]
+                    if len(cur_labels) == 0:
+                        result[label +"_pr_auc_score"] = 0.0
+                    else:
+                        result[label +"_pr_auc_score"]  = auc(recall, precision)
 
 
 
@@ -550,6 +618,8 @@ def main():
                 #     for key in sorted(result.keys()):
                 #         logger.info("  %s = %s", key, str(result[key]))
                 #         writer.write("%s = %s\n" % (key, str(result[key])))
+
+
 
 
     if args.do_train:
