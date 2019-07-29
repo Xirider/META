@@ -548,7 +548,7 @@ def main():
                         result[label +"_pr_auc_score"]  = auc(recall, precision)
 
                 # token metrics
-
+                import pdb; pdb.set_trace()
                 for l_id, label in enumerate(label_list[1]):
                     
                     cur_labels = evaldict[label +"labels"]
