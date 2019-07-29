@@ -1329,6 +1329,7 @@ class BertForMetaClassification(BertPreTrainedModel):
                                       keep_multihead_output=keep_multihead_output)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
         #self.newline_classifier = nn.Linear(config.hidden_size, num_binary_labels + num_multi_labels * multi_classes)
+        self.loss_per_token = True
         self.use_bce_loss = use_bce_loss
 
         if self.use_bce_loss:
@@ -1377,7 +1378,12 @@ class BertForMetaClassification(BertPreTrainedModel):
             binary_loss = bce_fct(binary_logits.view(-1,binary_logits.size(-1)), binary_stack.view(-1, binary_stack.size(-1)))
 
             #####bce_loss = bce_fct(binary_logits[:,:,0].view(-1,1), binary_stack[:,:,0].view(-1,1))
-            binary_loss = binary_loss.view(-1)[active_loss].mean()
+            binary_loss = binary_loss.view(-1)[active_loss]
+            
+            if self.loss_per_token:
+                pass
+            else:
+                binary_loss = binary_loss.mean()
         
             modified_binary_logits = logits
         else:
@@ -1431,7 +1437,11 @@ class BertForMetaClassification(BertPreTrainedModel):
         if active_loss.sum() == 0:
             token_loss = token_loss.view(-1)[0]* 0.0
         else:
-            token_loss = token_loss.view(-1)[active_loss].mean()
+            token_loss = token_loss.view(-1)[active_loss]
+            if self.loss_per_token:
+                pass
+            else:
+                token_loss = token_loss.mean()
     
         
 
@@ -1456,9 +1466,12 @@ class BertForMetaClassification(BertPreTrainedModel):
         # # binary_logits = torch.zeros([logits.size(0), logits.size(1), self.num_binary_labels - 1]).cuda()
         # # reduced_logits = logits[:,:,1].unsqueeze(2)
         # # binary_logits = torch.cat((reduced_logits, binary_logits), 2)
-
-
-        loss = binary_loss + token_loss
+        if self.loss_per_token:
+            loss = torch.cat((binary_loss, token_loss ), 0).mean()
+            token_loss = token_loss.mean()
+            binary_loss = binary_loss.mean()
+        else:
+            loss = binary_loss + token_loss
 
         tt = torch.tensor([1.01]) #.cuda()
 
