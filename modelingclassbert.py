@@ -1458,7 +1458,7 @@ class BertForMetaClassification(BertPreTrainedModel):
         # # binary_logits = torch.cat((reduced_logits, binary_logits), 2)
 
 
-        loss = binary_loss #+ token_loss
+        loss = binary_loss + token_loss
 
         tt = torch.tensor([1.01]) #.cuda()
 
