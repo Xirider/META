@@ -442,10 +442,10 @@ def main():
                         #     #import pdb; pdb.set_trace()
                         #     result[str(thresh)+ "_" + label + "_f1"] += f1 / len_bce
                         #     result[str(thresh)+ "_" + label + "_acc"] += acc / len_bce
-
+                    
                     for l_id, label in enumerate(label_list[1]):
 
-                                            cur_labels = label_id_list[l_id +bin_label_len]
+                                            cur_labels = label_id_list[l_id +len(label_list[0])]
 
                                             cur_logits = token_logits[:, :, l_id]
                                             
@@ -548,7 +548,7 @@ def main():
                         result[label +"_pr_auc_score"]  = auc(recall, precision)
 
                 # token metrics
-                import pdb; pdb.set_trace()
+                
                 for l_id, label in enumerate(label_list[1]):
                     
                     cur_labels = evaldict[label +"labels"]

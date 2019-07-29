@@ -137,6 +137,7 @@ if __name__ == "__main__":
         
         for label in span_labels:
             example[label] =  spans2label(spanlist, label, example["input_ids"], example["activelist"])
+
         
 
         for label in multi_labels:
