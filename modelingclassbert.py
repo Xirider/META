@@ -1329,7 +1329,7 @@ class BertForMetaClassification(BertPreTrainedModel):
                                       keep_multihead_output=keep_multihead_output)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
         #self.newline_classifier = nn.Linear(config.hidden_size, num_binary_labels + num_multi_labels * multi_classes)
-        self.loss_per_token = False
+        self.loss_per_token = True
         self.use_bce_loss = use_bce_loss
 
         if self.use_bce_loss:
