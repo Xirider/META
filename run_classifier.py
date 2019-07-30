@@ -770,7 +770,7 @@ def main():
             tr_loss = 0
             number_of_epochs += 1
             nb_tr_examples, nb_tr_steps = 0, 0
-            if number_of_epochs % 5 == 0:
+            if number_of_epochs % 2 == 0:
                 evaluate(number_of_epochs=number_of_epochs)
             model.train()
             for step, batch in enumerate(tqdm(train_dataloader, desc="Iteration", disable=args.local_rank not in [-1, 0])):
