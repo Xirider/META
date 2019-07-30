@@ -267,10 +267,10 @@ def main():
 
 
         with open(output_thresh_file, "w") as text_file:
-            text_file.write(score)
+            text_file.write(str(score))
             for thresh in threshs:
                 text_file.write("\n")
-                text_file.write(thresh)
+                text_file.write(str(thresh))
 
 
     def sigmoid(x):
