@@ -1469,7 +1469,9 @@ class BertForMetaClassification(BertPreTrainedModel):
         if self.loss_per_token:
 
             if token_loss.sum() == 0:
-                pass
+                loss = binary_loss.mean()
+            elif binary_loss.sum() == 0:
+                loss = token_loss.mean()
             else:
                 loss = torch.cat((binary_loss, token_loss ), 0).mean()
 
