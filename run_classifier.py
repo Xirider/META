@@ -249,6 +249,30 @@ def main():
     nb_tr_steps = 0
     tr_loss = 0
 
+
+    def save_model(model, outputdir, threshs, score):
+
+        model_to_save = model.module if hasattr(model, 'module') else model  # Only save the model it-self
+
+        # If we save using the predefined names, we can load using `from_pretrained`
+        output_model_file = os.path.join(outputdir, WEIGHTS_NAME)
+        output_config_file = os.path.join(outputdir, CONFIG_NAME)
+        TRESH_NAME = "thresholds.txt"
+        output_thresh_file = os.path.join(outputdir, TRESH_NAME)
+
+        torch.save(model_to_save.state_dict(), output_model_file)
+        model_to_save.config.to_json_file(output_config_file)
+        tokenizer.save_vocabulary(outputdir)
+
+
+
+        with open(output_thresh_file, "w") as text_file:
+            text_file.write(score)
+            for thresh in threshs:
+                text_file.write("\n")
+                text_file.write(thresh)
+
+
     def sigmoid(x):
         sigm = 1. / (1. + np.exp(-x))
         return sigm
@@ -358,6 +382,7 @@ def main():
                 import pdb; pdb.set_trace()
             return f1
 
+        best_sum_of_scores = 0.0
 
         def evaluate(number_of_epochs=0, show_examples=True):
 
@@ -618,6 +643,20 @@ def main():
                 #     for key in sorted(result.keys()):
                 #         logger.info("  %s = %s", key, str(result[key]))
                 #         writer.write("%s = %s\n" % (key, str(result[key])))
+
+
+
+                important_keys = ["secondary_relevance", "self_con", "topic_words"]
+
+                sum_of_scores = 0.0
+                for ikd, ik in enumerate(important_keys):
+                    sum_of_scores += result[ik + "_pr_auc_score"]
+                    if ikd == 0:
+                        sum_of_scores += result[ik]
+                if sum_of_scores > best_sum_of_scores:
+                    threshs = [ result[ts+"_best_thresh"] for ts in important_keys]
+
+                    save_model(model, args.output_dir, threshs, score)
 
 
 
