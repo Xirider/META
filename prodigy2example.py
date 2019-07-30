@@ -69,7 +69,7 @@ if __name__ == "__main__":
     mainfolder = "traindata"
     test_prob = 0.20
 
-
+    deduplication = False
 
     filename = f"outputsv1/{db}.jsonl"
 
@@ -105,17 +105,36 @@ if __name__ == "__main__":
                 if type(accepted_label) == list:
                     accepted_label = accepted_label[0]
                 activelist.append(accepted_label)
+                
+                if not deduplication:
+                    example_iterator[index]["activelist"] = [accepted_label]
+                    if not "spans" in cur:
+                        cur["spans"] = []
+            else:
+                if not deduplication:
+                    deletelist.append(index)
         
-        example_iterator[indexlist[0]]["spans"] = spanlist
-        example_iterator[indexlist[0]]["activelist"] = activelist
+        if deduplication:
+            example_iterator[indexlist[0]]["spans"] = spanlist
+            example_iterator[indexlist[0]]["activelist"] = activelist
+        
+
 
         # mark either all or all but the first for deleting
-        if len(activelist) == 0:
-            deletelist.append(indexlist[0])
-    
-        for iid, index in enumerate(indexlist):
-            if iid > 0:
-                deletelist.append(index)
+
+        if deduplication:
+            if len(activelist) == 0:
+                deletelist.append(indexlist[0])
+        
+            for iid, index in enumerate(indexlist):
+                if iid > 0:
+                    deletelist.append(index)
+                
+        # else:
+        #     if len(activelist) == 0:
+        #         for iid, index in enumerate(indexlist):
+        #             deletelist.append(index)
+
 
     deletelist.sort(reverse = True)
     for delitem in deletelist:
