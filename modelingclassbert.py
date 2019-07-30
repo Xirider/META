@@ -1470,7 +1470,7 @@ class BertForMetaClassification(BertPreTrainedModel):
 
             try:
                 loss = torch.cat((binary_loss, token_loss ), 0).mean()
-            else:
+            except:
                 import pdb; pdb.set_trace()
             token_loss = token_loss.mean()
             binary_loss = binary_loss.mean()
