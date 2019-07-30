@@ -1316,7 +1316,7 @@ class BertForMetaClassification(BertPreTrainedModel):
     logits = model(input_ids, token_type_ids, input_mask)
     ```
     """
-    def __init__(self, config,  output_attentions=False, keep_multihead_output=False, num_binary_labels=None, num_span_labels=None, num_multi_labels=None, multi_classes = 3, use_bce_loss = False, use_pos_weights = False):
+    def __init__(self, config,  output_attentions=False, keep_multihead_output=False, num_binary_labels=None, num_span_labels=None, num_multi_labels=None, multi_classes = 3, use_bce_loss = True, use_pos_weights = False):
         super(BertForMetaClassification, self).__init__(config)
         self.output_attentions = output_attentions
 
@@ -1468,10 +1468,11 @@ class BertForMetaClassification(BertPreTrainedModel):
         # # binary_logits = torch.cat((reduced_logits, binary_logits), 2)
         if self.loss_per_token:
 
-            try:
+            if token_loss.sum() == 0:
+                pass
+            else:
                 loss = torch.cat((binary_loss, token_loss ), 0).mean()
-            except:
-                import pdb; pdb.set_trace()
+
             token_loss = token_loss.mean()
             binary_loss = binary_loss.mean()
         else:
