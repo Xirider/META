@@ -382,9 +382,9 @@ def main():
                 import pdb; pdb.set_trace()
             return f1
 
-        best_sum_of_scores = 0.0
 
-        def evaluate(number_of_epochs=0, show_examples=True):
+
+        def evaluate(number_of_epochs=0, show_examples=True, best_sum_of_scores=0.0):
 
                 model.eval()
                 eval_loss = 0
@@ -659,6 +659,8 @@ def main():
                     save_model(model, args.output_dir, threshs, sum_of_scores/4)
                     best_sum_of_scores = sum_of_scores
 
+                return best_sum_of_scores
+
 
 
     if args.do_train:
@@ -804,13 +806,14 @@ def main():
         logger.info("  Batch size = %d", args.train_batch_size)
         logger.info("  Num steps = %d", num_train_optimization_steps)
         number_of_epochs = -1
+        best_sum_of_scores = 0.0
         model.train()
         for _ in trange(int(args.num_train_epochs), desc="Epoch", disable=args.local_rank not in [-1, 0]):
             tr_loss = 0
             number_of_epochs += 1
             nb_tr_examples, nb_tr_steps = 0, 0
             if number_of_epochs % 2 == 0:
-                evaluate(number_of_epochs=number_of_epochs)
+                best_sum_of_scores =evaluate(number_of_epochs=number_of_epochs ,best_sum_of_scores = best_sum_of_scores)
             model.train()
             for step, batch in enumerate(tqdm(train_dataloader, desc="Iteration", disable=args.local_rank not in [-1, 0])):
                 batch = tuple(t.to(device) for t in batch)
