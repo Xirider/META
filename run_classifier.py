@@ -656,7 +656,7 @@ def main():
                 if sum_of_scores > best_sum_of_scores:
                     threshs = [ result[ts+"_best_thresh"] for ts in important_keys]
 
-                    save_model(model, args.output_dir, threshs, score)
+                    save_model(model, args.output_dir, threshs, sum_of_scores/4)
 
 
 
