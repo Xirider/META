@@ -259,7 +259,7 @@ def main():
         output_config_file = os.path.join(outputdir, CONFIG_NAME)
         TRESH_NAME = "thresholds.txt"
         output_thresh_file = os.path.join(outputdir, TRESH_NAME)
-
+        print(f"Saving model with score of {score}")
         torch.save(model_to_save.state_dict(), output_model_file)
         model_to_save.config.to_json_file(output_config_file)
         tokenizer.save_vocabulary(outputdir)
@@ -271,7 +271,7 @@ def main():
             for thresh in threshs:
                 text_file.write("\n")
                 text_file.write(str(thresh))
-
+        
 
     def sigmoid(x):
         sigm = 1. / (1. + np.exp(-x))
@@ -657,7 +657,7 @@ def main():
                     threshs = [ result[ts+"_best_thresh"] for ts in important_keys]
 
                     save_model(model, args.output_dir, threshs, sum_of_scores/4)
-
+                    best_sum_of_scores = sum_of_scores
 
 
 
