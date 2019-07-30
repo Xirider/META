@@ -1467,7 +1467,11 @@ class BertForMetaClassification(BertPreTrainedModel):
         # # reduced_logits = logits[:,:,1].unsqueeze(2)
         # # binary_logits = torch.cat((reduced_logits, binary_logits), 2)
         if self.loss_per_token:
-            loss = torch.cat((binary_loss, token_loss ), 0).mean()
+
+            try:
+                loss = torch.cat((binary_loss, token_loss ), 0).mean()
+            else:
+                import pdb; pdb.set_trace()
             token_loss = token_loss.mean()
             binary_loss = binary_loss.mean()
         else:
