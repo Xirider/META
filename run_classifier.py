@@ -652,7 +652,7 @@ def main():
                 for ikd, ik in enumerate(important_keys):
                     sum_of_scores += result[ik + "_pr_auc_score"]
                     if ikd == 0:
-                        sum_of_scores += result[ik]
+                        sum_of_scores += result[ik + "_pr_auc_score"]
                 if sum_of_scores > best_sum_of_scores:
                     threshs = [ result[ts+"_best_thresh"] for ts in important_keys]
 

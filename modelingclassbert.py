@@ -1329,7 +1329,7 @@ class BertForMetaClassification(BertPreTrainedModel):
                                       keep_multihead_output=keep_multihead_output)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
         #self.newline_classifier = nn.Linear(config.hidden_size, num_binary_labels + num_multi_labels * multi_classes)
-        self.loss_per_token = False
+        self.loss_per_token = True
         self.use_bce_loss = use_bce_loss
 
         if self.use_bce_loss:
@@ -1353,136 +1353,141 @@ class BertForMetaClassification(BertPreTrainedModel):
             self.pos_weights = self.pos_weights[0,:]
         else:
             self.pos_weights = None
+
         logits = self.single_classifier(sequence_output)
 
+        span_logits = self.token_classifier(sequence_output)
+
         #labels = labels[0]
+        if labels != None:
+            if self.use_bce_loss:
+                
+                bce_fct = BCEWithLogitsLoss(reduction = "none" ,pos_weight = self.pos_weights)
 
-        if self.use_bce_loss:
+                # Only keep active parts of the loss
+
+                # binary classification
+                
+                binary_logits = logits
+                binary_stack = torch.stack(labels[:self.num_binary_labels], dim=2)
+
+                active_loss = binary_stack.view(-1) != -1
+
+                binary_stack = binary_stack.float()
+                # active_logits = binary_logits.view(-1)[active_loss]
+                # active_labels = binary_stack.view(-1)[active_loss]
+
+                
+                binary_loss = bce_fct(binary_logits.view(-1,binary_logits.size(-1)), binary_stack.view(-1, binary_stack.size(-1)))
+
+                #####bce_loss = bce_fct(binary_logits[:,:,0].view(-1,1), binary_stack[:,:,0].view(-1,1))
+                binary_loss = binary_loss.view(-1)[active_loss]
+                
+                if self.loss_per_token:
+                    pass
+                else:
+                    binary_loss = binary_loss.mean()
             
-            bce_fct = BCEWithLogitsLoss(reduction = "none" ,pos_weight = self.pos_weights)
+                modified_binary_logits = logits
+            else:
 
-            # Only keep active parts of the loss
+                loss_fct = CrossEntropyLoss(ignore_index = -1)
+                
+                # active_loss = newline_mask.view(-1) == 1
+                # active_logits = logits.view(-1, 2)[active_loss]
+                # active_labels = labels.view(-1)[active_loss]
 
-            # binary classification
+                binary_label_stack = torch.stack(labels[:self.num_binary_labels], dim=2)
+                binary_logits_stack = logits
+
+
+                active_logits = binary_logits_stack.view(-1, 2)
+                active_labels = binary_label_stack.view(-1)
+
+
+                binary_loss = loss_fct(active_logits, active_labels)
+
+                modified_binary_logits = binary_logits_stack.view(-1,2)[:,1].view(binary_label_stack.size(0), binary_label_stack.size(1), binary_label_stack.size(2))
+                
+                # binary_logits = torch.zeros([logits.size(0), logits.size(1), self.num_binary_labels - 1]).cuda()
+                # reduced_logits = logits[:,:,1].unsqueeze(2)
+                # binary_logits = torch.cat((reduced_logits, binary_logits), 2)
+
+
+            # token loss
+
+            token_fct = BCEWithLogitsLoss(reduction = "none" ,pos_weight = self.pos_weights)
+        
             
-            binary_logits = logits
-            binary_stack = torch.stack(labels[:self.num_binary_labels], dim=2)
 
-            active_loss = binary_stack.view(-1) != -1
+            
+            span_stack = torch.stack(labels[self.num_binary_labels:self.num_span_labels +self.num_binary_labels], dim=2)
 
-            binary_stack = binary_stack.float()
+            
+            active_loss = span_stack.view(-1) != -1
+
+            span_stack = span_stack.float()
+
+            #span_logits = span_logits[:,:span_stack.size(1),:]
             # active_logits = binary_logits.view(-1)[active_loss]
             # active_labels = binary_stack.view(-1)[active_loss]
 
             
-            binary_loss = bce_fct(binary_logits.view(-1,binary_logits.size(-1)), binary_stack.view(-1, binary_stack.size(-1)))
+            token_loss = token_fct(span_logits.view(-1,span_logits.size(-1)), span_stack.view(-1, span_stack.size(-1)))
 
             #####bce_loss = bce_fct(binary_logits[:,:,0].view(-1,1), binary_stack[:,:,0].view(-1,1))
-            binary_loss = binary_loss.view(-1)[active_loss]
-            
-            if self.loss_per_token:
-                pass
+
+            if active_loss.sum() == 0:
+                token_loss = token_loss.view(-1)[0]* 0.0
             else:
-                binary_loss = binary_loss.mean()
+                token_loss = token_loss.view(-1)[active_loss]
+                if self.loss_per_token:
+                    pass
+                else:
+                    token_loss = token_loss.mean()
         
-            modified_binary_logits = logits
-        else:
-
-            loss_fct = CrossEntropyLoss(ignore_index = -1)
             
-            # active_loss = newline_mask.view(-1) == 1
-            # active_logits = logits.view(-1, 2)[active_loss]
-            # active_labels = labels.view(-1)[active_loss]
-
-            binary_label_stack = torch.stack(labels[:self.num_binary_labels], dim=2)
-            binary_logits_stack = logits
 
 
-            active_logits = binary_logits_stack.view(-1, 2)
-            active_labels = binary_label_stack.view(-1)
+
+            # # active_loss = newline_mask.view(-1) == 1
+            # # active_logits = logits.view(-1, 2)[active_loss]
+            # # active_labels = labels.view(-1)[active_loss]
+
+            # binary_label_stack = torch.stack(labels[:self.num_binary_labels], dim=2)
+            # binary_logits_stack = logits
 
 
-            binary_loss = loss_fct(active_logits, active_labels)
+            # active_logits = binary_logits_stack.view(-1, 2)
+            # active_labels = binary_label_stack.view(-1)
 
-            modified_binary_logits = binary_logits_stack.view(-1,2)[:,1].view(binary_label_stack.size(0), binary_label_stack.size(1), binary_label_stack.size(2))
+
+            # loss = loss_fct(active_logits, active_labels)
+
+            # modified_binary_logits = binary_logits_stack.view(-1,2)[:,1].view(binary_label_stack.size(0), binary_label_stack.size(1), binary_label_stack.size(2))
             
-            # binary_logits = torch.zeros([logits.size(0), logits.size(1), self.num_binary_labels - 1]).cuda()
-            # reduced_logits = logits[:,:,1].unsqueeze(2)
-            # binary_logits = torch.cat((reduced_logits, binary_logits), 2)
-
-
-        # token loss
-
-        token_fct = BCEWithLogitsLoss(reduction = "none" ,pos_weight = self.pos_weights)
-    
-        span_logits = self.token_classifier(sequence_output)
-
-        
-        span_stack = torch.stack(labels[self.num_binary_labels:self.num_span_labels +self.num_binary_labels], dim=2)
-
-        
-        active_loss = span_stack.view(-1) != -1
-
-        span_stack = span_stack.float()
-
-        #span_logits = span_logits[:,:span_stack.size(1),:]
-        # active_logits = binary_logits.view(-1)[active_loss]
-        # active_labels = binary_stack.view(-1)[active_loss]
-
-        
-        token_loss = token_fct(span_logits.view(-1,span_logits.size(-1)), span_stack.view(-1, span_stack.size(-1)))
-
-        #####bce_loss = bce_fct(binary_logits[:,:,0].view(-1,1), binary_stack[:,:,0].view(-1,1))
-
-        if active_loss.sum() == 0:
-            token_loss = token_loss.view(-1)[0]* 0.0
-        else:
-            token_loss = token_loss.view(-1)[active_loss]
+            # # binary_logits = torch.zeros([logits.size(0), logits.size(1), self.num_binary_labels - 1]).cuda()
+            # # reduced_logits = logits[:,:,1].unsqueeze(2)
+            # # binary_logits = torch.cat((reduced_logits, binary_logits), 2)
             if self.loss_per_token:
-                pass
-            else:
+
+                if token_loss.sum() == 0:
+                    loss = binary_loss.mean()
+                elif binary_loss.sum() == 0:
+                    loss = token_loss.mean()
+                else:
+                    loss = torch.cat((binary_loss, token_loss ), 0).mean()
+
                 token_loss = token_loss.mean()
-    
-        
-
-
-
-        # # active_loss = newline_mask.view(-1) == 1
-        # # active_logits = logits.view(-1, 2)[active_loss]
-        # # active_labels = labels.view(-1)[active_loss]
-
-        # binary_label_stack = torch.stack(labels[:self.num_binary_labels], dim=2)
-        # binary_logits_stack = logits
-
-
-        # active_logits = binary_logits_stack.view(-1, 2)
-        # active_labels = binary_label_stack.view(-1)
-
-
-        # loss = loss_fct(active_logits, active_labels)
-
-        # modified_binary_logits = binary_logits_stack.view(-1,2)[:,1].view(binary_label_stack.size(0), binary_label_stack.size(1), binary_label_stack.size(2))
-        
-        # # binary_logits = torch.zeros([logits.size(0), logits.size(1), self.num_binary_labels - 1]).cuda()
-        # # reduced_logits = logits[:,:,1].unsqueeze(2)
-        # # binary_logits = torch.cat((reduced_logits, binary_logits), 2)
-        if self.loss_per_token:
-
-            if token_loss.sum() == 0:
-                loss = binary_loss.mean()
-            elif binary_loss.sum() == 0:
-                loss = token_loss.mean()
+                binary_loss = binary_loss.mean()
             else:
-                loss = torch.cat((binary_loss, token_loss ), 0).mean()
+                loss = binary_loss + token_loss
 
-            token_loss = token_loss.mean()
-            binary_loss = binary_loss.mean()
+            tt = torch.tensor([1.01]) #.cuda()
+
+            return (modified_binary_logits, span_logits, tt), loss, (binary_loss,token_loss,tt)
         else:
-            loss = binary_loss + token_loss
-
-        tt = torch.tensor([1.01]) #.cuda()
-
-        return (modified_binary_logits, span_logits, tt), loss, (binary_loss,token_loss,tt)
+            return logits, span_logits
 
         # newline_logits = self.newline_classifier(sequence_output)
         
