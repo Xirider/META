@@ -731,24 +731,24 @@ class QBert():
 
 
     def get_answer(self, q = None):
-        # if not q:
+        if not q:
 
-        #     raw_text = input(">>> ")
-        #     start_time = time.time()
-        #     while not raw_text:
-        #         print('Prompt should not be empty!')
-        #         raw_text = input(">>> ")
-        #         start_time = time.time()
-        # else:
-        #     raw_text = q
-        #     start_time = time.time()
+            raw_text = input(">>> ")
+            start_time = time.time()
+            while not raw_text:
+                print('Prompt should not be empty!')
+                raw_text = input(">>> ")
+                start_time = time.time()
+        else:
+            raw_text = q
+            start_time = time.time()
 
-        # articlelist = self.search.searchandsplit(raw_text)
+        articlelist = self.search.searchandsplit(raw_text)
 
         #pickle.dump(articlelist, open("intermediatearticles.p", "wb"))
-        start_time = time.time()
-        raw_text = "Who is the current president"
-        articlelist = pickle.load(open("intermediatearticles.p", "rb"))
+        # start_time = time.time()
+        # raw_text = "Who is the current president"
+        # articlelist = pickle.load(open("intermediatearticles.p", "rb"))
 
         query = raw_text
         toplist =[]
