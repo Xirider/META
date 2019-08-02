@@ -760,33 +760,33 @@ class QBert():
         batch_list = build_input_batch(articlelist = articlelist, question= query, tokenizer = self.tokenizer, batch_size = self.args.batch_size, onlyone=self.args.more_than_one, webdata=True)
         
         print("finished encoding")
-        # with torch.no_grad():
-        #     for batch in batch_list:
-        #         print("batch starts")
-        #         (input_batch, input_mask, input_segment, batch_article) = batch
-        #         # for ba in batch_article:
-        #             # print("next article \n\n")
-        #             # print(ba.article_id)
-        #             # print(ba.tokens)
-        #         tocudatime = time.time()
-        #         input_batch = input_batch.to(self.args.device)
-        #         input_mask = input_mask.to(self.args.device)
-        #         input_segment = input_segment.to(self.args.device)
-        #         tocudafin = time.time() - tocudatime
-        #         print(f"model to cuda after {tocudafin}")
-        #         print("model starts")
-        #         mts = time.time()
-        #         binary_logits, span_logits = self.model(input_ids = input_batch, token_type_ids = input_segment, attention_mask = input_mask)
+        with torch.no_grad():
+            for batch in batch_list:
+                print("batch starts")
+                (input_batch, input_mask, input_segment, batch_article) = batch
+                # for ba in batch_article:
+                    # print("next article \n\n")
+                    # print(ba.article_id)
+                    # print(ba.tokens)
+                tocudatime = time.time()
+                input_batch = input_batch.to(self.args.device)
+                input_mask = input_mask.to(self.args.device)
+                input_segment = input_segment.to(self.args.device)
+                tocudafin = time.time() - tocudatime
+                print(f"model to cuda after {tocudafin}")
+                print("model starts")
+                mts = time.time()
+                binary_logits, span_logits = self.model(input_ids = input_batch, token_type_ids = input_segment, attention_mask = input_mask)
                 
-        #         finaltime = time.time() - mts
-        #         print(f"model finished after {finaltime}")
-        #         print("model ends")
-        #         prediction_list.append([binary_logits, span_logits, batch_article])
-        #         print("appending ends")
-        #     print("compute best predictions")
+                finaltime = time.time() - mts
+                print(f"model finished after {finaltime}")
+                print("model ends")
+                prediction_list.append([binary_logits, span_logits, batch_article])
+                print("appending ends")
+            print("compute best predictions")
 
         #     pickle.dump(prediction_list, open("savebatches.p", "wb"))
-        prediction_list = pickle.load(open("savebatches.p", "rb"))
+        # prediction_list = pickle.load(open("savebatches.p", "rb"))
 
 
 
@@ -896,4 +896,4 @@ class QBert():
 
 if __name__ == "__main__":
         abc = QBert()
-        abc.get_answer("Who is the current president")
+        abc.get_answer()
