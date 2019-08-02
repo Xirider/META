@@ -1,5 +1,7 @@
 import sys
 sys.path.append(r"C:\Users\peter\Desktop\dl\qa")
+sys.path.append(r"C:\Users\sophi\Desktop\peter\qa")
+
 
 
 
