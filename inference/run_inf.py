@@ -479,6 +479,7 @@ def do_ranking(score_list, score_threshold= 0.25,  sep_type="score", top_k = 100
             para_groups.append(para_group)
 
     # check for example overlapping and fuse para_groups
+    import pdb; pdb.set_trace()
     group_len = len(para_groups)
     skip_list = []
     for conti in range(max_continuations):
@@ -745,7 +746,7 @@ class QBert():
 
         articlelist = self.search.searchandsplit(raw_text)
 
-        #pickle.dump(articlelist, open("intermediatearticles.p", "wb"))
+        pickle.dump(articlelist, open("intermediatearticles.p", "wb"))
         # start_time = time.time()
         # raw_text = "Who is the current president"
         # articlelist = pickle.load(open("intermediatearticles.p", "rb"))
@@ -785,7 +786,7 @@ class QBert():
                 print("appending ends")
             print("compute best predictions")
 
-        #     pickle.dump(prediction_list, open("savebatches.p", "wb"))
+        pickle.dump(prediction_list, open("savebatches.p", "wb"))
         # prediction_list = pickle.load(open("savebatches.p", "rb"))
 
 
