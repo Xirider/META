@@ -414,46 +414,74 @@ def do_ranking(score_list, score_threshold= 0.25,  sep_type="score", top_k = 100
     main_counter = 0
     for exid, example in enumerate(score_list):
         (newlinelist, spanslist) = example
-
+        skipping_list = []
         for nid, newline in enumerate(newlinelist):
             # create group by looking around the highest scoring newline
-            active_score = newline["score_dict"][1]
-            if active_score < cur_worst_score:
-                continue
-            look_back = False
-            look_forward = False
-            cur_minus = 0
-            cur_plus = 0
-            skip = False
-            while True:
-                cond, value = check_index(newlinelist, nid + cur_minus - 1)
-                if cond and value["score_dict"][1] > score_threshold:
-                    cur_minus -= 1
-                    if value["score_dict"][1] > active_score:
-                        skip = True
-                elif not cond:
-                    look_back = True
-                    break
-                else:
-                    break
-            while True:
-                cond, value = check_index(newlinelist, nid + cur_plus + 1)
-                if cond and value["score_dict"][1] > score_threshold:
-                    cur_plus += 1
-                    if value["score_dict"][1] > active_score:
-                        skip = True
-                elif not cond:
-                    look_forward = True
-                    break
-                else:
-                    break
+            # active_score = newline["score_dict"][1]
+            # if active_score < cur_worst_score:
+            #     continue
+            # look_back = False
+            # look_forward = False
+            # cur_minus = 0
+            # cur_plus = 0
+            # skip = False
+            # while True:
+            #     cond, value = check_index(newlinelist, nid + cur_minus - 1)
+            #     if cond and value["score_dict"][1] > score_threshold:
+            #         cur_minus -= 1
+            #         if value["score_dict"][1] > active_score:
+            #             skip = True
+            #     elif not cond:
+            #         look_back = True
+            #         break
+            #     else:
+            #         break
+            # while True:
+            #     cond, value = check_index(newlinelist, nid + cur_plus + 1)
+            #     if cond and value["score_dict"][1] > score_threshold:
+            #         cur_plus += 1
+            #         if value["score_dict"][1] > active_score:
+            #             skip = True
+            #     elif not cond:
+            #         look_forward = True
+            #         break
+            #     else:
+            #         break
             
-            if skip:
+            # if skip:
+            #     continue
+
+
+            # span_range = [nid + cur_minus, nid + cur_plus + 1]
+            # span_tokids = list(range(nid + cur_minus,  cur_plus +nid + 1))
+            if nid in skipping_list:
+                continue
+            cur_plus = -1
+            condition = True
+
+            while condition:
+                cur_plus += 1
+                cond, value = check_index(newlinelist, nid + cur_plus)
+                if not cond and cur_plus > 0:
+                    look_forward = True
+                    cur_plus -= 1
+                    condition = False
+                if not cond and cur_plus <= 0:
+                    print("something went wrong")
+                if cond:
+                    if value["score_dict"][1] > score_threshold:
+                        skipping_list.append(nid + cur_plus)
+                        continue
+                    else:
+                        condition = False
+
+
+            if cur_plus > 0:
                 continue
 
+            span_range = [nid, nid + cur_plus]
+            span_tokids = list(range(nid,  cur_plus +nid))
 
-            span_range = [nid + cur_minus, nid + cur_plus + 1]
-            span_tokids = list(range(nid + cur_minus,  cur_plus +nid + 1))
 
             cur_span_score_list = [newlinelist[tokids]["score_dict"][1] for tokids in span_tokids]
 
