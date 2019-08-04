@@ -594,9 +594,7 @@ def do_ranking(score_list, score_threshold= 0.25,  sep_type="score", top_k = 100
                 headline = sorted(found_list, key=lambda x: x["max_score"], reverse=True)[0]["tokens"]
             
         group["headline"] = headline
-        if headline != ["headline"]:
-            
-        print(headline)
+
     
     para_groups.sort(key= lambda x : x["max_score"], reverse= True)
 
