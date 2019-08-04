@@ -595,7 +595,7 @@ def do_ranking(score_list, score_threshold= 0.25,  sep_type="score", top_k = 100
             
         group["headline"] = headline
         if headline != ["headline"]:
-            import pdb; pdb.set_trace()
+            
         print(headline)
     
     para_groups.sort(key= lambda x : x["max_score"], reverse= True)
