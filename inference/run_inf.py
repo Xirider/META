@@ -590,7 +590,7 @@ def do_ranking(score_list, score_threshold= 0.25,  sep_type="score", top_k = 100
             if len(found_list) == 0:
                 headline = ["headline"]
             else:
-                import pdb; pdb.set_trace()
+
                 headline = sorted(found_list, key=lambda x: x["max_score"], reverse=True)[0]["tokens"]
             
         group["headline"] = headline
@@ -603,8 +603,10 @@ def do_ranking(score_list, score_threshold= 0.25,  sep_type="score", top_k = 100
     
     for p in para_groups[0:30]:
         print("\n\n")
+        print("Headline here: ")
         print(" ".join(p["headline"]))
         print("\n")
+        print("Text here: ")
         print(" ".join(p["token_list"]))
     import pdb; pdb.set_trace()
     return para_groups
