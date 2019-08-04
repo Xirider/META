@@ -1487,6 +1487,8 @@ class BertForMetaClassification(BertPreTrainedModel):
 
             return (modified_binary_logits, span_logits, tt), loss, (binary_loss,token_loss,tt)
         else:
+            logits = torch.sigmoid(logits)
+            span_logits = torch.sigmoid(span_logits)
             return logits, span_logits
 
         # newline_logits = self.newline_classifier(sequence_output)

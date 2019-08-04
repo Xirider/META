@@ -404,7 +404,7 @@ def score_logits(example, example_binary_logits, example_span_logits, n_best_siz
     return  newlinelist, span_type_list
 
 
-def do_ranking(score_list, score_threshold= 0.25,  sep_type="score", top_k = 100, max_continuations= 10):
+def do_ranking(score_list, score_threshold= 0.25,  sep_type="score", top_k = 100, max_continuations= 10, max_headline = 15):
     """ Takes in a list of tuples (newlinestartlist, newlinelist, span_type_list), returns list of para groups with scores  """
 
     #(newlinelist, spanslist) 
@@ -458,6 +458,10 @@ def do_ranking(score_list, score_threshold= 0.25,  sep_type="score", top_k = 100
                 continue
             cur_plus = -1
             condition = True
+            look_back = False
+            look_forward = False
+            if nid == 0:
+                look_back = True
 
             while condition:
                 cur_plus += 1
@@ -467,7 +471,8 @@ def do_ranking(score_list, score_threshold= 0.25,  sep_type="score", top_k = 100
                     cur_plus -= 1
                     condition = False
                 if not cond and cur_plus <= 0:
-                    print("something went wrong")
+                    condition = False
+
                 if cond:
                     if value["score_dict"][1] > score_threshold:
                         skipping_list.append(nid + cur_plus)
@@ -476,7 +481,7 @@ def do_ranking(score_list, score_threshold= 0.25,  sep_type="score", top_k = 100
                         condition = False
 
 
-            if cur_plus > 0:
+            if cur_plus < 1:
                 continue
 
             span_range = [nid, nid + cur_plus]
@@ -507,7 +512,7 @@ def do_ranking(score_list, score_threshold= 0.25,  sep_type="score", top_k = 100
             para_groups.append(para_group)
 
     # check for example overlapping and fuse para_groups
-    import pdb; pdb.set_trace()
+    
     group_len = len(para_groups)
     skip_list = []
     for conti in range(max_continuations):
@@ -550,10 +555,12 @@ def do_ranking(score_list, score_threshold= 0.25,  sep_type="score", top_k = 100
 
 
     # check for headlines
+    
     for group in para_groups:
         headline_found = False
         for tokid, tok in enumerate(group["token_list"]):
             if tok in headline_tokens:
+                
                 headline_found = True
                 headline_start = tokid + 1
                 rest_tokens = group["token_list"][headline_start:]
@@ -561,14 +568,17 @@ def do_ranking(score_list, score_threshold= 0.25,  sep_type="score", top_k = 100
                 for nltokid, nltok in enumerate(rest_tokens):
                     if nltok == "[Newline]" or (nltokid == (rest_tok_len - 1)):
                         headline_end = nltokid + headline_start
+                        break
                 headline = group["token_list"][headline_start:headline_end]
                 break
         # look in spans if there is a headline
+        
         if not headline_found:
             exidlist = group["exid_list"]
             found_list = []
             for exid in exidlist:
-                spanlist = score_list[exid][1][0]
+                labelid = 0
+                spanlist = score_list[exid][1][labelid]
 
                 for span in spanlist:
                     if span["span_range"][0] >= group["original_ranges"][0] and span["span_range"][1] <= group["original_ranges"][1]:
@@ -580,10 +590,13 @@ def do_ranking(score_list, score_threshold= 0.25,  sep_type="score", top_k = 100
             if len(found_list) == 0:
                 headline = ["headline"]
             else:
-
+                import pdb; pdb.set_trace()
                 headline = sorted(found_list, key=lambda x: x["max_score"], reverse=True)[0]["tokens"]
-
+            
         group["headline"] = headline
+        if headline != ["headline"]:
+            import pdb; pdb.set_trace()
+        print(headline)
     
     para_groups.sort(key= lambda x : x["max_score"], reverse= True)
 
@@ -705,8 +718,8 @@ class QBert():
         parser.add_argument("--model_checkpoint", type=str, default="logfiles/metamodel", help="Path, url or short name of the model")
         parser.add_argument("--max_history", type=int, default=2, help="Number of previous utterances to keep in history")
         parser.add_argument("--batch_size", type=int, default=8, help="batch size for prediction")
-        parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device (cuda or cpu)")
-        #parser.add_argument("--device", type=str, default="cpu", help="Device (cuda or cpu)")
+        #parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device (cuda or cpu)")
+        parser.add_argument("--device", type=str, default="cpu", help="Device (cuda or cpu)")
 
         parser.add_argument("--no_sample", action='store_true', help="Set to use greedy decoding instead of sampling")
         parser.add_argument("--max_length", type=int, default=50, help="Maximum length of the output utterances")
@@ -759,25 +772,27 @@ class QBert():
         self.threshold = 0.5872142
 
 
-    def get_answer(self, q = None):
-        if not q:
+    def get_answer(self, q = None, redo_calcs = True):
+        if redo_calcs:
+            if not q:
 
-            raw_text = input(">>> ")
-            start_time = time.time()
-            while not raw_text:
-                print('Prompt should not be empty!')
                 raw_text = input(">>> ")
                 start_time = time.time()
-        else:
-            raw_text = q
-            start_time = time.time()
+                while not raw_text:
+                    print('Prompt should not be empty!')
+                    raw_text = input(">>> ")
+                    start_time = time.time()
+            else:
+                raw_text = q
+                start_time = time.time()
 
-        articlelist = self.search.searchandsplit(raw_text)
+            articlelist = self.search.searchandsplit(raw_text)
 
-        pickle.dump(articlelist, open("intermediatearticles.p", "wb"))
-        # start_time = time.time()
-        # raw_text = "Who is the current president"
-        # articlelist = pickle.load(open("intermediatearticles.p", "rb"))
+            pickle.dump(articlelist, open("intermediatearticles.p", "wb"))
+
+        start_time = time.time()
+        raw_text = "current president"
+        articlelist = pickle.load(open("intermediatearticles.p", "rb"))
 
         query = raw_text
         toplist =[]
@@ -789,33 +804,34 @@ class QBert():
         batch_list = build_input_batch(articlelist = articlelist, question= query, tokenizer = self.tokenizer, batch_size = self.args.batch_size, onlyone=self.args.more_than_one, webdata=True)
         
         print("finished encoding")
-        with torch.no_grad():
-            for batch in batch_list:
-                print("batch starts")
-                (input_batch, input_mask, input_segment, batch_article) = batch
-                # for ba in batch_article:
-                    # print("next article \n\n")
-                    # print(ba.article_id)
-                    # print(ba.tokens)
-                tocudatime = time.time()
-                input_batch = input_batch.to(self.args.device)
-                input_mask = input_mask.to(self.args.device)
-                input_segment = input_segment.to(self.args.device)
-                tocudafin = time.time() - tocudatime
-                print(f"model to cuda after {tocudafin}")
-                print("model starts")
-                mts = time.time()
-                binary_logits, span_logits = self.model(input_ids = input_batch, token_type_ids = input_segment, attention_mask = input_mask)
-                
-                finaltime = time.time() - mts
-                print(f"model finished after {finaltime}")
-                print("model ends")
-                prediction_list.append([binary_logits, span_logits, batch_article])
-                print("appending ends")
-            print("compute best predictions")
+        if redo_calcs:
+            with torch.no_grad():
+                for batch in batch_list:
+                    print("batch starts")
+                    (input_batch, input_mask, input_segment, batch_article) = batch
+                    # for ba in batch_article:
+                        # print("next article \n\n")
+                        # print(ba.article_id)
+                        # print(ba.tokens)
+                    tocudatime = time.time()
+                    input_batch = input_batch.to(self.args.device)
+                    input_mask = input_mask.to(self.args.device)
+                    input_segment = input_segment.to(self.args.device)
+                    tocudafin = time.time() - tocudatime
+                    print(f"model to cuda after {tocudafin}")
+                    print("model starts")
+                    mts = time.time()
+                    binary_logits, span_logits = self.model(input_ids = input_batch, token_type_ids = input_segment, attention_mask = input_mask)
+                    
+                    finaltime = time.time() - mts
+                    print(f"model finished after {finaltime}")
+                    print("model ends")
+                    prediction_list.append([binary_logits, span_logits, batch_article])
+                    print("appending ends")
+                print("compute best predictions")
 
-        pickle.dump(prediction_list, open("savebatches.p", "wb"))
-        # prediction_list = pickle.load(open("savebatches.p", "rb"))
+            pickle.dump(prediction_list, open("savebatches.p", "wb"))
+        prediction_list = pickle.load(open("savebatches.p", "rb"))
 
 
 
