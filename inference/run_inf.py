@@ -776,7 +776,7 @@ class QBert():
 
         self.search = Searcher(use_webscraper = True, use_api = True)
         #self.threshold = 0.5872142
-        self.threshold = 0.5
+        self.threshold = 0.8
 
 
     def get_answer(self, q = None, redo_calcs = True):
