@@ -158,7 +158,7 @@ def get_best_indexes(logits, n_best_size):
 
 
 
-def compute_best_predictions(prediction_list, stopper, topk = 5,threshold = 0, span_threshold = 0.22208):
+def compute_best_predictions(prediction_list, stopper, topk = 5,threshold = 0, span_threshold = 0.22208, con_threshold=0.89185):
     funcstart = time.time()
     """ takes in list of predictions, creates list of prediction spans, returns the best span for the top spans """
     #articles = defaultdict(list)
@@ -207,7 +207,7 @@ def compute_best_predictions(prediction_list, stopper, topk = 5,threshold = 0, s
         loopfin = time.time() - loopstart
         print(f"single batch best answer getting time {loopfin}")
     print("finished putting examples into lists")
-    ranked_list = do_ranking(score_list, score_threshold=threshold)
+    ranked_list = do_ranking(score_list, score_threshold=threshold, con_threshold=con_threshold)
     finaltime = time.time() - funcstart
     print(f"Processing finished of all batches before cutting them out {finaltime}")
     # for ex in score_list:
@@ -219,88 +219,11 @@ def compute_best_predictions(prediction_list, stopper, topk = 5,threshold = 0, s
     lenlist = len(score_list)
     print("number of candidates")
     print(lenlist)
-    top_results = []
-    counter = 0
-    while len(top_results) < topk:
-        if lenlist == 0:
-            break
-        #import pdb; pdb.set_trace()
-
-        current_example = score_list[counter]
-
-        
-        skip = False
-
-
-        # decide which type of answer is necessary
-        type_index = current_example.answer_type_logits.index(max(current_example.answer_type_logits))
-        #type_index = np.argmax(current_example.answer_type_logits)
-
-        current_example.type_index = type_index
-
-        #check if article is already there
-        for top in top_results:
-            if current_example.article_id == top.article_id:
-                #check for overlap
-                if current_example.doc_start <= top.doc_end and top.doc_start <= current_example.doc_end:
-
-                    counter += 1
-                    skip = True
-                elif current_example.start_position <= top.end_position and top.start_position <= current_example.end_position:
-                    counter += 1
-                    skip = True
-                elif type_index == 2:
-                    counter += 1
-                    skip = True
-                else:
-                    pass
-        if skip:
-            if counter == lenlist - 1:
-                break
-            else:
-                continue
 
 
 
 
-
-
-
-
-
-        if type_index == 4 or type_index == 0 or type_index == 1 or type_index == 3 or type_index == 2:
-
-            # add a long answer
-            tok_counter = 0
-            max_extra_tokens = 50
-            token_map = []
-            divided_article = defaultdict(list)
-
-            for tok in current_example.all_doc_tokens:
-                if tok in stopper:
-                    tok_counter += 1
-                token_map.append(tok_counter)
-                divided_article[tok_counter].append(tok)
-
-            para_number_start = token_map[current_example.doc_start]
-            para_number_end = token_map[current_example.doc_start]
-
-            if para_number_start == para_number_end:
-                current_example.long_text = divided_article[para_number_start]
-            else:
-                current_example.long_text = []
-        else:
-            current_example.long_text = []
-
-
-
-        top_results.append(current_example)
-        counter += 1
-        if counter == lenlist:
-            break
-
-
-    return top_results
+    return ranked_list
 
 def check_index(target_list, index):
     if 0 <= index < len(target_list):
@@ -404,7 +327,7 @@ def score_logits(example, example_binary_logits, example_span_logits, n_best_siz
     return  newlinelist, span_type_list
 
 
-def do_ranking(score_list, score_threshold= 0.25,  sep_type="score", top_k = 100, max_continuations= 10, max_headline = 15):
+def do_ranking(score_list, score_threshold= 0.25, con_threshold = 0.25,  sep_type="self_con", top_k = 100, max_continuations= 10, max_headline = 15, headline_finding_range= 30, headline_before =True, headline_after =True):
     """ Takes in a list of tuples (newlinestartlist, newlinelist, span_type_list), returns list of para groups with scores  """
 
     #(newlinelist, spanslist) 
@@ -412,10 +335,12 @@ def do_ranking(score_list, score_threshold= 0.25,  sep_type="score", top_k = 100
     para_groups = []
     cur_worst_score = score_threshold
     main_counter = 0
+    score_len = len(score_list)
     for exid, example in enumerate(score_list):
         (newlinelist, spanslist) = example
         skipping_list = []
         for nid, newline in enumerate(newlinelist):
+
             # create group by looking around the highest scoring newline
             # active_score = newline["score_dict"][1]
             # if active_score < cur_worst_score:
@@ -454,35 +379,81 @@ def do_ranking(score_list, score_threshold= 0.25,  sep_type="score", top_k = 100
 
             # span_range = [nid + cur_minus, nid + cur_plus + 1]
             # span_tokids = list(range(nid + cur_minus,  cur_plus +nid + 1))
-            if nid in skipping_list:
-                continue
-            cur_plus = -1
-            condition = True
-            look_back = False
-            look_forward = False
-            if nid == 0:
-                look_back = True
 
-            while condition:
-                cur_plus += 1
-                cond, value = check_index(newlinelist, nid + cur_plus)
-                if not cond and cur_plus > 0:
-                    look_forward = True
-                    cur_plus -= 1
-                    condition = False
-                if not cond and cur_plus <= 0:
-                    condition = False
+            if sep_type == "score":
 
-                if cond:
-                    if value["score_dict"][1] > score_threshold:
-                        skipping_list.append(nid + cur_plus)
-                        continue
-                    else:
+                if nid in skipping_list:
+                    continue
+                cur_plus = -1
+                condition = True
+                look_back = False
+                look_forward = False
+                if nid == 0:
+                    look_back = True
+
+                while condition:
+                    cur_plus += 1
+                    cond, value = check_index(newlinelist, nid + cur_plus)
+                    if not cond and cur_plus > 0:
+                        look_forward = True
+                        cur_plus -= 0
+                        condition = False
+                    if not cond and cur_plus <= 0:
                         condition = False
 
+                    if cond:
+                        if value["score_dict"][1] > score_threshold:
+                            skipping_list.append(nid + cur_plus)
+                            continue
+                        else:
+                            condition = False
 
-            if cur_plus < 1:
-                continue
+
+                if cur_plus < 1:
+                    continue
+
+            elif sep_type == "self_con":
+
+                # loop through all newlines, check if a new self_con starts, if yes, save the old param_group, also create a new param_group and add the first line, if not, just add the newline data
+                if nid in skipping_list:
+                    continue
+
+                con_score = newline["score_dict"][0]
+                #if con_score > con_threshold:
+                if con_score < con_threshold:
+                    continue
+                
+                
+                cur_plus = 0
+                condition = True
+                look_back = False
+                look_forward = False
+                if nid == 0:
+                    look_back = True
+
+                while condition:
+                    cur_plus += 1
+                    cond, value = check_index(newlinelist, nid + cur_plus)
+                    if not cond and cur_plus > 0:
+                        look_forward = True
+                        cur_plus -= 0
+                        condition = False
+                    if not cond and cur_plus <= 0:
+                        condition = False
+
+                    if cond:
+                        if value["score_dict"][0] < con_threshold:
+                            skipping_list.append(nid + cur_plus)
+                            continue
+                        else:
+                            condition = False
+
+
+
+
+
+            else:
+                raise Exception("do_ranking needs either score or self_con as sep_type")
 
             span_range = [nid, nid + cur_plus]
             span_tokids = list(range(nid,  cur_plus +nid))
@@ -491,7 +462,8 @@ def do_ranking(score_list, score_threshold= 0.25,  sep_type="score", top_k = 100
             cur_span_score_list = [newlinelist[tokids]["score_dict"][1] for tokids in span_tokids]
 
             average_score = sum(cur_span_score_list)/ len(cur_span_score_list)
-
+            if average_score < score_threshold:
+                continue
             max_score = max(cur_span_score_list)
 
             token_list = []
@@ -504,8 +476,8 @@ def do_ranking(score_list, score_threshold= 0.25,  sep_type="score", top_k = 100
 
 
             para_group = {"exid": exid, "exid_list": [exid], "nid": nid, "main_counter": main_counter, "span_range":span_range,
-             "cur_span_score_list": cur_span_score_list, "average_score": average_score, "max_score": max_score,
-             "token_list":token_list , "look_forward": look_forward, "look_back": look_back , "original_ranges":new_original_ranges}
+            "cur_span_score_list": cur_span_score_list, "average_score": average_score, "max_score": max_score,
+            "token_list":token_list , "look_forward": look_forward, "look_back": look_back , "original_ranges":new_original_ranges}
             
             main_counter += 1
 
@@ -558,19 +530,49 @@ def do_ranking(score_list, score_threshold= 0.25,  sep_type="score", top_k = 100
     
     for group in para_groups:
         headline_found = False
-        for tokid, tok in enumerate(group["token_list"]):
-            if tok in headline_tokens:
-                
-                headline_found = True
-                headline_start = tokid + 1
-                rest_tokens = group["token_list"][headline_start:]
-                rest_tok_len = len(rest_tokens)
-                for nltokid, nltok in enumerate(rest_tokens):
-                    if nltok == "[Newline]" or (nltokid == (rest_tok_len - 1)):
-                        headline_end = nltokid + headline_start
+
+        if headline_before:
+            nid = group["nid"]
+            for before in range(3):
+                before += 1
+                before_pos = nid - before
+                if before_pos < 0:
+                    break
+                cur_exid = group["exid"]
+
+                before_tokens = score_list[cur_exid][0][before_pos]["tokens"]
+
+
+                for tokid, tok in enumerate(before_tokens[-headline_finding_range:]):
+                    if tok in headline_tokens:
+                        
+                        headline_found = True
+                        headline_start = tokid + 1
+                        rest_tokens = before_tokens[headline_start:]
+                        rest_tok_len = len(rest_tokens)
+                        for nltokid, nltok in enumerate(rest_tokens):
+                            if nltok == "[Newline]" or (nltokid == (rest_tok_len - 1)):
+                                headline_end = nltokid + headline_start
+                                break
+                        headline = before_tokens[headline_start:headline_end]
                         break
-                headline = group["token_list"][headline_start:headline_end]
-                break
+
+            
+
+        if headline_after:
+            for tokid, tok in enumerate(group["token_list"][:headline_finding_range]):
+                if tok in headline_tokens:
+                    
+                    headline_found = True
+                    headline_start = tokid + 1
+                    rest_tokens = group["token_list"][headline_start:]
+                    rest_tok_len = len(rest_tokens)
+                    for nltokid, nltok in enumerate(rest_tokens):
+                        if nltok == "[Newline]" or (nltokid == (rest_tok_len - 1)):
+                            headline_end = nltokid + headline_start
+                            break
+                    headline = group["token_list"][headline_start:headline_end]
+                    break
         # look in spans if there is a headline
         
         if not headline_found:
@@ -596,17 +598,21 @@ def do_ranking(score_list, score_threshold= 0.25,  sep_type="score", top_k = 100
         group["headline"] = headline
 
     
-    para_groups.sort(key= lambda x : x["max_score"], reverse= True)
+    #para_groups.sort(key= lambda x : x["max_score"], reverse= True)
 
     
-    for p in para_groups[0:30]:
+    for i, p in enumerate(para_groups):
         print("\n\n")
-        print("Headline here: ")
-        print(" ".join(p["headline"]))
-        print("\n")
-        print("Text here: ")
+        # print("Headline here: ")
+        # print(" ".join(p["headline"]))
+        # print("\n")
+        # print(i)
+        # print(" Text here: ")
         print(" ".join(p["token_list"]))
+    print("\n\nnumber of para_groups: ")
+    print(len(para_groups))
     import pdb; pdb.set_trace()
+
     return para_groups
 
 
@@ -791,7 +797,7 @@ class QBert():
             pickle.dump(articlelist, open("intermediatearticles.p", "wb"))
 
         start_time = time.time()
-        raw_text = "current president"
+        raw_text = "chocolate cake recipe"
         articlelist = pickle.load(open("intermediatearticles.p", "rb"))
 
         query = raw_text
