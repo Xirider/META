@@ -608,6 +608,10 @@ def do_ranking(score_list, score_threshold= 0.25, con_threshold = 0.25,  sep_typ
         # print("\n")
         # print(i)
         # print(" Text here: ")
+        spanr0 = span_range[0]
+        spanr1 = span_range[1]
+        maxscore = p["max_score"]
+        print(f"Max score: {maxscore:.2} , Spanrange: {spanr0} - {spanr1}\n")
         print(" ".join(p["token_list"]))
     print("\n\nnumber of para_groups: ")
     print(len(para_groups))
@@ -775,8 +779,8 @@ class QBert():
         #examplepara = tokenizer.encode(examplepara)
 
         self.search = Searcher(use_webscraper = True, use_api = True)
-        #self.threshold = 0.5872142
-        self.threshold = 0.8
+        self.threshold = 0.5872142
+        #self.threshold = 0.8
 
 
     def get_answer(self, q = None, redo_calcs = True):
