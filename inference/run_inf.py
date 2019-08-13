@@ -608,8 +608,8 @@ def do_ranking(score_list, score_threshold= 0.25, con_threshold = 0.25,  sep_typ
         # print("\n")
         # print(i)
         # print(" Text here: ")
-        spanr0 = span_range[0]
-        spanr1 = span_range[1]
+        spanr0 = p["span_range"][0]
+        spanr1 = p["span_range"][1]
         maxscore = p["max_score"]
         print(f"Max score: {maxscore:.2} , Spanrange: {spanr0} - {spanr1}\n")
         print(" ".join(p["token_list"]))
