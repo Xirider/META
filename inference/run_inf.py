@@ -802,7 +802,7 @@ class QBert():
             pickle.dump(articlelist, open("intermediatearticles.p", "wb"))
 
         start_time = time.time()
-        raw_text = "chocolate cake recipe"
+        #raw_text = "chocolate cake recipe"
         articlelist = pickle.load(open("intermediatearticles.p", "rb"))
 
         query = raw_text
