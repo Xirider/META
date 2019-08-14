@@ -504,6 +504,7 @@ def do_ranking(score_list, score_threshold= 0.25, con_threshold = 0.25,  sep_typ
                 cond, value = check_index(para_groups, next_id)
                 if cond:
                     if value["look_back"]:
+                        import pdb; pdb.set_trace()
                         new_start = False
                         for tok in value["token_list"][:3]:
                             if tok in segment_tokens:
@@ -613,6 +614,9 @@ def do_ranking(score_list, score_threshold= 0.25, con_threshold = 0.25,  sep_typ
         maxscore = p["max_score"]
         lookf = p["look_forward"]
         print(f"Max score: {maxscore:.4} , Spanrange: {spanr0} - {spanr1}, look_forward: {lookf}\n")
+        print("Headline: ")
+        print(" ".join(p["headline"]))
+        print("\n")
         print(" ".join(p["token_list"]))
     print("\n\nnumber of para_groups: ")
     print(len(para_groups))
