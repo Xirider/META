@@ -503,8 +503,9 @@ def do_ranking(score_list, score_threshold= 0.25, con_threshold = 0.25,  sep_typ
             if para_group["look_forward"]:
                 cond, value = check_index(para_groups, next_id)
                 if cond:
+                    import pdb; pdb.set_trace()
                     if value["look_back"]:
-                        import pdb; pdb.set_trace()
+                        
                         new_start = False
                         for tok in value["token_list"][:3]:
                             if tok in segment_tokens:
