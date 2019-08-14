@@ -611,7 +611,8 @@ def do_ranking(score_list, score_threshold= 0.25, con_threshold = 0.25,  sep_typ
         spanr0 = p["span_range"][0]
         spanr1 = p["span_range"][1]
         maxscore = p["max_score"]
-        print(f"Max score: {maxscore:.2} , Spanrange: {spanr0} - {spanr1}\n")
+        lookf = p["look_forward"]
+        print(f"Max score: {maxscore:.4} , Spanrange: {spanr0} - {spanr1}, look_forward: {lookf}\n")
         print(" ".join(p["token_list"]))
     print("\n\nnumber of para_groups: ")
     print(len(para_groups))
@@ -739,6 +740,7 @@ class QBert():
         parser.add_argument("--top_k", type=int, default=0, help="Filter top-k tokens before sampling (<=0: no filtering)")
         parser.add_argument("--top_p", type=float, default=0.9, help="Nucleus filtering (top-p) before sampling (<=0.0: no filtering)")
         parser.add_argument("--more_than_one", action='store_true', help= "")
+        parser.add_argument("--new_calcs", action='store_true', help= "")
         self.args = parser.parse_args()
         
 
@@ -782,8 +784,11 @@ class QBert():
         self.threshold = 0.5872142
         #self.threshold = 0.8
 
+        self.new_calcs = args.new_calcs
 
-    def get_answer(self, q = None, redo_calcs = True):
+
+    def get_answer(self, q = None):
+        redo_calcs = self.new_calcs
         if redo_calcs:
             if not q:
 
