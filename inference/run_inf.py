@@ -784,7 +784,7 @@ class QBert():
         self.threshold = 0.5872142
         #self.threshold = 0.8
 
-        self.new_calcs = args.new_calcs
+        self.new_calcs = self.args.new_calcs
 
 
     def get_answer(self, q = None):
