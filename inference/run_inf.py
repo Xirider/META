@@ -623,6 +623,29 @@ def do_ranking(score_list, score_threshold= 0.25, con_threshold = 0.25,  sep_typ
         print(" ".join(p["token_list"]))
     print("\n\nnumber of para_groups: ")
     print(len(para_groups))
+
+
+    print("\n\n\n\n\n\n\n\nNow only the top 10 results:\n\n")
+
+    para_groups.sort(key= lambda x : x["max_score"], reverse= True)
+    
+    for i, p in enumerate(para_groups):
+        print("\n\n")
+        # print("Headline here: ")
+        # print(" ".join(p["headline"]))
+        # print("\n")
+        # print(i)
+        # print(" Text here: ")
+        spanr0 = p["span_range"][0]
+        spanr1 = p["span_range"][1]
+        maxscore = p["max_score"]
+        lookf = p["look_forward"]
+        print(f"Rank: {i} , Max score: {maxscore:.4} , Spanrange: {spanr0} - {spanr1}, look_forward: {lookf}, ")
+        print("Headline: ")
+        print(" ".join(p["headline"]))
+        print("\n")
+        print(" ".join(p["token_list"]))
+
     import pdb; pdb.set_trace()
 
     return para_groups
