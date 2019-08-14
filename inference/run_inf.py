@@ -645,7 +645,10 @@ def do_ranking(score_list, score_threshold= 0.25, con_threshold = 0.25,  sep_typ
         print("Headline: ")
         print(" ".join(p["headline"]))
         print("\n")
-        print(" ".join(p["token_list"]))
+        tokenstring = " ".join(p["token_list"])
+        tokenstring = tokenstring.replace('[Newline]', '\n')
+
+        print(tokenstring)
 
     import pdb; pdb.set_trace()
 
