@@ -335,10 +335,12 @@ def do_ranking(score_list, score_threshold= 0.25, con_threshold = 0.25,  sep_typ
     para_groups = []
     cur_worst_score = score_threshold
     main_counter = 0
+    
     score_len = len(score_list)
     for exid, example in enumerate(score_list):
         (newlinelist, spanslist) = example
         skipping_list = []
+        look_forward = False
         for nid, newline in enumerate(newlinelist):
 
             # create group by looking around the highest scoring newline
@@ -420,7 +422,7 @@ def do_ranking(score_list, score_threshold= 0.25, con_threshold = 0.25,  sep_typ
 
                 con_score = newline["score_dict"][0]
                 #if con_score > con_threshold:
-                if con_score < con_threshold:
+                if con_score < con_threshold and nid != 0:
                     continue
                 
                 
@@ -503,7 +505,7 @@ def do_ranking(score_list, score_threshold= 0.25, con_threshold = 0.25,  sep_typ
             if para_group["look_forward"]:
                 cond, value = check_index(para_groups, next_id)
                 if cond:
-                    import pdb; pdb.set_trace()
+
                     if value["look_back"]:
                         
                         new_start = False
