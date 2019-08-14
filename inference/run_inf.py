@@ -327,7 +327,7 @@ def score_logits(example, example_binary_logits, example_span_logits, n_best_siz
     return  newlinelist, span_type_list
 
 
-def do_ranking(score_list, score_threshold= 0.25, con_threshold = 0.25,  sep_type="self_con", top_k = 100, max_continuations= 10, max_headline = 15, headline_finding_range= 30, headline_before =True, headline_after =True):
+def do_ranking(score_list, score_threshold= 0.25, con_threshold = 0.25,  sep_type="self_con", top_k = 100, max_continuations= 20, max_headline = 15, headline_finding_range= 30, headline_before =False, headline_after =False):
     """ Takes in a list of tuples (newlinestartlist, newlinelist, span_type_list), returns list of para groups with scores  """
 
     #(newlinelist, spanslist) 
@@ -456,8 +456,8 @@ def do_ranking(score_list, score_threshold= 0.25, con_threshold = 0.25,  sep_typ
 
             else:
                 raise Exception("do_ranking needs either score or self_con as sep_type")
-
-            span_range = [nid, nid + cur_plus]
+            exid10k = exid * 10000
+            span_range = [nid + exid10k, nid + cur_plus + exid10k]
             span_tokids = list(range(nid,  cur_plus +nid))
 
 
@@ -474,7 +474,7 @@ def do_ranking(score_list, score_threshold= 0.25, con_threshold = 0.25,  sep_typ
                 token_list.extend(newlinelist[tokid]["tokens"])
                 original_ranges.append(newlinelist[tokid]["ranges"][0])
                 original_ranges.append(newlinelist[tokid]["ranges"][1])
-            new_original_ranges = [original_ranges[0], original_ranges[-1]]
+            new_original_ranges = [original_ranges[0] + exid10k, original_ranges[-1] + exid10k]
 
 
             para_group = {"exid": exid, "exid_list": [exid], "nid": nid, "main_counter": main_counter, "span_range":span_range,
@@ -640,7 +640,8 @@ def do_ranking(score_list, score_threshold= 0.25, con_threshold = 0.25,  sep_typ
         spanr1 = p["span_range"][1]
         maxscore = p["max_score"]
         lookf = p["look_forward"]
-        print(f"Rank: {i} , Max score: {maxscore:.4} , Spanrange: {spanr0} - {spanr1}, look_forward: {lookf}, ")
+        lookb = p["look_backward"]
+        print(f"Rank: {i} , Max score: {maxscore:.4} , Spanrange: {spanr0} - {spanr1}, look_forward: {lookf},, look_backward: {lookb}, ")
         print("Headline: ")
         print(" ".join(p["headline"]))
         print("\n")
