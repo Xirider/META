@@ -640,8 +640,8 @@ def do_ranking(score_list, score_threshold= 0.25, con_threshold = 0.25,  sep_typ
         spanr1 = p["span_range"][1]
         maxscore = p["max_score"]
         lookf = p["look_forward"]
-        lookb = p["look_backward"]
-        print(f"Rank: {i} , Max score: {maxscore:.4} , Spanrange: {spanr0} - {spanr1}, look_forward: {lookf},, look_backward: {lookb}, ")
+        lookb = p["look_back"]
+        print(f"Rank: {i} , Max score: {maxscore:.4} , Spanrange: {spanr0} - {spanr1}, look_forward: {lookf},, look_back: {lookb}, ")
         print("Headline: ")
         print(" ".join(p["headline"]))
         print("\n")
