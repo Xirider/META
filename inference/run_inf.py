@@ -629,7 +629,7 @@ def do_ranking(score_list, score_threshold= 0.25, con_threshold = 0.25,  sep_typ
 
     para_groups.sort(key= lambda x : x["max_score"], reverse= True)
     
-    for i, p in enumerate(para_groups):
+    for i, p in enumerate(para_groups[:10]):
         print("\n\n")
         # print("Headline here: ")
         # print(" ".join(p["headline"]))
