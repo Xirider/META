@@ -762,11 +762,13 @@ class QBert():
         parser = ArgumentParser()
         parser.add_argument("--dataset_path", type=str, default="", help="Path or url of the dataset. If empty download from S3.")
         parser.add_argument("--dataset_cache", type=str, default='./dataset_cache', help="Path or url of the dataset cache")
-        parser.add_argument("--model_checkpoint", type=str, default="logfiles/metamodel", help="Path, url or short name of the model")
+        # parser.add_argument("--model_checkpoint", type=str, default="logfiles/metamodel", help="Path, url or short name of the model")
+        parser.add_argument("--model_checkpoint", type=str, default="logfiles\v1_3class", help="Path, url or short name of the model")
+        #"logfiles\v1_3class"
         parser.add_argument("--max_history", type=int, default=2, help="Number of previous utterances to keep in history")
-        parser.add_argument("--batch_size", type=int, default=8, help="batch size for prediction")
+        parser.add_argument("--batch_size", type=int, default=32, help="batch size for prediction")
         #parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device (cuda or cpu)")
-        parser.add_argument("--device", type=str, default="cpu", help="Device (cuda or cpu)")
+        parser.add_argument("--device", type=str, default="cuda", help="Device (cuda or cpu)")
 
         parser.add_argument("--no_sample", action='store_true', help="Set to use greedy decoding instead of sampling")
         parser.add_argument("--max_length", type=int, default=50, help="Maximum length of the output utterances")
