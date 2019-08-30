@@ -1,9 +1,9 @@
-import subprocess
+import os
 
 
-subprocess.call("activate qa")
+os.system("activate qa")
 exe_str = r"cd C:/Users/sophi/Desktop/peter/qa/inference"
 
-subprocess.call(exe_str)
+os.system(exe_str)
 
-subprocess.call("python app.py")
+os.system("python app.py")
