@@ -208,6 +208,7 @@ def compute_best_predictions(prediction_list, stopper, topk = 5,threshold = 0, s
         print(f"single batch best answer getting time {loopfin}")
     print("finished putting examples into lists")
     ranked_list = do_ranking(score_list, score_threshold=threshold, con_threshold=con_threshold)
+    
     finaltime = time.time() - funcstart
     print(f"Processing finished of all batches before cutting them out {finaltime}")
     # for ex in score_list:
@@ -220,7 +221,7 @@ def compute_best_predictions(prediction_list, stopper, topk = 5,threshold = 0, s
     print("number of candidates")
     print(lenlist)
 
-
+    ranked_list = ranked_list[:topk]
 
 
     return ranked_list
@@ -247,6 +248,7 @@ def score_logits(example, example_binary_logits, example_span_logits, n_best_siz
     bin_num = example_binary_logits.shape[1]
     cur_line = []
     toklen = len(tokens)
+    
     for tokid, token in enumerate(tokens):
         if token == "[Newline]":
             cur_line = [tokid]
@@ -258,17 +260,17 @@ def score_logits(example, example_binary_logits, example_span_logits, n_best_siz
         
 
 
-
+    
         if (toklen - 1) == tokid:
             cur_line.append(tokid + 1)
-            cur_line_dict = { "ranges" :cur_line , "tokens" : tokens[cur_line[0]:cur_line[1]], "score_dict": cur_dict}
+            cur_line_dict = { "ranges" :cur_line , "tokens" : tokens[cur_line[0]:cur_line[1]], "score_dict": cur_dict, "url": example.url}
             newlinelist.append(cur_line_dict)
 
 
         elif tokens[tokid + 1] == "[Newline]":
             if len(cur_line) > 0:
                 cur_line.append(tokid + 1)
-                cur_line_dict = { "ranges" :cur_line , "tokens" : tokens[cur_line[0]:cur_line[1]],"score_dict": cur_dict}
+                cur_line_dict = { "ranges" :cur_line , "tokens" : tokens[cur_line[0]:cur_line[1]],"score_dict": cur_dict,  "url": example.url}
                 newlinelist.append(cur_line_dict)
 
     
@@ -479,7 +481,7 @@ def do_ranking(score_list, score_threshold= 0.25, con_threshold = 0.25,  sep_typ
 
             para_group = {"exid": exid, "exid_list": [exid], "nid": nid, "main_counter": main_counter, "span_range":span_range,
             "cur_span_score_list": cur_span_score_list, "average_score": average_score, "max_score": max_score,
-            "token_list":token_list , "look_forward": look_forward, "look_back": look_back , "original_ranges":new_original_ranges}
+            "token_list":token_list , "look_forward": look_forward, "look_back": look_back , "original_ranges":new_original_ranges, "url": newline["url"]}
             
             main_counter += 1
 
@@ -605,52 +607,52 @@ def do_ranking(score_list, score_threshold= 0.25, con_threshold = 0.25,  sep_typ
     #para_groups.sort(key= lambda x : x["max_score"], reverse= True)
 
     
-    for i, p in enumerate(para_groups):
-        print("\n\n")
-        # print("Headline here: ")
-        # print(" ".join(p["headline"]))
-        # print("\n")
-        # print(i)
-        # print(" Text here: ")
-        spanr0 = p["span_range"][0]
-        spanr1 = p["span_range"][1]
-        maxscore = p["max_score"]
-        lookf = p["look_forward"]
-        print(f"Max score: {maxscore:.4} , Spanrange: {spanr0} - {spanr1}, look_forward: {lookf}\n")
-        print("Headline: ")
-        print(" ".join(p["headline"]))
-        print("\n")
-        print(" ".join(p["token_list"]))
-    print("\n\nnumber of para_groups: ")
-    print(len(para_groups))
+    # for i, p in enumerate(para_groups):
+    #     print("\n\n")
+    #     # print("Headline here: ")
+    #     # print(" ".join(p["headline"]))
+    #     # print("\n")
+    #     # print(i)
+    #     # print(" Text here: ")
+    #     spanr0 = p["span_range"][0]
+    #     spanr1 = p["span_range"][1]
+    #     maxscore = p["max_score"]
+    #     lookf = p["look_forward"]
+    #     print(f"Max score: {maxscore:.4} , Spanrange: {spanr0} - {spanr1}, look_forward: {lookf}\n")
+    #     print("Headline: ")
+    #     print(" ".join(p["headline"]))
+    #     print("\n")
+    #     print(" ".join(p["token_list"]))
+    # print("\n\nnumber of para_groups: ")
+    # print(len(para_groups))
 
 
     print("\n\n\n\n\n\n\n\nNow only the top 10 results:\n\n")
 
     para_groups.sort(key= lambda x : x["max_score"], reverse= True)
     
-    for i, p in enumerate(para_groups[:10]):
-        print("\n\n")
-        # print("Headline here: ")
-        # print(" ".join(p["headline"]))
-        # print("\n")
-        # print(i)
-        # print(" Text here: ")
-        spanr0 = p["span_range"][0]
-        spanr1 = p["span_range"][1]
-        maxscore = p["max_score"]
-        lookf = p["look_forward"]
-        lookb = p["look_back"]
-        print(f"Rank: {i} , Max score: {maxscore:.4} , Spanrange: {spanr0} - {spanr1}, look_forward: {lookf},, look_back: {lookb}, ")
-        print("Headline: ")
-        print(" ".join(p["headline"]))
-        print("\n")
-        tokenstring = " ".join(p["token_list"])
-        tokenstring = tokenstring.replace('[Newline]', '\n')
+    # for i, p in enumerate(para_groups[:10]):
+    #     print("\n\n")
+    #     # print("Headline here: ")
+    #     # print(" ".join(p["headline"]))
+    #     # print("\n")
+    #     # print(i)
+    #     # print(" Text here: ")
+    #     spanr0 = p["span_range"][0]
+    #     spanr1 = p["span_range"][1]
+    #     maxscore = p["max_score"]
+    #     lookf = p["look_forward"]
+    #     lookb = p["look_back"]
+    #     print(f"Rank: {i} , Max score: {maxscore:.4} , Spanrange: {spanr0} - {spanr1}, look_forward: {lookf},, look_back: {lookb}, ")
+    #     print("Headline: ")
+    #     print(" ".join(p["headline"]))
+    #     print("\n")
+    #     tokenstring = " ".join(p["token_list"])
+    #     tokenstring = tokenstring.replace('[Newline]', '\n')
 
-        print(tokenstring)
+    #     print(tokenstring)
 
-    import pdb; pdb.set_trace()
+
 
     return para_groups
 
@@ -777,6 +779,8 @@ class QBert():
         parser.add_argument("--new_calcs", action='store_true', help= "")
         self.args = parser.parse_args()
         
+        self.args.new_calcs = True
+        self.inference = True
 
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__file__)
@@ -837,12 +841,15 @@ class QBert():
                 start_time = time.time()
 
             articlelist = self.search.searchandsplit(raw_text)
+            if not self.inference:
+                pickle.dump(articlelist, open("intermediatearticles.p", "wb"))
+        else:
+            raw_text = "chocolate cake recipe"
 
-            pickle.dump(articlelist, open("intermediatearticles.p", "wb"))
 
         start_time = time.time()
-        #raw_text = "chocolate cake recipe"
-        articlelist = pickle.load(open("intermediatearticles.p", "rb"))
+        if not self.inference:
+            articlelist = pickle.load(open("intermediatearticles.p", "rb"))
 
         query = raw_text
         toplist =[]
@@ -879,9 +886,10 @@ class QBert():
                     prediction_list.append([binary_logits, span_logits, batch_article])
                     print("appending ends")
                 print("compute best predictions")
-
-            pickle.dump(prediction_list, open("savebatches.p", "wb"))
-        prediction_list = pickle.load(open("savebatches.p", "rb"))
+            if not self.inference:
+                pickle.dump(prediction_list, open("savebatches.p", "wb"))
+        if not self.inference:
+            prediction_list = pickle.load(open("savebatches.p", "rb"))
 
 
 
@@ -893,28 +901,59 @@ class QBert():
         if not q:
             for result_id, result in enumerate(top_results):
                 
-                print("\n\n\n")
-                print(f"Top {result_id + 1}\n")
-                print(f"Answer score: {result.score}\n")
-                print(f"Answer propabilities: - Yes: {result.answer_type_logits[0]} - No: {result.answer_type_logits[1]} -No Answer {result.answer_type_logits[2]} -Short Answer {result.answer_type_logits[3]} -Only Long Answer: {result.answer_type_logits[4]}\n")
+                # print("\n\n\n")
+                # print(f"Top {result_id + 1}\n")
+                # print(f"Answer score: {result.score}\n")
+                # print(f"Answer propabilities: - Yes: {result.answer_type_logits[0]} - No: {result.answer_type_logits[1]} -No Answer {result.answer_type_logits[2]} -Short Answer {result.answer_type_logits[3]} -Only Long Answer: {result.answer_type_logits[4]}\n")
                 
-                if result.type_index == 0:
-                    print("Answer: Yes\n")
+                # if result.type_index == 0:
+                #     print("Answer: Yes\n")
 
-                if result.type_index == 1:
-                    print("Answer: No\n")
+                # if result.type_index == 1:
+                #     print("Answer: No\n")
                 
-                if result.type_index == 2:
-                    print("No Answer found here")
+                # if result.type_index == 2:
+                #     print("No Answer found here")
 
 
-                if result.type_index == 3:
-                    decoded_short_answer = decode(self.tokenizer, result.short_text)
-                    print(f"Short Answer: {decoded_short_answer}  \n\n")
+                # if result.type_index == 3:
+                #     decoded_short_answer = decode(self.tokenizer, result.short_text)
+                #     print(f"Short Answer: {decoded_short_answer}  \n\n")
 
-                if result.type_index == 4 or result.type_index == 0 or result.type_index == 1 or result.type_index == 3:
-                    decoded_long_answer = decode(self.tokenizer, result.long_text)
-                    print(f"Long Answer: \n{decoded_long_answer}")
+                # if result.type_index == 4 or result.type_index == 0 or result.type_index == 1 or result.type_index == 3:
+                #     decoded_long_answer = decode(self.tokenizer, result.long_text)
+                #     print(f"Long Answer: \n{decoded_long_answer}")
+                i = result_id
+                p = result
+                    
+                print("\n\n")
+                # print("Headline here: ")
+                # print(" ".join(p["headline"]))
+                # print("\n")
+                # print(i)
+                # print(" Text here: ")
+                spanr0 = p["span_range"][0]
+                spanr1 = p["span_range"][1]
+                maxscore = p["max_score"]
+                lookf = p["look_forward"]
+                lookb = p["look_back"]
+                print(f"Rank: {i} , Max score: {maxscore:.4} , Spanrange: {spanr0} - {spanr1}, look_forward: {lookf},, look_back: {lookb}, ")
+                print("Headline: ")
+                print(decode(self.tokenizer, result["headline"]))
+                print("\n")
+                tokenstring = decode(self.tokenizer, result["token_list"]).replace('[Newline]', '\n')
+
+                print(tokenstring)
+                print("\n")
+                print(p["url"])
+
+
+            finaltime = time.time() - start_time
+            print(f"Total Time: {finaltime}")
+            return None
+
+
+
 
         else:
             show_list = []
@@ -926,36 +965,130 @@ class QBert():
                 #     continue
 
 
-                if result.type_index == 0:
-                    answer_dict["short"] = "Yes"
+                # if result.type_index == 0:
+                #     answer_dict["short"] = "Yes"
 
-                if result.type_index == 1:
-                    answer_dict["short"] = "No"
+                # if result.type_index == 1:
+                #     answer_dict["short"] = "No"
                 
 
 
 
-                if result.type_index == 3 or result.type_index == 2:
-                    answer_dict["short"] = decode(self.tokenizer, result.short_text)
+                # if result.type_index == 3 or result.type_index == 2:
+                #     answer_dict["short"] = decode(self.tokenizer, result.short_text)
                 
 
-                if result.type_index == 4 or result.type_index == 0 or result.type_index == 1 or result.type_index == 3 or result.type_index == 2:
-                    answer_dict["long"] = decode(self.tokenizer, result.long_text[1:])
+                # if result.type_index == 4 or result.type_index == 0 or result.type_index == 1 or result.type_index == 3 or result.type_index == 2:
+                #     answer_dict["long"] = decode(self.tokenizer, result.long_text[1:])
 
-                if result.type_index == 4:
-                    answer_dict["short"] = ""
-                answer_dict["url"] = result.url
-                answer_dict["type"] = result.type_index
-                if result.score > self.threshold:
-                    show_list.append(answer_dict)
-                else:
-                    print("skipped, too low score")
-            
+                # if result.type_index == 4:
+                #     answer_dict["short"] = ""
+                # answer_dict["url"] = result.url
+                # answer_dict["type"] = result.type_index
+                # if result.score > self.threshold:
+                #     show_list.append(answer_dict)
+                # else:
+                #     print("skipped, too low score")
+                atext = decode(self.tokenizer, result["token_list"])
+                #import pdb; pdb.set_trace()
+                atext = atext.split("[Newline]")
+                listactive = False
+                newat = []
+                for at in atext:
+                    at = "".join(["[Newline]",at])
+                    if "[Paragraph]" in at:
+                        at += "<br>"
+                    if "[H1Start]" in at:
+                        at = at.replace("[H1Start]", "<h1>")
+                        at += "</h1>"
+                    if "[H2Start]" in at:
+                        #import pdb; pdb.set_trace()
+                        at += "</h2>"
+                        at = at.replace("[H2Start]", "<h2>")
+                    if "[H3Start]" in at:
+                        at += "</h3>"
+                        at = at.replace("[H3Start]", "<h3>")
+                    if "[H4Start]" in at:
+                        at += "</h4>"
+                        at = at.replace("[H4Start]", "<h4>")
+                    if "[H5Start]" in at:
+                        at += "</h5>"
+                        at = at.replace("[H5Start]", "<h5>")
+
+                    if "[UnorderedList=1]" in at:
+                        at = at.replace('[UnorderedList=1]', "<li>")
+
+
+                    if "[UnorderedList=2]" in at:
+                        at = at.replace('[UnorderedList=2]', "<li>")
+
+
+                    if "[UnorderedList=3]" in at:
+                        at = at.replace('[UnorderedList=3]', "<li>")
+
+
+                    if "[UnorderedList=4]" in at:
+                        at = at.replace('[UnorderedList=4]', "<li>")
+
+
+                    if "[UnorderedList=5]" in at:
+                        at = at.replace('[UnorderedList=5]', "<li>")
+                    
+
+
+
+                    if "[UnorderedListEnd=1]" in at:
+                        at = at.replace('[UnorderedList=1]', "</li>")
+
+
+                    if "[UnorderedListEnd=2]" in at:
+                        at = at.replace('[UnorderedListEnd=2]', "</li>")
+
+
+                    if "[UnorderedListEnd=3]" in at:
+                        at = at.replace('[UnorderedListEnd=3]', "</li>")
+
+
+                    if "[UnorderedListEnd=4]" in at:
+                        at = at.replace('[UnorderedListEnd=4]', "</li>")
+
+
+                    if "[UnorderedListEnd=5]" in at:
+                        at = at.replace('[UnorderedListEnd=5]', "</li>")
+                    
+                    htags = ["h1", "h2", "h3", "h4", "h5"]
+                    htagsend = ["/h1", "/h2", "/h3", "/h4", "/h5"]
+
+                    for htag in htags:
+                        at = at.replace(htag, "h6")
+                    for htag in htagsend:
+                        at = at.replace(htag, "/h6")
+
+
+
+                    newat.append(at)
+                atext = newat
+                atext = "".join(atext)
+                #atext = atext.replace('[Paragraph]', "<p>")
+                atext = atext.replace('[Newline]', "<br>").replace('[Paragraph]', "")
+
+
+
+                answer_dict["long"] = atext
+                answer_dict["short"] = decode(self.tokenizer, result["headline"])
+                answer_dict["url"] = result["url"]
+
+                show_list.append(answer_dict)
 
             finaltime = time.time() - start_time
             print(f"Total Time: {finaltime}")
 
             return show_list
+
+
+
+
+            #return show_list
 
 
 
@@ -986,8 +1119,8 @@ class QBert():
 
         # print("Number of paragraphs searched")
         # print(len(sortedresults))
-        finaltime = time.time() - start_time
-        print(f"Processing finished after {finaltime}")
+        #finaltime = time.time() - start_time
+        #print(f"Processing finished after {finaltime}")
 
 if __name__ == "__main__":
         abc = QBert()
