@@ -1040,7 +1040,7 @@ class QBert():
 
 
                     if "[UnorderedListEnd=1]" in at:
-                        at = at.replace('[UnorderedList=1]', "</li>")
+                        at = at.replace('[UnorderedListEnd=1]', "</li>")
 
 
                     if "[UnorderedListEnd=2]" in at:
@@ -1066,7 +1066,13 @@ class QBert():
                     for htag in htagsend:
                         at = at.replace(htag, "/h6")
 
+                    # listtags = ["OrderedList"]
+                    
+                    # if "[OrderedList] 1." in at:
+                    #     at = at.replace('[OrderedList] 1.', "</li>")
 
+                    # if "[OrderedList] 1." in at:
+                    #     at = at.replace('[OrderedList] 1.', "</li>")
 
                     newat.append(at)
                 atext = newat
