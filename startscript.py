@@ -2,6 +2,8 @@ import subprocess
 
 
 subprocess.call("activate qa")
-exe_str = r"python C:/Users/sophi/Desktop/peter/qa/inference/app.py"
+exe_str = r"cd C:/Users/sophi/Desktop/peter/qa/inference"
 
 subprocess.call(exe_str)
+
+subprocess.call("python app.py")
