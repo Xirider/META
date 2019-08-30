@@ -1071,8 +1071,10 @@ class QBert():
                     # if "[OrderedList] 1." in at:
                     #     at = at.replace('[OrderedList] 1.', "</li>")
 
-                    # if "[OrderedList] 1." in at:
-                    #     at = at.replace('[OrderedList] 1.', "</li>")
+                    if "[OrderedList]" in at:
+                        at = at.replace('[OrderedList]', "")
+                    if "[OrderedListEnd]" in at:
+                        at = at.replace('[OrderedListEnd]', "")
 
                     newat.append(at)
                 atext = newat
