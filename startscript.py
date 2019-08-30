@@ -1,7 +1,7 @@
 import os
 import time
 import subprocess
-subprocess.run(["activate qa",r"cd C:/Users/sophi/Desktop/peter/qa/inference", "python app.py"] , shell=True)
+subprocess.run(r"activate qa && cd C:/Users/sophi/Desktop/peter/qa/inference && python app.py", shell=True)
 # os.system("activate qa")
 # time.sleep(5)
 # exe_str = r"cd C:/Users/sophi/Desktop/peter/qa/inference"
