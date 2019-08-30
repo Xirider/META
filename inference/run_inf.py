@@ -526,6 +526,8 @@ def do_ranking(score_list, score_threshold= 0.25, con_threshold = 0.25,  sep_typ
                             para_group["exid_list"].extend(value["exid_list"])
                             skip_list.append(next_id)                       
 
+    # why do we need deduplication???
+    skip_list = list(dict.fromkeys(skip_list))
     skip_list.sort(reverse=True)
     for skipid, skipindex in enumerate(skip_list):
         try:
