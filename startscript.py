@@ -2,7 +2,7 @@ import os
 import time
 
 os.system("activate qa")
-time.sleep(3)
+time.sleep(5)
 exe_str = r"cd C:/Users/sophi/Desktop/peter/qa/inference"
 
 os.system(exe_str)
