@@ -528,7 +528,10 @@ def do_ranking(score_list, score_threshold= 0.25, con_threshold = 0.25,  sep_typ
 
     skip_list.sort(reverse=True)
     for skipid, skipindex in enumerate(skip_list):
-        del para_groups[skipindex]
+        try:
+            del para_groups[skipindex]
+        except:
+            import pdb; pdb.set_trace()
 
 
 
