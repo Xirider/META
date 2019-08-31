@@ -9,7 +9,7 @@ from labels import binary_labels, span_labels, multi_labels
 
 all_labels = binary_labels + span_labels + multi_labels
 
-def spans2newlinelabel(spans, labels, newline_pos, tok2newline, activelist):
+def spans2newlinelabel(spans, labels, newline_pos, tok2newline, activelist, active_newlines):
     
     label_list = defaultdict(list)
     for label in labels:
@@ -21,14 +21,26 @@ def spans2newlinelabel(spans, labels, newline_pos, tok2newline, activelist):
     
     
     final_labels = []
+    new_active = []
+    for active in active_newlines:
+        new_active.append(tok2newline[active])
     
     for newline, _ in enumerate(newline_pos):
         added_value = False
-        for labelid, label in enumerate(labels):
-            if newline in label_list[label]:
-                final_labels.append(labelid + 1)
-                added_value = True
-                break
+
+
+        if newline not in new_active:
+            final_labels.append(-1)
+            added_value = True
+
+        if not added_value:
+            for labelid, label in enumerate(labels):
+                if newline in label_list[label]:
+                    final_labels.append(labelid + 1)
+                    added_value = True
+                    break
+
+
 
         if not added_value:
             final_labels.append(0)
@@ -38,7 +50,7 @@ def spans2newlinelabel(spans, labels, newline_pos, tok2newline, activelist):
     return final_labels 
 
 
-def spans2label(spans, label, input_ids, activelist):
+def spans2label(spans, label, input_ids, activelist, inactive_tokens):
     if label in activelist:
 
         final_labels = [0]*len(input_ids)
@@ -47,6 +59,14 @@ def spans2label(spans, label, input_ids, activelist):
                 span_range = range(span["token_start"], span["token_end"] + 1)
                 for positive in span_range:
                     final_labels[positive] = 1
+    
+
+        active = list(range(inactive_tokens[0], inactive_tokens[1]))
+
+        for tokid, tok in enumerate(final_labels):
+            if tokid not in active:
+                final_labels[tokid] = -1
+
     else:
         final_labels = [-1]*len(input_ids)
     return final_labels
@@ -151,16 +171,17 @@ if __name__ == "__main__":
 
         spanlist = example["spans"]
 
+
         for label in binary_labels:
-            example[label] = spans2newlinelabel(spanlist, [label], example["[Newline]"], example["tok2newline"], example["activelist"])
+            example[label] = spans2newlinelabel(spanlist, [label], example["[Newline]"], example["tok2newline"], example["activelist"], example["active_newlines"])
         
         for label in span_labels:
-            example[label] =  spans2label(spanlist, label, example["input_ids"], example["activelist"])
+            example[label] =  spans2label(spanlist, label, example["input_ids"], example["activelist"], example["inactive_tokens"])
 
         
 
         for label in multi_labels:
-            example[label[0]] = spans2newlinelabel(spanlist, label, example["[Newline]"], example["tok2newline"], example["activelist"])
+            example[label[0]] = spans2newlinelabel(spanlist, label, example["[Newline]"], example["tok2newline"], example["activelist"], example["active_newlines"])
 
         new_example_list.append(example)
 

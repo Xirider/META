@@ -122,7 +122,7 @@ def build_input_batch(articlelist, question, tokenizer, batch_size, onlyone=Fals
 
 
 
-def convert_single_example(article, question, tokenizer, article_id, max_query_length=30, max_seq_length = 384, doc_stride = 384, 
+def convert_single_example(article, question, tokenizer, article_id, max_query_length=30, max_seq_length = 384, doc_stride = 190,
                             already_tokenized=False, url=None, answer_start=None, answer_end=None, answer_type=None, webdata = False, mode="inference"):
   """Converts a single NqExample into a list of InputFeatures."""
   # tok_to_orig_index = []
@@ -176,6 +176,8 @@ def convert_single_example(article, question, tokenizer, article_id, max_query_l
   if webdata:
       max_tokens_for_doc -= 2
 
+
+
   # We can have documents that are longer than the maximum sequence length.
   # To deal with this we do a sliding window approach, where we take chunks
   # of up to our max length with a stride of `doc_stride`.
@@ -191,6 +193,7 @@ def convert_single_example(article, question, tokenizer, article_id, max_query_l
       break
     start_offset += min(length, doc_stride)
 
+  number_of_doc_spans = len(doc_spans)
   for (doc_span_index, doc_span) in enumerate(doc_spans):
     
     tokens = []
@@ -239,6 +242,38 @@ def convert_single_example(article, question, tokenizer, article_id, max_query_l
     segment_ids.append(1)
     assert len(tokens) == len(segment_ids)
 
+    # determine which newlines are the active one when where is overlap
+    active_newlines = []
+    doc_s_s = int(doc_stride / 2 + question_length)
+    doc_s_e = int(doc_stride * 1.5 + question_length)
+    for tokid, tok in tokens:
+        if tok == "[Newline]":
+            
+            if tokid <= doc_s_s:
+                if doc_span_index > 0:
+                    continue
+
+            if tokid > doc_s_e:
+                if doc_span_index != len(number_of_doc_spans - 1):
+                    continue
+            
+            active_newlines.append(tokid)
+
+    inactive_tokens = []
+
+    if doc_span_index == 0:
+        inactive_tokens.append(0)
+    else:
+        inactive_tokens.append(doc_s_s)
+
+    if doc_span_index == len(number_of_doc_spans - 1):
+        inactive_tokens.append(len(tokens))
+    else:
+        inactive_tokens.append(doc_s_e + 1)
+
+    
+
+
     
 
     input_ids = tokenizer.convert_tokens_to_ids(tokens)
@@ -269,7 +304,6 @@ def convert_single_example(article, question, tokenizer, article_id, max_query_l
             
             answer_start += question_length
             answer_end += question_length
-
 
 
 
@@ -319,7 +353,9 @@ def convert_single_example(article, question, tokenizer, article_id, max_query_l
         answer_start = answer_start,
         answer_end = answer_end,
         answer_type = answer_type,
-        question_tokens = question
+        question_tokens = question,
+        active_newlines= active_newlines,
+        inactive_tokens = inactive_tokens
         
 
 
@@ -365,7 +401,9 @@ class InputOutputs(object):
                url = None,
                answer_start = None,
                answer_end = None,
-               question_tokens = None
+               question_tokens = None,
+               active_newlines = None,
+               inactive_tokens = None
 
 
 
@@ -402,6 +440,8 @@ class InputOutputs(object):
     self.answer_end = answer_end
     self.answer_type = answer_type
     self.question_tokens = question_tokens
+    self.active_newlines = active_newlines
+    self.inactive_tokens = inactive_tokens
 
 
 

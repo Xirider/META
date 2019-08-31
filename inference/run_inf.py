@@ -248,9 +248,17 @@ def score_logits(example, example_binary_logits, example_span_logits, n_best_siz
     bin_num = example_binary_logits.shape[1]
     cur_line = []
     toklen = len(tokens)
+
+    active_newline = example.active_newline
+    active = False
     
     for tokid, token in enumerate(tokens):
         if token == "[Newline]":
+
+            if not tokid in active_newline:
+                active = False
+                continue
+            active = True
             cur_line = [tokid]
             cur_bin = example_binary_logits[tokid]
             cur_dict = {"tokid": tokid}
@@ -261,13 +269,13 @@ def score_logits(example, example_binary_logits, example_span_logits, n_best_siz
 
 
     
-        if (toklen - 1) == tokid:
+        if (toklen - 1) == tokid and active:
             cur_line.append(tokid + 1)
             cur_line_dict = { "ranges" :cur_line , "tokens" : tokens[cur_line[0]:cur_line[1]], "score_dict": cur_dict, "url": example.url}
             newlinelist.append(cur_line_dict)
 
 
-        elif tokens[tokid + 1] == "[Newline]":
+        elif tokens[tokid + 1] == "[Newline]" and active:
             if len(cur_line) > 0:
                 cur_line.append(tokid + 1)
                 cur_line_dict = { "ranges" :cur_line , "tokens" : tokens[cur_line[0]:cur_line[1]],"score_dict": cur_dict,  "url": example.url}
@@ -276,10 +284,11 @@ def score_logits(example, example_binary_logits, example_span_logits, n_best_siz
     
     # spans
     span_num = example_span_logits.shape[1]
+
     span_type_list = []
     for span_type in range(span_num):
 
-        span_logits = example_span_logits[:,span_type].tolist()
+        span_logits = example_span_logits[:,span_type].tolist()[example.inactive_tokens[0], example.inactive_tokens[1]]
         toplist = get_best_indexes(span_logits, n_best_size)
         scorelist = []
         for ind in toplist:

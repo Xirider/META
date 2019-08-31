@@ -16,7 +16,6 @@ from labels import binary_labels, span_labels, multi_labels
     dataset=("The dataset to use", "positional", None, str),
     label_type=("the type of annotation", "positional", None, str),
     labelid=("One or more comma-separated labels", "positional", None,  int),
-    exclude=("Names of datasets to exclude", "option", "e", split_string)
 )
 def manual(dataset, label_type, labelid, exclude=None):
     """
@@ -56,7 +55,6 @@ def manual(dataset, label_type, labelid, exclude=None):
         'view_id': 'ner_manual', # Annotation interface to use
         'dataset': dataset,      # Name of dataset to save annotations
         'stream': stream,        # Incoming stream of examples
-        'exclude': exclude,      # List of dataset names to exclude
         'config': {              # Additional config settings, mostly for app UI
             
             'label': ', '.join(label),
