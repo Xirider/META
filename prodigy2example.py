@@ -82,12 +82,26 @@ def list_duplicates(seq, key):
     return ddict
 
 if __name__ == "__main__":
+
+
+    from argparse import ArgumentParser
+    parser = ArgumentParser()
+    parser.add_argument("--output_folder", type=str, default="", help="where to save the annotated example train and test files")
+    
+
+    args = parser.parse_args()
     #db_prefix = "d3"
     db_name = "d3_merged"
     db = db_name
-    foldername = f"processed_{db_name}"
     mainfolder = "traindata"
     test_prob = 0.20
+
+
+
+    foldername = f"processed_{args.output_folder}"
+
+
+
 
     deduplication = False
 
@@ -199,11 +213,18 @@ if __name__ == "__main__":
     train_example_list = []
     test_example_list = []
 
-    for line in new_example_list:
-        if random.random() > test_prob:
-            train_example_list.append(line)
-        else:
-            test_example_list.append(line)
+    nel = len(new_example_list)
+    train_num = nel - (nel // (1/test_prob))
+
+
+    train_example_list = new_example_list[:train_num]
+    test_example_list = new_example_list[train_num:]
+
+    # for line in new_example_list:
+    #     if random.random() > test_prob:
+    #         train_example_list.append(line)
+    #     else:
+    #         test_example_list.append(line)
 
     with open(full_filename, 'w') as outfile:
             for line in train_example_list:

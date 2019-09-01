@@ -216,7 +216,7 @@ def compute_best_predictions(prediction_list, stopper, topk = 5,threshold = 0, s
     #     print(ex.doc_start)
     #     print(ex.doc_end)
     #     #print(ex.short_text)
-    # import pdb; pdb.set_trace()
+
     lenlist = len(score_list)
     print("number of candidates")
     print(lenlist)
@@ -273,6 +273,9 @@ def score_logits(example, example_binary_logits, example_span_logits, n_best_siz
             cur_line.append(tokid + 1)
             cur_line_dict = { "ranges" :cur_line , "tokens" : tokens[cur_line[0]:cur_line[1]], "score_dict": cur_dict, "url": example.url}
             newlinelist.append(cur_line_dict)
+        
+        elif (toklen - 1) == tokid and not active:
+            break
 
 
         elif tokens[tokid + 1] == "[Newline]" and active:
@@ -288,7 +291,7 @@ def score_logits(example, example_binary_logits, example_span_logits, n_best_siz
     span_type_list = []
     for span_type in range(span_num):
 
-        span_logits = example_span_logits[:,span_type].tolist()[example.inactive_tokens[0], example.inactive_tokens[1]]
+        span_logits = example_span_logits[:,span_type].tolist()[example.inactive_tokens[0]: example.inactive_tokens[1]]
         toplist = get_best_indexes(span_logits, n_best_size)
         scorelist = []
         for ind in toplist:
@@ -426,6 +429,8 @@ def do_ranking(score_list, score_threshold= 0.25, con_threshold = 0.25,  sep_typ
                     continue
 
             elif sep_type == "self_con":
+                
+
 
                 # loop through all newlines, check if a new self_con starts, if yes, save the old param_group, also create a new param_group and add the first line, if not, just add the newline data
                 if nid in skipping_list:
@@ -467,6 +472,7 @@ def do_ranking(score_list, score_threshold= 0.25, con_threshold = 0.25,  sep_typ
 
             else:
                 raise Exception("do_ranking needs either score or self_con as sep_type")
+
             exid10k = exid * 10000
             span_range = [nid + exid10k, nid + cur_plus + exid10k]
             span_tokids = list(range(nid,  cur_plus +nid))
@@ -689,7 +695,7 @@ def do_ranking(score_list, score_threshold= 0.25, con_threshold = 0.25,  sep_typ
     #         length = end_index - start_index + 1
     #         if length > max_answer_length:
     #             continue
-    #         #import pdb; pdb.set_trace()
+
     #         short_span_score = (
     #             start_logits[start_index] +
     #             end_logits[end_index])
@@ -916,7 +922,8 @@ class QBert():
         top_results = compute_best_predictions(prediction_list, topk = topresults, stopper = stopper, threshold=self.threshold)
         finaltime = time.time() - cbs
         print(f"computing best preds finished after {finaltime}")
-        if not q:
+
+        if not self.inference:
             for result_id, result in enumerate(top_results):
                 
                 # print("\n\n\n")
@@ -1008,7 +1015,7 @@ class QBert():
                 # else:
                 #     print("skipped, too low score")
                 atext = decode(self.tokenizer, result["token_list"])
-                #import pdb; pdb.set_trace()
+
                 atext = atext.split("[Newline]")
                 listactive = False
                 newat = []
@@ -1020,7 +1027,7 @@ class QBert():
                         at = at.replace("[H1Start]", "<h1>")
                         at += "</h1>"
                     if "[H2Start]" in at:
-                        #import pdb; pdb.set_trace()
+
                         at += "</h2>"
                         at = at.replace("[H2Start]", "<h2>")
                     if "[H3Start]" in at:

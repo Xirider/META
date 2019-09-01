@@ -311,11 +311,12 @@ if __name__ == "__main__":
 
 
 
-
-
-
-
-
+    
+    from argparse import ArgumentParser
+    parser = ArgumentParser()
+    parser.add_argument("--download", action="store_true", help="where to save the annotated example train and test files")
+    parser.add_argument("--num_q", type=int, default=200, help="where to save the annotated example train and test files")
+    args = parser.parse_args()
 
 
 
@@ -357,7 +358,7 @@ if __name__ == "__main__":
             print(len(querylist))
 
             samples = min(samples, len(querylist))
-            querylist = random.sample(querylist, k=samples)
+            querylist = random.sample(querylist, k=num_q)
             
             print("writing querys")
             with open(saveto, "w", encoding="utf-8")as f:
@@ -381,7 +382,7 @@ if __name__ == "__main__":
                 
             #querylist = ["s1: error: cannot open .git/FETCH_HEAD: Permission denied", "Snorkel Metal", "linux search file", "meta", "carrot cake recipe"]
 
-        querylist = ["Sri lanka to do", "get keys from dictionary python", "mirai no mirai","Mecha animes" , "acillary justice", "sleep vs hibernate windows 10" ,"metric for imbalanced data"  ]
+        #querylist = ["Sri lanka to do", "get keys from dictionary python", "mirai no mirai","Mecha animes" , "acillary justice", "sleep vs hibernate windows 10" ,"metric for imbalanced data"  ]
 
 
         qlist = querylist
@@ -430,7 +431,7 @@ if __name__ == "__main__":
 
 
 
-    example_list = create_data(extracting_queries=False, num_q=210, download=True, samples=200, a_number=3, return_all=True)
+    example_list = create_data(extracting_queries=False, num_q=args.num_q, download=args.download, samples=200, a_number=3, return_all=True)
 
 
     create_prodigy_file(example_list, multi_labels, "multi", filename)
