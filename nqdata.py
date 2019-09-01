@@ -246,7 +246,7 @@ def convert_single_example(article, question, tokenizer, article_id, max_query_l
     active_newlines = []
     doc_s_s = int(doc_stride / 2 + question_length)
     doc_s_e = int(doc_stride * 1.5 + question_length)
-    for tokid, tok in tokens:
+    for tokid, tok in enumerate(tokens):
         if tok == "[Newline]":
             
             if tokid <= doc_s_s:
