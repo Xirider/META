@@ -792,11 +792,13 @@ class QBert():
         parser.add_argument("--top_k", type=int, default=0, help="Filter top-k tokens before sampling (<=0: no filtering)")
         parser.add_argument("--top_p", type=float, default=0.9, help="Nucleus filtering (top-p) before sampling (<=0.0: no filtering)")
         parser.add_argument("--more_than_one", action='store_true', help= "")
-        parser.add_argument("--new_calcs", action='store_true', help= "")
+        parser.add_argument("--use_cached_calcs", action='store_true', help= "")
+        parser.add_argument("--no_inference", action='store_true', help= "")
         self.args = parser.parse_args()
         
-        self.args.new_calcs = True
-        self.inference = True
+
+        self.inference = not self.args.no_inference
+        self.new_calcs = not self.args.use_cached_calcs
 
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__file__)
@@ -838,7 +840,7 @@ class QBert():
         self.threshold = 0.5872142
         #self.threshold = 0.8
 
-        self.new_calcs = self.args.new_calcs
+        
 
 
     def get_answer(self, q = None):
