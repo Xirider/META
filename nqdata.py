@@ -254,7 +254,7 @@ def convert_single_example(article, question, tokenizer, article_id, max_query_l
                     continue
 
             if tokid > doc_s_e:
-                if doc_span_index != len(number_of_doc_spans - 1):
+                if doc_span_index != number_of_doc_spans - 1:
                     continue
             
             active_newlines.append(tokid)
@@ -266,7 +266,7 @@ def convert_single_example(article, question, tokenizer, article_id, max_query_l
     else:
         inactive_tokens.append(doc_s_s)
 
-    if doc_span_index == len(number_of_doc_spans - 1):
+    if doc_span_index == number_of_doc_spans - 1:
         inactive_tokens.append(len(tokens))
     else:
         inactive_tokens.append(doc_s_e + 1)
