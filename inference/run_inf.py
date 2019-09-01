@@ -242,20 +242,20 @@ def score_logits(example, example_binary_logits, example_span_logits, n_best_siz
     tokens = example.tokens
     newlinestartlist = []
     newlinelist = []
-    active_newline = []
+    active_newlines = []
     threshold = span_threshold
     
     bin_num = example_binary_logits.shape[1]
     cur_line = []
     toklen = len(tokens)
 
-    active_newline = example.active_newline
+    active_newlines = example.active_newlines
     active = False
     
     for tokid, token in enumerate(tokens):
         if token == "[Newline]":
 
-            if not tokid in active_newline:
+            if not tokid in active_newlines:
                 active = False
                 continue
             active = True
