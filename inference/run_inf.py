@@ -26,32 +26,9 @@ from nqdata import build_input_batch
 from modelingclassbert import BertForMetaClassification
 from pytorch_pretrained_bert import BertTokenizer
 
+from thresholds import binary_labels_threshold, span_labels_threshold, multi_labels_threshold
 from labels import binary_labels, span_labels, multi_labels
-
-
-stopper = ["[Newline]" , "[UNK]" , "[SEP]" , "[Q]" , "[CLS]" , "[WebLinkStart]" , "[LocalLinkStart]" , "[RelativeLinkStart]" ,
-    "[WebLinkEnd]" , "[LocalLinkEnd]" , "[RelativeLinkEnd]" , "[VideoStart]" , "[VideoEnd]" , "[TitleStart]" , 
-    "[NavStart]" , "[AsideStart]" , "[FooterStart]" , "[IframeStart]" , "[IframeEnd]" , "[NavEnd]" , "[AsideEnd]" , 
-    "[FooterEnd]" , "[CodeStart]" , "[H1Start]" , "[H2Start]" , "[H3Start]" , "[H4Start]" , "[H5Start]" , "[H6Start]" ,
-    "[CodeEnd]" , "[UnorderedList=1]" , "[UnorderedList=2]" , "[UnorderedList=3]" , "[UnorderedList=4]" , "[OrderedList]"
-    , "[UnorderedListEnd=1]" , "[UnorderedListEnd=2]" , "[UnorderedListEnd=3]" , "[UnorderedListEnd=4]" , 
-    "[OrderedListEnd]" , "[TableStart]" , "[RowStart]" , "[CellStart]" , "[TableEnd]" , "[RowEnd]" , "[CellEnd]" ,
-    "[LineBreak]" , "[Paragraph]" , "[StartImage]" , "[EndImage]" , "[Segment=00]" , "[Segment=01]" , "[Segment=02]" ,
-        "[Segment=03]" , "[Segment=04]" , "[Segment=05]" , "[Segment=06]" , "[Segment=07]" , "[Segment=08]" ,
-        "[Segment=09]" , "[Segment=10]" , "[Segment=11]" , "[Segment=12]" , "[Segment=13]" , "[Segment=14]" ,
-        "[Segment=15]" , "[Segment=16]" , "[Segment=17]" , "[Segment=18]" , "[Segment=19]" , "[Segment=20]" , 
-        "[Segment=21]" , "[Segment=22]" , "[Segment=23]" , "[Segment=24]" , "[Segment=25]" , "[Segment=26]" , 
-        "[Segment=27]" , "[Segment=28]" , "[Segment=29]" , "[Segment=30]" , "[Segment=XX]", "\n"]
-
-
-segment_tokens = ["[Segment=00]" , "[Segment=01]" , "[Segment=02]" ,
-        "[Segment=03]" , "[Segment=04]" , "[Segment=05]" , "[Segment=06]" , "[Segment=07]" , "[Segment=08]" ,
-        "[Segment=09]" , "[Segment=10]" , "[Segment=11]" , "[Segment=12]" , "[Segment=13]" , "[Segment=14]" ,
-        "[Segment=15]" , "[Segment=16]" , "[Segment=17]" , "[Segment=18]" , "[Segment=19]" , "[Segment=20]" , 
-        "[Segment=21]" , "[Segment=22]" , "[Segment=23]" , "[Segment=24]" , "[Segment=25]" , "[Segment=26]" , 
-        "[Segment=27]" , "[Segment=28]" , "[Segment=29]" , "[Segment=30]" , "[Segment=XX]"]
-
-headline_tokens = ["[H1Start]" , "[H2Start]" , "[H3Start]" , "[H4Start]" , "[H5Start]" , "[H6Start]"]
+from tokenlist import stopper, segment_tokens, headline_tokens
 
 def top_filtering(logits, top_k=0, top_p=0.0, threshold=-float('Inf'), filter_value=-float('Inf')):
     """ Filter a distribution of logits using top-k, top-p (nucleus) and/or threshold filtering
@@ -158,7 +135,7 @@ def get_best_indexes(logits, n_best_size):
 
 
 
-def compute_best_predictions(prediction_list, stopper, topk = 5,threshold = 0, span_threshold = 0.22208, con_threshold=0.89185):
+def compute_best_predictions(prediction_list, stopper, topk = 5,threshold = None, span_threshold = None, con_threshold=None):
     funcstart = time.time()
     """ takes in list of predictions, creates list of prediction spans, returns the best span for the top spans """
     #articles = defaultdict(list)
@@ -233,14 +210,14 @@ def check_index(target_list, index):
         return False, 0
 
 
-def score_logits(example, example_binary_logits, example_span_logits, n_best_size=35, span_threshold=0.25):
+def score_logits(example, example_binary_logits, example_span_logits, n_best_size=35, span_threshold=None):
     
     # logits, tokens -> scores per newline, newline ranges
     # for spans: list of spans, with modulated scores, tokid, newline token number
 
     # binary
     tokens = example.tokens
-    newlinestartlist = []
+    #newlinestartlist = []
     newlinelist = []
     active_newlines = []
     threshold = span_threshold
@@ -253,7 +230,7 @@ def score_logits(example, example_binary_logits, example_span_logits, n_best_siz
     active = False
     
     for tokid, token in enumerate(tokens):
-        if token == "[Newline]":
+        if token == "[newline]":
 
             if not tokid in active_newlines:
                 active = False
@@ -264,24 +241,30 @@ def score_logits(example, example_binary_logits, example_span_logits, n_best_siz
             cur_dict = {"tokid": tokid}
             for i in range(bin_num):
                 cur_dict[i] = cur_bin[i].item()
-            newlinestartlist.append(cur_dict)
+            #newlinestartlist.append(cur_dict)
         
 
 
     
         if (toklen - 1) == tokid and active:
+            nl2ll = example.newline2longline[cur_line[0]]
             cur_line.append(tokid + 1)
-            cur_line_dict = { "ranges" :cur_line , "tokens" : tokens[cur_line[0]:cur_line[1]], "score_dict": cur_dict, "url": example.url}
+            cur_line_dict = { "ranges" :cur_line , "tokens" : tokens[cur_line[0]:cur_line[1]], "score_dict": cur_dict,
+             "url": example.url, "newline2longline":nl2ll, "htmltext": example.htmltext,
+              "activelonglines": example.activelonglines }
             newlinelist.append(cur_line_dict)
         
         elif (toklen - 1) == tokid and not active:
             break
 
 
-        elif tokens[tokid + 1] == "[Newline]" and active:
+        elif tokens[tokid + 1] == "[newline]" and active:
             if len(cur_line) > 0:
+                nl2ll = example.newline2longline[cur_line[0]]
                 cur_line.append(tokid + 1)
-                cur_line_dict = { "ranges" :cur_line , "tokens" : tokens[cur_line[0]:cur_line[1]],"score_dict": cur_dict,  "url": example.url}
+                cur_line_dict = { "ranges" :cur_line , "tokens" : tokens[cur_line[0]:cur_line[1]],"score_dict": cur_dict,
+                  "url": example.url, "newline2longline":nl2ll, "htmltext": example.htmltext,
+                   "activelonglines": example.activelonglines }
                 newlinelist.append(cur_line_dict)
 
     
@@ -341,7 +324,7 @@ def score_logits(example, example_binary_logits, example_span_logits, n_best_siz
     return  newlinelist, span_type_list
 
 
-def do_ranking(score_list, score_threshold= 0.25, con_threshold = 0.25,  sep_type="self_con", top_k = 100, max_continuations= 20, max_headline = 15, headline_finding_range= 30, headline_before =False, headline_after =False):
+def do_ranking(score_list, score_threshold= None, con_threshold = None,  sep_type="self_con", top_k = 100, max_continuations= 20, max_headline = 15, headline_finding_range= 30, headline_before =False, headline_after =False):
     """ Takes in a list of tuples (newlinestartlist, newlinelist, span_type_list), returns list of para groups with scores  """
 
     #(newlinelist, spanslist) 
@@ -486,17 +469,23 @@ def do_ranking(score_list, score_threshold= 0.25, con_threshold = 0.25,  sep_typ
             max_score = max(cur_span_score_list)
 
             token_list = []
+            conversion_list = []
             original_ranges = []
             for tokid in span_tokids:
+                anl2ll = newlinelist[tokid]["newline2longline"]
+                if anl2ll["longline"] != None:
+                    conversion_list.append(anl2ll)
                 token_list.extend(newlinelist[tokid]["tokens"])
                 original_ranges.append(newlinelist[tokid]["ranges"][0])
                 original_ranges.append(newlinelist[tokid]["ranges"][1])
             new_original_ranges = [original_ranges[0] + exid10k, original_ranges[-1] + exid10k]
 
 
-            para_group = {"exid": exid, "exid_list": [exid], "nid": nid, "main_counter": main_counter, "span_range":span_range,
-            "cur_span_score_list": cur_span_score_list, "average_score": average_score, "max_score": max_score,
-            "token_list":token_list , "look_forward": look_forward, "look_back": look_back , "original_ranges":new_original_ranges, "url": newline["url"]}
+            para_group = {"exid": exid, "exid_list": [exid], "nid": nid, "main_counter": main_counter,
+            "span_range":span_range, "cur_span_score_list": cur_span_score_list, "average_score": average_score,
+            "max_score": max_score, "token_list":token_list , "look_forward": look_forward, "look_back": look_back ,
+            "original_ranges":new_original_ranges, "url": newline["url"], "newline2longline": conversion_list,
+            "htmltext": newline["htmltext"], "activelonglines": newline["activelonglines"]}
             
             main_counter += 1
 
@@ -539,6 +528,7 @@ def do_ranking(score_list, score_threshold= 0.25, con_threshold = 0.25,  sep_typ
                             para_group["token_list"].extend(value["token_list"])
                             para_group["look_forward"] = value["look_forward"]
                             para_group["exid_list"].extend(value["exid_list"])
+                            para_group["newline2longline"].extend(value["newline2longline"])
                             skip_list.append(next_id)                       
 
     # why do we need deduplication???
@@ -577,7 +567,7 @@ def do_ranking(score_list, score_threshold= 0.25, con_threshold = 0.25,  sep_typ
                         rest_tokens = before_tokens[headline_start:]
                         rest_tok_len = len(rest_tokens)
                         for nltokid, nltok in enumerate(rest_tokens):
-                            if nltok == "[Newline]" or (nltokid == (rest_tok_len - 1)):
+                            if nltok == "[newline]" or (nltokid == (rest_tok_len - 1)):
                                 headline_end = nltokid + headline_start
                                 break
                         headline = before_tokens[headline_start:headline_end]
@@ -594,7 +584,7 @@ def do_ranking(score_list, score_threshold= 0.25, con_threshold = 0.25,  sep_typ
                     rest_tokens = group["token_list"][headline_start:]
                     rest_tok_len = len(rest_tokens)
                     for nltokid, nltok in enumerate(rest_tokens):
-                        if nltok == "[Newline]" or (nltokid == (rest_tok_len - 1)):
+                        if nltok == "[newline]" or (nltokid == (rest_tok_len - 1)):
                             headline_end = nltokid + headline_start
                             break
                     headline = group["token_list"][headline_start:headline_end]
@@ -672,7 +662,99 @@ def do_ranking(score_list, score_threshold= 0.25, con_threshold = 0.25,  sep_typ
 
     #     print(tokenstring)
 
+    # fix not properly opened or closed tags
 
+    # find out in which longline the para group starts and ends
+    for parag in para_groups:
+
+        for lline in parag["newline2longline"]:
+            if lline["longline"] != None:
+                parag["startline"] = lline["longline"]
+                break
+        for lline in reversed(parag["newline2longline"]):
+            if lline["longline"] != None:
+                parag["endline"] = lline["longline"]
+                break
+        
+        
+
+    opentags = ["<table>", "<td>","<ol>", "<ul>", "<li>"]
+    closetags = ["</table>","</td>", "</ol>","</ul>", "</li>"]
+    headtags = ["[h1]","[h2]","[h3]","[h4]","[h5]","[h6]"]
+
+    for parag in para_groups:
+        htmltext = parag["htmltext"]
+        startline = parag["startline"]
+        endline = parag["endline"]
+        linelist = []
+        opendict = defaultdict(int)
+        startdict = defaultdict(int)
+        text = htmltext[startline: endline +1]
+        #closedict = defaultdict(int)
+        for lline in text:            
+            # check for unopened and unclosed tags and change them
+            splitline = lline.split()
+            for word in splitline:
+                if word in opentags:
+                    opendict[word] += 1
+                if word in closetags:
+                    if opendict[word] == 0:
+                        startdict[word] += 1
+                    else:
+                        opendict[word] -= 1
+        
+        addstring = []
+        for start in opentags:
+            curinsert = startdict[start]
+            if curinsert > 0:
+                addstring.extend( [start] * curinsert)
+        addstring = " ".join(addstring) + " "
+
+        closestring = []     
+        for start in range(start =len(opentags)-1, stop=-1, step= -1):
+            closestring.extend(opendict[opentags[start]] * [closetags[start]])
+        closestring = " " + " ".join(addstring)
+
+        text[0] = addstring + text[0]
+        text[-1] = text[-1] + closestring
+
+        # add html back to the lines
+
+        # add line breaks to lines outside of lists and tables
+        opendict = defaultdict(int)
+        for lline in text:            
+            
+            updated_line = []
+            add_to_end = []
+            changing = False
+            splitline = lline.split()
+            for word in splitline:
+                if word in opentags:
+                    opendict[word] += 1
+                    changing = True
+                if word in closetags:
+                    opendict[word] -= 1
+                    changing = True
+                if sum(opendict.values()) > 0:
+                    changing = True
+            
+                if word in headtags:
+                    hnumber = word[2]
+                    word = f"<h{hnumber}>"
+                    add_to_end.append(f"</h{hnumber}>")
+                    changing = True
+
+                if word == 
+                updated_line.append(word)
+
+
+            if not changing:
+                updated_line = ["<br>"].extend(updated_line)
+
+            updated_line.extend(add_to_end)
+
+    # {"longline": article["line2line"][shortlinecounter],
+    #                                      "current_shortline":shortlinecounter }
 
     return para_groups
 
@@ -843,10 +925,11 @@ class QBert():
         #examplepara = tokenizer.encode(examplepara)
 
         self.search = Searcher(use_webscraper = True, use_api = True)
-        self.threshold = 0.5872142
-        #self.threshold = 0.8
 
-        
+        self.span_threshold = span_labels_threshold[0]
+        self.con_threshold = binary_labels_threshold[0]
+        self.threshold = binary_labels_threshold[1]
+        #self.threshold = 0.8
 
 
     def get_answer(self, q = None):
@@ -908,6 +991,7 @@ class QBert():
                     print(f"model finished after {finaltime}")
                     print("model ends")
                     prediction_list.append([binary_logits, span_logits, batch_article])
+                    import pdb; pdb.set_trace()
                     print("appending ends")
                 print("compute best predictions")
             if not self.inference:
@@ -919,7 +1003,7 @@ class QBert():
 
         number_computed_paras = len(prediction_list) * self.args.batch_size
         cbs = time.time()
-        top_results = compute_best_predictions(prediction_list, topk = topresults, stopper = stopper, threshold=self.threshold)
+        top_results = compute_best_predictions(prediction_list, topk = topresults, stopper = stopper, threshold=self.threshold, span_threshold = self.span_threshold, con_threshold=self.con_threshold)
         finaltime = time.time() - cbs
         print(f"computing best preds finished after {finaltime}")
 
@@ -966,7 +1050,7 @@ class QBert():
                 print("Headline: ")
                 print(decode(self.tokenizer, result["headline"]))
                 print("\n")
-                tokenstring = decode(self.tokenizer, result["token_list"]).replace('[Newline]', '\n')
+                tokenstring = decode(self.tokenizer, result["token_list"]).replace('[newline]', '\n')
 
                 print(tokenstring)
                 print("\n")
@@ -1016,11 +1100,11 @@ class QBert():
                 #     print("skipped, too low score")
                 atext = decode(self.tokenizer, result["token_list"])
 
-                atext = atext.split("[Newline]")
+                atext = atext.split("[newline]")
                 listactive = False
                 newat = []
                 for at in atext:
-                    at = "".join(["[Newline]",at])
+                    at = "".join(["[newline]",at])
                     if "[Paragraph]" in at:
                         at += "<br>"
                     if "[H1Start]" in at:
@@ -1103,7 +1187,7 @@ class QBert():
                 atext = newat
                 atext = "".join(atext)
                 #atext = atext.replace('[Paragraph]', "<p>")
-                atext = atext.replace('[Newline]', "<br>").replace('[Paragraph]', "")
+                atext = atext.replace('[newline]', "<br>").replace('[Paragraph]', "")
 
 
 

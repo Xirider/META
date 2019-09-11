@@ -21,7 +21,7 @@ import lxml.html.clean
 from html import unescape
 import collections
 import torch
-
+from htmlconvert.htmlconverter import single_html2text
 
 
 def url_to_nq_inputlist(url):
@@ -30,7 +30,17 @@ def url_to_nq_inputlist(url):
   article.download()
   html = article.html
   text , _ = html_to_marked_text(html)
-  return {"text": text, "url": url}
+  #returndict = single_html2text(html, url)
+  return text
+
+def url_to_cleanedtext(url):
+  """ Converts single article url to list of input for the model (but no batching) """
+  article = newspaper.Article(url, fetch_images=False, memoize_articles=False)
+  article.download()
+  html = article.html
+
+  returndict = single_html2text(html, url)
+  return returndict
 
 
 def build_input_batch(articlelist, question, tokenizer, batch_size, onlyone=False, webdata =False, **kwargs):
@@ -150,7 +160,9 @@ def convert_single_example(article, question, tokenizer, article_id, max_query_l
   else:
     all_doc_tokens = article
 
-
+  activelonglines = article["activelonglines"]
+  htmltext = article["htmltext"]
+  line2line = article["line2line"]
 
 
   # QUERY
@@ -194,6 +206,7 @@ def convert_single_example(article, question, tokenizer, article_id, max_query_l
     start_offset += min(length, doc_stride)
 
   number_of_doc_spans = len(doc_spans)
+  shortlinecounter = 0
   for (doc_span_index, doc_span) in enumerate(doc_spans):
     
     tokens = []
@@ -226,10 +239,10 @@ def convert_single_example(article, question, tokenizer, article_id, max_query_l
             
                 segmentindex = f"{doc_span_index:02d}"
             else:
-                segmentindex = "XX"
-            tokens.append(f"[Segment={segmentindex}]")
+                segmentindex = "xx"
+            tokens.append(f"[segment={segmentindex}]")
             segment_ids.append(1)
-            tokens.append(f"[Newline]")
+            tokens.append(f"[newline]")
             segment_ids.append(1)
         except:
             import pdb; pdb.set_trace()
@@ -242,12 +255,16 @@ def convert_single_example(article, question, tokenizer, article_id, max_query_l
     segment_ids.append(1)
     assert len(tokens) == len(segment_ids)
 
+    
+
     # determine which newlines are the active one when where is overlap
     active_newlines = []
+    newline2longline = {}
     doc_s_s = int(doc_stride / 2 + question_length)
     doc_s_e = int(doc_stride * 1.5 + question_length)
+    nlncounter = 0
     for tokid, tok in enumerate(tokens):
-        if tok == "[Newline]":
+        if tok == "[newline]":
             
             if tokid <= doc_s_s:
                 if doc_span_index > 0:
@@ -258,6 +275,19 @@ def convert_single_example(article, question, tokenizer, article_id, max_query_l
                     continue
             
             active_newlines.append(tokid)
+            nlncounter += 1
+            # add tok2longline conversion for all active newlines
+            # skip over the first newlinecounter as it is not included
+            if nlncounter > 1:
+
+                newline2longline[tokid] = {"longline": article["line2line"][shortlinecounter],
+                                         "current_shortline":shortlinecounter }
+                shortlinecounter += 1
+            
+            else:
+                newline2longline[tokid] = {"longline": None,
+                                         "current_shortline":None}
+
 
     inactive_tokens = []
 
@@ -355,7 +385,11 @@ def convert_single_example(article, question, tokenizer, article_id, max_query_l
         answer_type = answer_type,
         question_tokens = question,
         active_newlines= active_newlines,
-        inactive_tokens = inactive_tokens
+        inactive_tokens = inactive_tokens,
+        activelonglines = activelonglines,
+        line2line = line2line,
+        htmltext = htmltext,
+        newline2longline = newline2longline,
         
 
 
@@ -403,7 +437,11 @@ class InputOutputs(object):
                answer_end = None,
                question_tokens = None,
                active_newlines = None,
-               inactive_tokens = None
+               inactive_tokens = None,
+               activelonglines = None,
+               line2line = None,
+               htmltext = None,
+               newline2longline = None,
 
 
 
@@ -442,6 +480,10 @@ class InputOutputs(object):
     self.question_tokens = question_tokens
     self.active_newlines = active_newlines
     self.inactive_tokens = inactive_tokens
+    self.activelonglines = activelonglines
+    self.line2line = line2line
+    self.htmltext = htmltext
+    self.newline2longline = newline2longline
 
 
 

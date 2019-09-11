@@ -10,17 +10,18 @@ from newspaper import Article, news_pool
 
 from concurrent.futures import TimeoutError
 from pebble import ProcessPool, ProcessExpired, ThreadPool
-from nqdata import url_to_nq_inputlist
+from nqdata import url_to_nq_inputlist, url_to_cleanedtext
 
 from newscrape import get_html
 from inscriptis_p import get_text
 
 from lib.google_search_results import GoogleSearchResults
 
-def webscraper(url):
-    html = get_html(url)
-    text = get_text(html)
-    return {"text": text, "url": url}
+# def webscraper(url):
+#     html = get_html(url)
+#     text = get_text(html)
+#     return {"text": text, "url": url}
+
 
 
 def artdownload(url):
@@ -111,7 +112,7 @@ class Searcher():
         if use_nq_scraper:
             self.scrape_function = url_to_nq_inputlist
         elif use_webscraper:
-            self.scrape_function = webscraper
+            self.scrape_function = url_to_cleanedtext
         else:
             self.scrape_function = artdownload
         self.use_api = use_api
