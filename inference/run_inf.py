@@ -711,7 +711,7 @@ def do_ranking(score_list, score_threshold= None, con_threshold = None,  sep_typ
         addstring = " ".join(addstring) + " "
 
         closestring = []     
-        for start in range(start =len(opentags)-1, stop=-1, step= -1):
+        for start in range(len(opentags)-1, -1, -1):
             closestring.extend(opendict[opentags[start]] * [closetags[start]])
         closestring = " " + " ".join(addstring)
 
@@ -726,9 +726,11 @@ def do_ranking(score_list, score_threshold= None, con_threshold = None,  sep_typ
             
             updated_line = []
             add_to_end = []
-            changing = False
+            imagestart = False
+            deletenext = False
             splitline = lline.split()
-            for word in splitline:
+            for wordid, word in enumerate(splitline):
+                changing = False
                 if word in opentags:
                     opendict[word] += 1
                     changing = True
@@ -737,25 +739,92 @@ def do_ranking(score_list, score_threshold= None, con_threshold = None,  sep_typ
                     changing = True
                 if sum(opendict.values()) > 0:
                     changing = True
-            
+                
+                # delenext
+
+                if deletenext:
+                    word = ""
+                    deletenext = False
+                # h tags
                 if word in headtags:
                     hnumber = word[2]
                     word = f"<h{hnumber}>"
                     add_to_end.append(f"</h{hnumber}>")
                     changing = True
 
-                if word == 
+                # link
+                if word == "[linkstart]":
+
+                    link_word_id = wordid
+
+                if word == "[linkend]":
+                    linktext = splitline[wordid+1]
+                    if linktext[0] == "(":
+                        updated_line[link_word_id] = f"<a href='{linktext[1:-1]}'>"
+                        word = "</a>"
+                        deletenext = True
+                    
+                    else:
+                        updated_line[link_word_id] = ""
+                        word = ""
+
+                # image link
+                if word == "[imagestart]":
+                    imagestart = True
+                    image_word_id = wordid
+
+                if imagestart and splitline[wordid+1] != "[imageend]":
+                    deletenext = True
+
+                if word == "[imageend]":
+                    linktext = splitline[wordid+1]
+                    imagestart = False
+                    if linktext[0] == "(":
+                        if linktext[0:6] == "(https":
+                            updated_line[image_word_id] = f"<img src='{linktext[1:-1]}'>"
+                        else:
+                            updated_line[image_word_id] = ""
+                        word = ""
+                        deletenext = True
+                        
+                    
+                    else:
+                        updated_line[image_word_id] = ""
+                        word = ""                
+
+
+
+
+                # unordered list
+                if word == "[unorderedlist]":
+                    word = ""
+
+                # ordered list
+                if word == "[orderedlist]":
+                    word = ""
+                    deletenext = True
+
+
+                
                 updated_line.append(word)
 
 
             if not changing:
-                updated_line = ["<br>"].extend(updated_line)
+                brlist = ["<br>"]
+                brlist.extend(updated_line)
+                updated_line = brlist
+            try:
+                updated_line.extend(add_to_end)
+            except:
+                import pdb; pdb.set_trace()
+            updated_line = list(filter(None, updated_line))
+            updated_line = " ".join(updated_line)
+            linelist.append(updated_line)
 
-            updated_line.extend(add_to_end)
-
+        parag["newhtml"] = "".join(linelist)
     # {"longline": article["line2line"][shortlinecounter],
     #                                      "current_shortline":shortlinecounter }
-
+    import pdb; pdb.set_trace()
     return para_groups
 
 
@@ -991,7 +1060,7 @@ class QBert():
                     print(f"model finished after {finaltime}")
                     print("model ends")
                     prediction_list.append([binary_logits, span_logits, batch_article])
-                    import pdb; pdb.set_trace()
+                    
                     print("appending ends")
                 print("compute best predictions")
             if not self.inference:

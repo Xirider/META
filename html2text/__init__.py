@@ -301,7 +301,8 @@ class HTML2Text(html.parser.HTMLParser):
             and tag not in ["p", "div", "style", "dl", "dt"]
             and (tag != "img" or self.ignore_images)
         ):
-            self.o(" [linkstart] ")
+            # removed because of duplicates
+            #self.o(" [linkstart] ")
             self.maybe_automatic_link = None
             self.empty_link = False
 
