@@ -44,7 +44,7 @@ def create_single_para_examples(articlelist, query, stopper, tokenizer, question
             # add one list for each special tag with the corresponding token ids
 
             for special_tag in stopper:
-                if not special_tag.startswith("[Segment="):
+                if not special_tag.startswith("[segment="):
                     special_list = []
                     for tokid, token in enumerate(featuredict["tokens"]):
                         if token == special_tag:
@@ -72,16 +72,16 @@ def create_single_para_examples(articlelist, query, stopper, tokenizer, question
             #             stop_len = 1
             #             break
                         
-            len_newlines = len(featuredict["[Newline]"])
+            len_newlines = len(featuredict["[newline]"])
             if duplication_mode:
-                for stopid, tokid in enumerate(featuredict["[Newline]"]):
+                for stopid, tokid in enumerate(featuredict["[newline]"]):
                     curdict = copy.deepcopy(featuredict)
 
                     para_start = tokid
                     if stopid == len_newlines - 1:
                         para_end = len(curdict["tokens"]) - 1
                     else:
-                        para_end = curdict["[Newline]"][stopid + 1]
+                        para_end = curdict["[newline]"][stopid + 1]
 
 
                     # add start and end special tokens in "text"
@@ -94,7 +94,7 @@ def create_single_para_examples(articlelist, query, stopper, tokenizer, question
                     divider = " \n\n<<<<<<<<>>>>>>>>\n "
                     # enddivider = ""
 
-                    for new_line_token_id in curdict["[Newline]"]:
+                    for new_line_token_id in curdict["[newline]"]:
                         copytokens[new_line_token_id] = "\n"
 
                     copytokens.insert(para_start, divider)
@@ -139,7 +139,7 @@ def create_single_para_examples(articlelist, query, stopper, tokenizer, question
                 #divider = " \n\n<<<<<<<<>>>>>>>>\n "
                 # enddivider = ""
 
-                for new_line_token_id in curdict["[Newline]"]:
+                for new_line_token_id in curdict["[newline]"]:
                     copytokens[new_line_token_id] = "\n"
 
                 #copytokens.insert(para_start, divider)
@@ -272,7 +272,10 @@ def create_prodigy_file(examples, label_list, clas_task, filename, foldername="d
     full_filename = f'{foldername}{filename}prodfile.jsonl'
     writecounter = 0
     with open(full_filename, 'w') as outfile:
-        for line in examples:
+        for lid, line in enumerate(examples):
+            line["htmltext"] = ""
+            if lid % 100 == 0:
+                print(lid)
             json.dump(line, outfile)
             outfile.write('\n')
             writecounter += 1
@@ -304,6 +307,7 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--download", action="store_true", help="where to save the annotated example train and test files")
     parser.add_argument("--num_q", type=int, default=200, help="where to save the annotated example train and test files")
+    parser.add_argument("--timeout", type=int, default=10, help="where to save the annotated example train and test files")
     args = parser.parse_args()
 
 
@@ -323,7 +327,7 @@ if __name__ == "__main__":
     
 
 
-    def create_data(extracting_queries= False, num_q = 200, download= False, samples = 200, a_number=3, return_all=False):
+    def create_data(extracting_queries= False, num_q = 200, download= False, samples_n = 200, a_number=5, return_all=False):
         
         if extracting_queries:
             with open(sfile, "r", encoding="utf-8") as f:
@@ -375,7 +379,29 @@ if __name__ == "__main__":
 
         #qlist = querylist
 
-
+        qlist = [
+            "current president",
+                "carrot cake recipes",
+                "mark zuckerberg podcast",
+                "flixbus",
+                "linux search file",
+                "snorkel metal",
+                "india tourist visa",
+                "why is google so fast",
+                "flask get request example",
+                "s1: error: cannot open .git/FETCH_HEAD: Permission denied",
+                "Snorkel Metal",
+                "linux search file",
+                "meta",
+                "carrot cake recipe",
+                "Sri lanka to do",
+                "get keys from dictionary python",
+                "mirai no mirai",
+                "Mecha animes" ,
+                "acillary justice",
+                "sleep vs hibernate windows 10",
+                "metric for imbalanced data"
+        ]
 
         
         searcher = Searcher(use_webscraper = True, use_api=True, a_number=a_number)
@@ -388,7 +414,7 @@ if __name__ == "__main__":
         if download:
             for qid, query in enumerate(tqdm(qlist)):
                 try:
-                    article_list = searcher.searchandsplit(query, timeout = 10)
+                    article_list = searcher.searchandsplit(query, timeout = args.timeout)
                 except:
                     print("couldn't get articles, maybe because of api failure, skipping query now")
                     time.sleep(10)
@@ -399,10 +425,10 @@ if __name__ == "__main__":
                 question_number += 1
                 example_list.extend(example_result)
             
-            pickle.dump( example_list, open( "example_list_for_annotations.p", "wb") )
+            pickle.dump( example_list, open( "interm_for_annotations.p", "wb") )
         
-        example_list = pickle.load( open( "example_list_for_annotations.p", "rb") )
-
+        example_list = pickle.load( open( "interm_for_annotations.p", "rb") )
+        samples = samples_n
         if return_all:
             print("number of samples")
             print(len(example_list))
@@ -419,7 +445,7 @@ if __name__ == "__main__":
 
 
 
-    example_list = create_data(extracting_queries=False, num_q=args.num_q, download=args.download, samples=200, a_number=3, return_all=True)
+    example_list = create_data(extracting_queries=False, num_q=args.num_q, download=args.download, samples_n=200, a_number=5, return_all=True)
 
 
     create_prodigy_file(example_list, multi_labels, "multi", filename)

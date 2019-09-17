@@ -30,12 +30,17 @@ class Model(object):
         num_span_labels = len(span_labels)
         num_multi_labels = len(multi_labels)
 
-        self.label_type_cond = label_type_cond.split(",")
-        self.label_id_cond = label_id_cond.split(",")
 
 
-        assert len(self.label_id_cond) == len(self.label_type_cond)
+        if label_id_cond:
+            self.label_type_cond = label_type_cond.split(",")
+            self.label_id_cond = label_id_cond.split(",")
 
+
+            assert len(self.label_id_cond) == len(self.label_type_cond)
+        else:
+            self.label_type_cond = None
+            self.label_id_cond = None
 
 
         self.device = device
@@ -65,25 +70,26 @@ class Model(object):
 
                 bin_num = binary_logits.shape[1]
                 seq_len = span_logits.shape[0]
+                if self.label_id_cond:
 
-                for ltcid, ltc in enumerate(self.label_type_cond):
-                    
-                    lic = int(self.label_id_cond[ltcid])
+                    for ltcid, ltc in enumerate(self.label_type_cond):
+                        
+                        lic = int(self.label_id_cond[ltcid])
 
-                    if ltc == "binary":
-                        for a_newline in active_newlines:
-                            if binary_logits[0][a_newline][lic] > binary_labels_threshold[lic]:
-                                keep += 1
-                                break
-                            
-                    elif ltc == "span":
-                        for seq in range(seq_len):
-                            if span_logits[0][seq][lic] > span_labels_threshold[lic]:
-                                keep += 1
-                                break
+                        if ltc == "binary":
+                            for a_newline in active_newlines:
+                                if binary_logits[0][a_newline][lic] > binary_labels_threshold[lic]:
+                                    keep += 1
+                                    break
+                                
+                        elif ltc == "span":
+                            for seq in range(seq_len):
+                                if span_logits[0][seq][lic] > span_labels_threshold[lic]:
+                                    keep += 1
+                                    break
 
-                if keep != len(self.label_type_cond):
-                    continue
+                    if keep != len(self.label_type_cond):
+                        continue
 
                 yield example
 

@@ -102,6 +102,9 @@ def zenapi(query):
         urllist = [ x["url"] for x in results["organic"] if "title" in x]
     except: 
         raise Exception("Zenserp api returns error")
+    
+    urllist = [url for url in urllist if not url.endswith(".pdf")]
+
     return urllist
 
 
@@ -158,6 +161,8 @@ class Searcher():
 
         else:
             for urlr in search(query, stop= 10, pause = 0.0,only_standard = True):
+                if urlr.endswith(".pdf"):
+                    continue
                 urllist.append(urlr)
                 print("adding url or url list")
 

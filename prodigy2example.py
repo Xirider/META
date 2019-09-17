@@ -91,7 +91,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     #db_prefix = "d3"
-    db_name = "d3_merged"
+    db_name = args.output_folder
     db = db_name
     mainfolder = "traindata"
     test_prob = 0.20
@@ -114,6 +114,7 @@ if __name__ == "__main__":
     ddict = list_duplicates(example_iterator, "_input_hash")
     keylist = list(ddict.keys())
     deletelist = []
+    print("generating keylist")
     for key in keylist:
         indexlist = ddict[key]
         spanlist = []
@@ -176,18 +177,19 @@ if __name__ == "__main__":
 
 
 
+    print("start converting labels")
 
-
-
-    for example in example_iterator:
+    print(f"total of {len(example_iterator)} examples")
+    for exampleid, example in enumerate(example_iterator):
         # convert spans into newline labels
         
-
+        if exampleid % 50 == 0:
+            print(f"Converting example {exampleid}")
         spanlist = example["spans"]
 
 
         for label in binary_labels:
-            example[label] = spans2newlinelabel(spanlist, [label], example["[Newline]"], example["tok2newline"], example["activelist"], example["active_newlines"])
+            example[label] = spans2newlinelabel(spanlist, [label], example["[newline]"], example["tok2newline"], example["activelist"], example["active_newlines"])
         
         for label in span_labels:
             example[label] =  spans2label(spanlist, label, example["input_ids"], example["activelist"], example["inactive_tokens"])
@@ -195,7 +197,7 @@ if __name__ == "__main__":
         
 
         for label in multi_labels:
-            example[label[0]] = spans2newlinelabel(spanlist, label, example["[Newline]"], example["tok2newline"], example["activelist"], example["active_newlines"])
+            example[label[0]] = spans2newlinelabel(spanlist, label, example["[newline]"], example["tok2newline"], example["activelist"], example["active_newlines"])
 
         new_example_list.append(example)
 
@@ -214,7 +216,7 @@ if __name__ == "__main__":
     test_example_list = []
 
     nel = len(new_example_list)
-    train_num = nel - (nel // (1/test_prob))
+    train_num = int(nel - (nel // (1/test_prob)))
 
 
     train_example_list = new_example_list[:train_num]

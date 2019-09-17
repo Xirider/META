@@ -30,3 +30,5 @@ build/
 randomtest.py
 *.toc
 startscript.spec
+*.jsonl
+*.jsonl
