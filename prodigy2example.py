@@ -4,13 +4,14 @@ from collections import defaultdict
 import json
 import random
 import os
-
+import copy
 from labels import binary_labels, span_labels, multi_labels
 
 all_labels = binary_labels + span_labels + multi_labels
 
 def spans2newlinelabel(spans, labels, newline_pos, tok2newline, activelist, active_newlines):
     
+
     label_list = defaultdict(list)
     for label in labels:
         for span in spans:
@@ -21,15 +22,15 @@ def spans2newlinelabel(spans, labels, newline_pos, tok2newline, activelist, acti
     
     
     final_labels = []
-    new_active = []
-    for active in active_newlines:
-        new_active.append(tok2newline[active])
-    
-    for newline, _ in enumerate(newline_pos):
+    # new_active = []
+    # for active in active_newlines:
+    #     new_active.append(tok2newline[active])
+    new_active = active_newlines
+    for newline, rlnewline in enumerate(newline_pos):
         added_value = False
 
 
-        if newline not in new_active:
+        if rlnewline not in new_active:
             final_labels.append(-1)
             added_value = True
 
@@ -38,20 +39,31 @@ def spans2newlinelabel(spans, labels, newline_pos, tok2newline, activelist, acti
                 if newline in label_list[label]:
                     final_labels.append(labelid + 1)
                     added_value = True
+                    
                     break
 
 
 
         if not added_value:
             final_labels.append(0)
+            
     
+
     if labels[0] not in activelist:
         final_labels = [-1] * len(newline_pos)
-    return final_labels 
+    
+    if sum(final_labels) * -1  != len(final_labels):
+        is_active = True
+    else:
+        is_active = False
+
+    return is_active,final_labels 
 
 
 def spans2label(spans, label, input_ids, activelist, inactive_tokens):
+
     if label in activelist:
+
 
         final_labels = [0]*len(input_ids)
         for span in spans:
@@ -59,6 +71,7 @@ def spans2label(spans, label, input_ids, activelist, inactive_tokens):
                 span_range = range(span["token_start"], span["token_end"] + 1)
                 for positive in span_range:
                     final_labels[positive] = 1
+                    
     
 
         active = list(range(inactive_tokens[0], inactive_tokens[1]))
@@ -69,7 +82,13 @@ def spans2label(spans, label, input_ids, activelist, inactive_tokens):
 
     else:
         final_labels = [-1]*len(input_ids)
-    return final_labels
+    
+    if sum(final_labels) * -1  != len(final_labels):
+        is_active = True
+    else:
+        is_active = False
+
+    return is_active ,final_labels
 
 
 
@@ -87,7 +106,7 @@ if __name__ == "__main__":
     from argparse import ArgumentParser
     parser = ArgumentParser()
     parser.add_argument("--output_folder", type=str, default="", help="where to save the annotated example train and test files")
-    
+    parser.add_argument("--single_labels", action='store_true', help="One example per label")
 
     args = parser.parse_args()
     #db_prefix = "d3"
@@ -187,19 +206,45 @@ if __name__ == "__main__":
             print(f"Converting example {exampleid}")
         spanlist = example["spans"]
 
-
+        non_minus_label = False
         for label in binary_labels:
-            example[label] = spans2newlinelabel(spanlist, [label], example["[newline]"], example["tok2newline"], example["activelist"], example["active_newlines"])
+
+            is_active,example[label] = spans2newlinelabel(spanlist, [label], example["[newline]"], example["tok2newline"], example["activelist"], example["active_newlines"])
+            if is_active:
+                non_minus_label = label
         
         for label in span_labels:
-            example[label] =  spans2label(spanlist, label, example["input_ids"], example["activelist"], example["inactive_tokens"])
-
+            is_active,example[label] =  spans2label(spanlist, label, example["input_ids"], example["activelist"], example["inactive_tokens"])
+            if is_active:
+                non_minus_label = label
         
 
         for label in multi_labels:
-            example[label[0]] = spans2newlinelabel(spanlist, label, example["[newline]"], example["tok2newline"], example["activelist"], example["active_newlines"])
+            is_active,example[label[0]] = spans2newlinelabel(spanlist, label, example["[newline]"], example["tok2newline"], example["activelist"], example["active_newlines"])
+            if is_active:
+                non_minus_label = label[0]
 
-        new_example_list.append(example)
+        if args.single_labels:
+            # for each 
+
+            if non_minus_label != False:
+                cur_list = example[non_minus_label]
+                cur_list_len = len(cur_list)
+                for lid, l_number in enumerate(cur_list):
+                    if l_number != -1:
+                        cop_example = copy.deepcopy(example)
+                        single_active_list = cur_list_len * [-1]
+                        single_active_list[lid] = l_number
+                        cop_example[non_minus_label] = list(single_active_list)
+                        if exampleid == 0:
+                            print(cop_example[non_minus_label])
+                        new_example_list.append(cop_example)
+
+        else:
+            if non_minus_label != False:
+                new_example_list.append(example)
+            else:
+                print("skipped example, as it had no non minus labels")
 
     if not os.path.exists(mainfolder):
         os.makedirs(mainfolder)

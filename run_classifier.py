@@ -17,7 +17,7 @@ import numpy as np
 
 import torch
 from torch.utils.data import (DataLoader, RandomSampler, SequentialSampler,
-                              TensorDataset)
+                              TensorDataset, Sampler)
 from torch.utils.data.distributed import DistributedSampler
 from torch.nn import CrossEntropyLoss, MSELoss
 
@@ -32,7 +32,6 @@ from run_classifier_dataset_utils import processors, output_modes, convert_examp
 
 from collections import defaultdict
 
-from collections import defaultdict
 from functools import partial
 
 from tokenlist import stopper
@@ -67,9 +66,8 @@ def main():
                         "bert-large-uncased, bert-base-cased, bert-large-cased, bert-base-multilingual-uncased, "
                         "bert-base-multilingual-cased, bert-base-chinese.")
     parser.add_argument("--task_name",
-                        default=None,
+                        default="meta",
                         type=str,
-                        required=True,
                         help="The name of the task to train.")
     parser.add_argument("--output_dir",
                         default=None,
@@ -139,6 +137,9 @@ def main():
     parser.add_argument('--fp16',
                         action='store_true',
                         help="Whether to use 16-bit float precision instead of 32-bit")
+    parser.add_argument('--random_sampling',
+                        action='store_true',
+                        help="random sampling instead of balanced sampling")
     parser.add_argument('--loss_scale',
                         type=float, default=0,
                         help="Loss scaling to improve fp16 numeric stability. Only used when fp16 set to True.\n"
@@ -205,6 +206,8 @@ def main():
 
     label_list = processor.get_labels()
 
+    full_label_list = label_list[0] + label_list[1] + label_list[2]
+
     num_binary_labels = len(label_list[0])
     num_span_labels = len(label_list[1])
     num_multi_labels = len(label_list[2])
@@ -262,6 +265,44 @@ def main():
     def sigmoid(x):
         sigm = 1. / (1. + np.exp(-x))
         return sigm
+
+    class UnderSampler(Sampler):
+
+
+        def __init__(self, label_mins, label_type_list, label_number_list):
+            self.label_mins = label_mins
+            self.label_type_list = label_type_list
+            self.label_number_list = label_number_list
+
+
+
+        def __iter__(self):
+            
+
+            label_mins = self.label_mins
+            label_type_list = self.label_type_list
+            label_number_list = self.label_number_list
+
+
+            index_list = []
+            counter_dict = defaultdict(int)
+
+            for i in range(len(label_type_list)):
+
+                current_label = label_type_list[i]
+                current_label_number = label_number_list[i]
+                current_label_min = label_mins[current_label]
+
+                if current_label_min > counter_dict[str(current_label)+ "_" + str(current_label_number)]:
+                     counter_dict[str(current_label)+"_" + str(current_label_number)] += 1
+                     index_list.append(i)
+            
+            random.shuffle(index_list)
+
+            return iter(index_list)
+
+        def __len__(self):
+            return len(self.label_number_list)
 
 
     ### Evaluation
@@ -347,13 +388,36 @@ def main():
         #pos_weights = [pos_weights] * len(eval_features)
         pos_weights = pos_weights.expand(all_input_ids.size(0), -1)
             
+        # prepare label information for undersampler
+        label_mins = [defaultdict(int)] * len(full_label_list)
+        label_type_list = ["x"] * len(eval_features)
+        label_number_list = ["x"] * len(eval_features)
 
+        for lbid, lb in enumerate(full_label_list):
+            if type(lb) == list:
+                lb = lb[0]
+            for exid, example in enumerate(train_features):
+                cur_arr = example[lb]
+                arr_number = sum(cur_arr) + len(cur_arr) 
+                if arr_number != 0:
+                    label_number_list[exid] = arr_number
+                    label_type_list[exid] = lbid
+                    label_mins[lbid][arr_number] += 1
+        assert ("x" not in label_type_list)
+        assert ("x" not in label_number_list)
+
+        for lid, lm in enumerate(label_mins):
+            label_mins[lid] = min(lm.values())
 
         eval_data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, newline_mask, pos_weights, *list_binary_labels, *list_span_labels, *list_multi_labels)
 
-        # Run prediction for full data
+        # Run prediction for full data 
+
         if args.local_rank == -1:
-            eval_sampler = SequentialSampler(eval_data)
+            if args.random_sampling:
+                eval_sampler = SequentialSampler(eval_data)
+            else:
+                eval_sampler = UnderSampler( label_mins, label_type_list, label_number_list)
         else:
             eval_sampler = DistributedSampler(eval_data)  # Note that this sampler samples randomly
         eval_dataloader = DataLoader(eval_data, sampler=eval_sampler, batch_size=args.eval_batch_size)
@@ -693,7 +757,7 @@ def main():
             list_binary_labels.append(torch.tensor([labelindex2binary(f[lb], f["[newline]"], input_len=input_len) for f in train_features], dtype=torch.long))
 
         pos_weights = []
-        for lb in label_list[0]:
+        for lbid, lb in enumerate(label_list[0]):
             pos_cases = 0
             neg_cases = 0
             for example in train_features:
@@ -703,10 +767,14 @@ def main():
                 pos = cur_arr.sum()
                 pos_cases += pos
                 neg_cases = neg_cases + size - pos
+
             if pos_cases > 0:
                 ratio = neg_cases / pos_cases
             else:
                 ratio = 1.0
+
+
+            
             pos_weights.append(ratio)
             experiment.log_metric(f"positive training labels for class: {lb}",pos_cases)
             experiment.log_metric(f"negative training labels for class: {lb}",neg_cases)
@@ -728,6 +796,35 @@ def main():
             list_multi_labels.append(torch.tensor([labelindex2binary(f[lb[0]], f["[newline]"], input_len=input_len, ignore=-1) for f in train_features], dtype=torch.long))
 
 
+        # prepare label information for undersampler
+        label_mins = [defaultdict(int)] * len(full_label_list)
+        label_type_list = ["x"] * len(train_features)
+        label_number_list = ["x"] * len(train_features)
+
+        for lbid, lb in enumerate(full_label_list):
+            if type(lb) == list:
+                lb = lb[0]
+            for exid, example in enumerate(train_features):
+                cur_arr = example[lb]
+                arr_number = sum(cur_arr) + len(cur_arr) 
+                if arr_number != 0:
+                    label_number_list[exid] = arr_number
+                    label_type_list[exid] = lbid
+                    label_mins[lbid][arr_number] += 1
+        assert ("x" not in label_type_list)
+        assert ("x" not in label_number_list)
+
+        for lid, lm in enumerate(label_mins):
+            label_mins[lid] = min(lm.values())
+
+            
+
+
+
+
+
+
+
 
         train_data = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, newline_mask, pos_weights, *list_binary_labels, *list_span_labels, *list_multi_labels)
         if args.local_rank == -1:
@@ -747,7 +844,11 @@ def main():
                 #train_sampler = RandomWeightedSampler(train_data)
             #else:
 
-            train_sampler = RandomSampler(train_data)
+            if args.random_sampling:
+                train_sampler = RandomSampler(train_data)
+            else:
+
+                train_sampler = UnderSampler( label_mins, label_type_list, label_number_list)
         else:
             train_sampler = DistributedSampler(train_data)
         train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=args.train_batch_size)
