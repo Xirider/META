@@ -396,7 +396,7 @@ def main():
         for lbid, lb in enumerate(full_label_list):
             if type(lb) == list:
                 lb = lb[0]
-            for exid, example in enumerate(train_features):
+            for exid, example in enumerate(eval_features):
                 cur_arr = example[lb]
                 arr_number = sum(cur_arr) + len(cur_arr) 
                 if arr_number != 0:

@@ -804,7 +804,11 @@ def do_ranking(score_list, score_threshold= None, con_threshold = None,  sep_typ
                     word = ""
                     deletenext = True
 
+                if word == "[codestart]":
+                    word = "<code>"
 
+                if word == "[codeend]":
+                    word = "</code>"
                 
                 updated_line.append(word)
 
