@@ -274,7 +274,27 @@ def main():
             self.label_type_list = label_type_list
             self.label_number_list = label_number_list
 
+            label_mins = self.label_mins
+            label_type_list = self.label_type_list
+            label_number_list = self.label_number_list
 
+
+            index_list = []
+            counter_dict = defaultdict(int)
+
+            for i in range(len(label_type_list)):
+
+                current_label = label_type_list[i]
+                current_label_number = label_number_list[i]
+                current_label_min = label_mins[current_label]
+
+                if current_label_min > counter_dict[str(current_label)+ "_" + str(current_label_number)]:
+                     counter_dict[str(current_label)+"_" + str(current_label_number)] += 1
+                     index_list.append(i)
+            
+            random.shuffle(index_list)
+
+            self.index_list_len = len(index_list)
 
         def __iter__(self):
             
@@ -302,7 +322,7 @@ def main():
             return iter(index_list)
 
         def __len__(self):
-            return len(self.label_number_list)
+            return self.index_list_len
 
 
     ### Evaluation
