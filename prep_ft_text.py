@@ -4,6 +4,7 @@ import copy
 from newscrape import get_html
 from inscriptis_p import get_text
 import pickle
+import langid
 # query = "current president"
 
 
@@ -26,7 +27,7 @@ def create_text_with_tok(articlelist, tokenizer, filename="corpus.txt", minlen =
             continue
         cur_sentence = []
         for tok in tokens:
-            if tok == "[Newline]":
+            if tok == "[newline]":
                 cur_sentence.append("\n")
                 
 
@@ -45,7 +46,7 @@ def insert_string(source_str, insert_str, pos):
 
 def add_linebreak_to_newline(string):
 
-    newtok = "[Newline]"
+    newtok = "[newline]"
     lb = "\n"
     newlen = len(newtok)
     last_found = -1 -newlen  # Begin at -1 so the next position to search from is 0
@@ -58,20 +59,24 @@ def add_linebreak_to_newline(string):
         string = insert_string(string, lb, last_found )
     return string
 
-def create_text(articlelist, tokenizer, filename="corpus.txt", minlen = 300):
+def create_text(articlelist,  filename="corpus.txt", minlen = 300, opentype = "a+"):
     # check for beginning para, then copy, modify and append
     
     updated_list = []
 
-    afile = open(filename, "a+", encoding="utf-8")
+    afile = open(filename, opentype, encoding="utf-8")
 
     for article_id, article in enumerate(articlelist):
         #tokens = tokenizer.tokenize(article["text"])
         text = article["text"]
+        language = langid.classify(text)[0]
+        print(language)
+        if language != "en":
+            continue
         if len(text.split()) < minlen:
             continue
         text = add_linebreak_to_newline(text)
-        text = text + "\n"
+        text = text + "\n\n"
 
         print("added new article line")
         afile.write(text)
@@ -88,24 +93,8 @@ if __name__ == "__main__":
     article_object_list = []
     question_number = 0   
 
-    stopper = ["[Newline]" , "[UNK]" , "[SEP]" , "[Q]" , "[CLS]" , "[WebLinkStart]" , "[LocalLinkStart]" , "[RelativeLinkStart]" ,
-     "[WebLinkEnd]" , "[LocalLinkEnd]" , "[RelativeLinkEnd]" , "[VideoStart]" , "[VideoEnd]" , "[TitleStart]" , 
-     "[NavStart]" , "[AsideStart]" , "[FooterStart]" , "[IframeStart]" , "[IframeEnd]" , "[NavEnd]" , "[AsideEnd]" , 
-     "[FooterEnd]" , "[CodeStart]" , "[H1Start]" , "[H2Start]" , "[H3Start]" , "[H4Start]" , "[H5Start]" , "[H6Start]" ,
-      "[CodeEnd]" , "[UnorderedList=1]" , "[UnorderedList=2]" , "[UnorderedList=3]" , "[UnorderedList=4]" , "[OrderedList]"
-       , "[UnorderedListEnd=1]" , "[UnorderedListEnd=2]" , "[UnorderedListEnd=3]" , "[UnorderedListEnd=4]" , 
-       "[OrderedListEnd]" , "[TableStart]" , "[RowStart]" , "[CellStart]" , "[TableEnd]" , "[RowEnd]" , "[CellEnd]" ,
-        "[LineBreak]" , "[Paragraph]" , "[StartImage]" , "[EndImage]" , "[Segment=00]" , "[Segment=01]" , "[Segment=02]" ,
-         "[Segment=03]" , "[Segment=04]" , "[Segment=05]" , "[Segment=06]" , "[Segment=07]" , "[Segment=08]" ,
-          "[Segment=09]" , "[Segment=10]" , "[Segment=11]" , "[Segment=12]" , "[Segment=13]" , "[Segment=14]" ,
-           "[Segment=15]" , "[Segment=16]" , "[Segment=17]" , "[Segment=18]" , "[Segment=19]" , "[Segment=20]" , 
-           "[Segment=21]" , "[Segment=22]" , "[Segment=23]" , "[Segment=24]" , "[Segment=25]" , "[Segment=26]" , 
-           "[Segment=27]" , "[Segment=28]" , "[Segment=29]" , "[Segment=30]" , "[Segment=XX]", "\n"]
-
-
-
     #bert_type = "bert-large-uncased-whole-word-masking"
-
+    from tokenlist import stopper
 
     tokenizer = BertTokenizer("savedmodel/vocab.txt", never_split = stopper)
 

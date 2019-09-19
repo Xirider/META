@@ -100,9 +100,10 @@ def zenapi(query):
         raise Exception("Response error during request error")
     try:
         urllist = [ x["url"] for x in results["organic"] if "title" in x]
-    except: 
-        raise Exception("Zenserp api returns error")
-    
+    except:
+        
+        print("Zenserp api returns error")
+        urllist = []
     urllist = [url for url in urllist if not url.endswith(".pdf")]
 
     return urllist

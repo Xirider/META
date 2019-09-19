@@ -239,8 +239,10 @@ def create_instances_from_document(
                         tokens_b.extend(current_chunk[j])
                 truncate_seq_pair(tokens_a, tokens_b, max_num_tokens)
 
-                assert len(tokens_a) >= 1
-                assert len(tokens_b) >= 1
+                if len(tokens_a) < 1:
+                    continue
+                if len(tokens_b) < 1:
+                    continue
 
                 tokens = ["[CLS]"] + tokens_a + ["[SEP]"] + tokens_b + ["[SEP]"]
                 # The segment IDs are 0 for the [CLS] token, the A tokens and the first [SEP]
@@ -268,7 +270,6 @@ def main():
     parser = ArgumentParser()
     parser.add_argument('--train_corpus', type=Path, required=True)
     parser.add_argument("--output_dir", type=Path, required=True)
-    parser.add_argument("--bert_model", type=str, required=True)
     parser.add_argument("--do_lower_case", action="store_true")
     parser.add_argument("--do_whole_word_mask", action="store_true",
                         help="Whether to use whole word masking rather than per-WordPiece masking.")
@@ -288,33 +289,23 @@ def main():
     args = parser.parse_args()
 
 
-    stopper = ["[Newline]" , "[UNK]" , "[SEP]" , "[Q]" , "[CLS]" , "[WebLinkStart]" , "[LocalLinkStart]" , "[RelativeLinkStart]" ,
-    "[WebLinkEnd]" , "[LocalLinkEnd]" , "[RelativeLinkEnd]" , "[VideoStart]" , "[VideoEnd]" , "[TitleStart]" , 
-    "[NavStart]" , "[AsideStart]" , "[FooterStart]" , "[IframeStart]" , "[IframeEnd]" , "[NavEnd]" , "[AsideEnd]" , 
-    "[FooterEnd]" , "[CodeStart]" , "[H1Start]" , "[H2Start]" , "[H3Start]" , "[H4Start]" , "[H5Start]" , "[H6Start]" ,
-    "[CodeEnd]" , "[UnorderedList=1]" , "[UnorderedList=2]" , "[UnorderedList=3]" , "[UnorderedList=4]" , "[OrderedList]"
-    , "[UnorderedListEnd=1]" , "[UnorderedListEnd=2]" , "[UnorderedListEnd=3]" , "[UnorderedListEnd=4]" , 
-    "[OrderedListEnd]" , "[TableStart]" , "[RowStart]" , "[CellStart]" , "[TableEnd]" , "[RowEnd]" , "[CellEnd]" ,
-    "[LineBreak]" , "[Paragraph]" , "[StartImage]" , "[EndImage]" , "[Segment=00]" , "[Segment=01]" , "[Segment=02]" ,
-        "[Segment=03]" , "[Segment=04]" , "[Segment=05]" , "[Segment=06]" , "[Segment=07]" , "[Segment=08]" ,
-        "[Segment=09]" , "[Segment=10]" , "[Segment=11]" , "[Segment=12]" , "[Segment=13]" , "[Segment=14]" ,
-        "[Segment=15]" , "[Segment=16]" , "[Segment=17]" , "[Segment=18]" , "[Segment=19]" , "[Segment=20]" , 
-        "[Segment=21]" , "[Segment=22]" , "[Segment=23]" , "[Segment=24]" , "[Segment=25]" , "[Segment=26]" , 
-        "[Segment=27]" , "[Segment=28]" , "[Segment=29]" , "[Segment=30]" , "[Segment=XX]", "\n"]
+    from tokenlist import stopper
+
+    tokenizer_file_name = "savedmodel/vocab.txt"
 
 
-
-
-    tokenizer = BertTokenizer.from_pretrained(args.bert_model, do_lower_case=args.do_lower_case, never_split=stopper)
+    tokenizer = BertTokenizer.from_pretrained(tokenizer_file_name, do_lower_case=args.do_lower_case, never_split=stopper)
     vocab_list = list(tokenizer.vocab.keys())
     with DocumentDatabase(reduce_memory=args.reduce_memory) as docs:
         with args.train_corpus.open(encoding="utf-8") as f:
             doc = []
             for line in tqdm(f, desc="Loading Dataset", unit=" lines"):
                 line = line.strip()
+                line = line.replace("\n", "")
                 if line == "":
                     docs.add_document(doc)
                     doc = []
+
                 else:
                     tokens = tokenizer.tokenize(line)
                     doc.append(tokens)

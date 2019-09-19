@@ -32,3 +32,4 @@ randomtest.py
 startscript.spec
 *.jsonl
 *.jsonl
+*.json
