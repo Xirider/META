@@ -234,9 +234,9 @@ def main():
         "[Segment=27]" , "[Segment=28]" , "[Segment=29]" , "[Segment=30]" , "[Segment=XX]", "\n"]
 
 
+    tokenizer_file_name = "savedmodel/vocab.txt"
 
-
-    tokenizer = BertTokenizer.from_pretrained(args.bert_model, do_lower_case=args.do_lower_case, never_split=stopper)
+    tokenizer = BertTokenizer.from_pretrained(tokenizer_file_name, do_lower_case=args.do_lower_case, never_split=stopper)
 
     total_train_examples = 0
     for i in range(args.epochs):
