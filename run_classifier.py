@@ -496,7 +496,7 @@ def main():
                     batch = tuple(t.to(device) for t in batch)
                     input_ids, input_mask, segment_ids, newline_mask, pos_weights,  *label_id_list = batch
                     with torch.no_grad():
-                        _,_, loss_list = model(input_ids, token_type_ids=segment_ids, attention_mask=input_mask, newline_mask= newline_mask, labels=label_id_list, pos_weights=pos_weights)
+                        _,loss, loss_list = model(input_ids, token_type_ids=segment_ids, attention_mask=input_mask, newline_mask= newline_mask, labels=label_id_list, pos_weights=pos_weights)
                         bin_ll = loss_list[3][0]
                         span_ll = loss_list[3][1]
                     
