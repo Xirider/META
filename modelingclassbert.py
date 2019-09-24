@@ -1470,12 +1470,13 @@ class BertForMetaClassification(BertPreTrainedModel):
             # # reduced_logits = logits[:,:,1].unsqueeze(2)
             # # binary_logits = torch.cat((reduced_logits, binary_logits), 2)
             if self.loss_per_token:
-
+                unreduced_loss = (binary_loss, token_loss)
                 if token_loss.sum() == 0:
                     loss = binary_loss.mean()
                 elif binary_loss.sum() == 0:
                     loss = token_loss.mean()
                 else:
+                    
                     loss = torch.cat((binary_loss, token_loss ), 0).mean()
 
                 token_loss = token_loss.mean()
@@ -1483,9 +1484,10 @@ class BertForMetaClassification(BertPreTrainedModel):
             else:
                 loss = binary_loss + token_loss
 
-            tt = torch.tensor([1.01]) #.cuda()
 
-            return (modified_binary_logits, span_logits, tt), loss, (binary_loss,token_loss,tt)
+            tt = torch.tensor([0.0]) #.cuda()
+
+            return (modified_binary_logits, span_logits, tt), loss, (binary_loss,token_loss,tt, unreduced_loss)
         else:
             logits = torch.sigmoid(logits)
             span_logits = torch.sigmoid(span_logits)

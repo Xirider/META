@@ -13,7 +13,7 @@ from thresholds import binary_labels_threshold, span_labels_threshold, multi_lab
 import torch
 from modelingclassbert import BertForMetaClassification
 
-MODELDIR = "logfiles/v1_3class"
+MODELDIR = "logfiles/d4_1_ft"
 DEVICE = "cuda"
 
 class Model(object):
@@ -79,6 +79,7 @@ class Model(object):
                         if ltc == "binary":
                             for a_newline in active_newlines:
                                 if binary_logits[0][a_newline][lic] > binary_labels_threshold[lic]:
+                                    print(binary_logits[0][a_newline][lic])
                                     keep += 1
                                     break
                                 
@@ -89,6 +90,7 @@ class Model(object):
                                     break
 
                     if keep != len(self.label_type_cond):
+                        print("skipped an example")
                         continue
 
                 yield example

@@ -140,6 +140,9 @@ def main():
     parser.add_argument('--random_sampling',
                         action='store_true',
                         help="random sampling instead of balanced sampling")
+    parser.add_argument('--active_sampling',
+                        action='store_true',
+                        help="uses active sampling instead of balanced sampling")
     parser.add_argument('--loss_scale',
                         type=float, default=0,
                         help="Loss scaling to improve fp16 numeric stability. Only used when fp16 set to True.\n"
@@ -269,10 +272,11 @@ def main():
     class UnderSampler(Sampler):
 
 
-        def __init__(self, label_mins, label_type_list, label_number_list):
+        def __init__(self, label_mins, label_type_list, label_number_list, order_index_list = None):
             self.label_mins = label_mins
             self.label_type_list = label_type_list
             self.label_number_list = label_number_list
+            self.order_index_list = order_index_list
 
             label_mins = self.label_mins
             label_type_list = self.label_type_list
@@ -282,7 +286,13 @@ def main():
             index_list = []
             counter_dict = defaultdict(int)
 
-            for i in range(len(label_type_list)):
+            if not order_index_list:
+                randomlist = list(range(len(label_type_list)))
+                random.shuffle(randomlist)
+            else:
+                randomlist = order_index_list
+
+            for i in randomlist:
 
                 current_label = label_type_list[i]
                 current_label_number = label_number_list[i]
@@ -302,12 +312,19 @@ def main():
             label_mins = self.label_mins
             label_type_list = self.label_type_list
             label_number_list = self.label_number_list
+            order_index_list = self.order_index_list
 
 
             index_list = []
             counter_dict = defaultdict(int)
 
-            for i in range(len(label_type_list)):
+            if not order_index_list:
+                randomlist = list(range(len(label_type_list)))
+                random.shuffle(randomlist)
+            else:
+                randomlist = order_index_list
+
+            for i in randomlist:
 
                 current_label = label_type_list[i]
                 current_label_number = label_number_list[i]
@@ -479,8 +496,9 @@ def main():
                     batch = tuple(t.to(device) for t in batch)
                     input_ids, input_mask, segment_ids, newline_mask, pos_weights,  *label_id_list = batch
                     with torch.no_grad():
-                        logits, loss, loss_list = model(input_ids, token_type_ids=segment_ids, attention_mask=input_mask, newline_mask= newline_mask, labels=label_id_list, pos_weights=pos_weights)
-
+                        _,_, loss_list = model(input_ids, token_type_ids=segment_ids, attention_mask=input_mask, newline_mask= newline_mask, labels=label_id_list, pos_weights=pos_weights)
+                        bin_ll = loss_list[3][0]
+                        span_ll = loss_list[3][1]
                     
                     eval_loss += loss.mean().item()
                     bce_loss += loss_list[0].mean().item()
@@ -875,6 +893,34 @@ def main():
 
         num_train_optimization_steps = len(train_dataloader) // args.gradient_accumulation_steps * args.num_train_epochs
 
+
+        def sample_active(label_mins, label_type_list, label_number_list ,train_data):
+            """ Goes through each train example and evaluates them. The indices of the ranking are then used to create a
+                new Undersampler and then a new dataloader is returned """
+            resultlist = []
+            sample_dataloader = train_dataloader = DataLoader(train_data, sampler=SequentialSampler, batch_size=1)
+
+            for sampleid, batch in enumerate(tqdm(sample_dataloader, desc="Iteration")):
+                
+                batch = tuple(t.to(device) for t in batch)
+                input_ids, input_mask, segment_ids, newline_mask, pos_weights, *label_id_list = batch
+                with torch.no_grad():
+
+                    logits, loss, loss_list = model(input_ids, token_type_ids=segment_ids, attention_mask=input_mask, newline_mask= newline_mask, labels=label_id_list, pos_weights=pos_weights)
+                
+                loss = loss.detach().cpu().numpy()
+                resultlist.append(loss)
+
+            sample_dataloader = 0
+
+            resultlist = np.array(resultlist)
+            sorted_resultlist = np.argsort(resultlist).tolist()
+            sorted_resultlist.reverse()
+
+            new_sampler = UnderSampler( label_mins, label_type_list, label_number_list, sorted_resultlist)
+            return_dataloader = DataLoader(train_data, sampler=new_sampler,  batch_size=args.train_batch_size)
+            return return_dataloader
+
         # Prepare optimizer
 
         param_optimizer = list(model.named_parameters())
@@ -921,6 +967,9 @@ def main():
             nb_tr_examples, nb_tr_steps = 0, 0
             if number_of_epochs % 2 == 0:
                 best_sum_of_scores =evaluate(number_of_epochs=number_of_epochs ,best_sum_of_scores = best_sum_of_scores)
+            if number_of_epochs > 0 and args.active_sampling:
+                train_dataloader = sample_active(label_mins, label_type_list, label_number_list ,train_data, model)
+            
             model.train()
             for step, batch in enumerate(tqdm(train_dataloader, desc="Iteration", disable=args.local_rank not in [-1, 0])):
                 batch = tuple(t.to(device) for t in batch)

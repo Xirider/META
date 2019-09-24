@@ -121,7 +121,7 @@ def single_html2text(html, url):
 
 if __name__ == "__main__":
 
-    url = "https://sugarspunrun.com/best-carrot-cake-recipe/"
+    url = "https://www.trustedreviews.com/best/ultrabook-3440182"
 
     #url = "https://en.wikipedia.org/wiki/British_National_(Overseas)"
     #rl = "https://stackoverflow.com/questions/29721994/python-array-subtraction-loops-back-to-high-number-instead-of-giving-negative-va?noredirect=1&lq=1"
@@ -141,9 +141,11 @@ if __name__ == "__main__":
     textdict = single_html2text(html, url)
     finished = time.time() - start
     
-    text = textdict["htmltext"]
-    text = " [newline] ".join(text)
-    text = text.replace(" [newline] ", "\n")
+    text = textdict["text"]
+    #import pdb; pdb.set_trace()
+    #text = " [newline] ".join(text)
+    #text = text.replace(" [newline] ", "\n")
+    text = text.replace(" [newline] ", "\n[newline] ")
     import pyperclip
     pyperclip.copy(text)
 
