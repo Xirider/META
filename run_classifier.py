@@ -451,10 +451,10 @@ def main():
         # Run prediction for full data 
 
         if args.local_rank == -1:
-            if args.random_sampling:
-                eval_sampler = SequentialSampler(eval_data)
-            else:
-                eval_sampler = UnderSampler( label_mins, label_type_list, label_number_list)
+            # if args.random_sampling:
+            eval_sampler = SequentialSampler(eval_data)
+            # else:
+            #eval_sampler = UnderSampler( label_mins, label_type_list, label_number_list)
         else:
             eval_sampler = DistributedSampler(eval_data)  # Note that this sampler samples randomly
         eval_dataloader = DataLoader(eval_data, sampler=eval_sampler, batch_size=args.eval_batch_size)
