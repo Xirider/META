@@ -897,7 +897,7 @@ def main():
             """ Goes through each train example and evaluates them. The indices of the ranking are then used to create a
                 new Undersampler and then a new dataloader is returned """
             resultlist = []
-            sample_dataloader = train_dataloader = DataLoader(train_data, sampler=SequentialSampler, batch_size=1)
+            sample_dataloader = train_dataloader = DataLoader(train_data, sampler=SequentialSampler(train_data), batch_size=1)
 
             for sampleid, batch in enumerate(tqdm(sample_dataloader, desc="Iteration")):
                 
