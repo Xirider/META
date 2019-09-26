@@ -127,7 +127,7 @@ if __name__ == "__main__":
     filename = f"outputsv1/{db}.jsonl"
 
     example_iterator = JSONL(filename)
-    new_example_list = []
+    new_example_list = defaultdict(list)
     example_iterator = list(example_iterator)
     # modify examples to have only one example per text with all relevant spans, and a marker to show which label is active
     ddict = list_duplicates(example_iterator, "_input_hash")
@@ -238,11 +238,11 @@ if __name__ == "__main__":
                         cop_example[non_minus_label] = list(single_active_list)
                         if exampleid == 0:
                             print(cop_example[non_minus_label])
-                        new_example_list.append(cop_example)
+                        new_example_list[non_minus_label].append(cop_example)
 
         else:
             if non_minus_label != False:
-                new_example_list.append(example)
+                new_example_list[non_minus_label].append(example)
             else:
                 print("skipped example, as it had no non minus labels")
 
@@ -255,38 +255,48 @@ if __name__ == "__main__":
 
     full_filename = f"{subfoldername}/train.jsonl"
     test_filename = f"{subfoldername}/test.jsonl"
-    writecounter = 0
-    
-    train_example_list = []
-    test_example_list = []
 
-    nel = len(new_example_list)
-    train_num = int(nel - (nel // (1/test_prob)))
+    if os.path.exists(full_filename):
+        os.remove(full_filename)
+
+    if os.path.exists(test_filename):
+        os.remove(test_filename)
 
 
-    train_example_list = new_example_list[:train_num]
-    test_example_list = new_example_list[train_num:]
+    for exkey in new_example_list:
+        cur_active_list = new_example_list[exkey]
+        writecounter = 0
+        
+        train_example_list = []
+        test_example_list = []
 
-    # for line in new_example_list:
-    #     if random.random() > test_prob:
-    #         train_example_list.append(line)
-    #     else:
-    #         test_example_list.append(line)
+        nel = len(cur_active_list)
+        train_num = int(nel - (nel // (1/test_prob)))
 
-    with open(full_filename, 'w') as outfile:
-            for line in train_example_list:
+
+        train_example_list = cur_active_list[:train_num]
+        test_example_list = cur_active_list[train_num:]
+
+        # for line in new_example_list:
+        #     if random.random() > test_prob:
+        #         train_example_list.append(line)
+        #     else:
+        #         test_example_list.append(line)
+
+        with open(full_filename, 'a+') as outfile:
+                for line in train_example_list:
+                    json.dump(line, outfile)
+                    outfile.write('\n')
+                    writecounter += 1
+        print(f"Wrote {writecounter} examples to train, ready for input, label: {exkey}")
+
+        writecounter = 0
+        with open(test_filename, 'a+') as outfile:
+            for line in test_example_list:
                 json.dump(line, outfile)
                 outfile.write('\n')
                 writecounter += 1
-    print(f"Wrote {writecounter} examples to train, ready for input")
-
-    writecounter = 0
-    with open(test_filename, 'w') as outfile:
-        for line in test_example_list:
-            json.dump(line, outfile)
-            outfile.write('\n')
-            writecounter += 1
-    print(f"Wrote {writecounter} examples to test, ready for input")
+        print(f"Wrote {writecounter} examples to test, ready for input, label: {exkey}")
 
 
           

@@ -10,6 +10,10 @@
 #d4_1 thresholds
 #0.9990369257643832
 #binary_labels_threshold = [0.5, 0.0,0.0, 0.0,0.0, 0.0,0.0, 0.0,0.0, 0.0, 0.0]
-binary_labels_threshold = [0.990369257643832, 0.0,0.0, 0.0,0.0, 0.0,0.0, 0.0,0.0, 0.0, 0.0]
+# binary_labels_threshold = [0.990369257643832, 0.0,0.0, 0.0,0.0, 0.0,0.0, 0.0,0.0, 0.0, 0.0]
+# span_labels_threshold = [0.0, 0.0]
+# multi_labels_threshold = [[0.0,0.0,0.0], [0.0,0.0,0.0], [0.0,0.0,0.0]]
+
+binary_labels_threshold = [0.0, 0.024311,0.0, 0.0,0.0, 0.0,0.0, 0.0,0.0, 0.0, 0.0]
 span_labels_threshold = [0.0, 0.0]
 multi_labels_threshold = [[0.0,0.0,0.0], [0.0,0.0,0.0], [0.0,0.0,0.0]]

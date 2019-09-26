@@ -965,7 +965,7 @@ def main():
             tr_loss = 0
             number_of_epochs += 1
             nb_tr_examples, nb_tr_steps = 0, 0
-            if number_of_epochs % 2 == 0:
+            if number_of_epochs % 1 == 0:
                 best_sum_of_scores =evaluate(number_of_epochs=number_of_epochs ,best_sum_of_scores = best_sum_of_scores)
             if number_of_epochs > 0 and args.active_sampling:
                 train_dataloader = sample_active(label_mins, label_type_list, label_number_list ,train_data, model)

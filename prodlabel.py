@@ -13,7 +13,7 @@ from thresholds import binary_labels_threshold, span_labels_threshold, multi_lab
 import torch
 from modelingclassbert import BertForMetaClassification
 
-MODELDIR = "logfiles/d4_1_ft"
+MODELDIR = "logfiles/d4_1_r_sampling"
 DEVICE = "cuda"
 
 class Model(object):
@@ -65,21 +65,28 @@ class Model(object):
 
                 binary_logits, span_logits = self.model(input_ids = input_batch, token_type_ids = input_segment, attention_mask = input_mask)
 
+                # binary_logits = torch.sigmoid(binary_logits)
+                # span_logits = torch.sigmoid(span_logits)
+
                 binary_logits = binary_logits.cpu().numpy()
                 span_logits = span_logits.cpu().numpy()
 
                 bin_num = binary_logits.shape[1]
                 seq_len = span_logits.shape[0]
+                print("new example")
                 if self.label_id_cond:
 
                     for ltcid, ltc in enumerate(self.label_type_cond):
                         
                         lic = int(self.label_id_cond[ltcid])
-
+                        
                         if ltc == "binary":
                             for a_newline in active_newlines:
                                 if binary_logits[0][a_newline][lic] > binary_labels_threshold[lic]:
                                     print(binary_logits[0][a_newline][lic])
+                                    if binary_logits[0][a_newline][lic] > 1:
+                                        print("ERORR")
+                                        import pdb; pdb.set_trace()
                                     keep += 1
                                     break
                                 
