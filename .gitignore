@@ -33,3 +33,4 @@ startscript.spec
 *.jsonl
 *.jsonl
 *.json
+inference/intermediatearticles.p

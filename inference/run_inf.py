@@ -248,6 +248,7 @@ def score_logits(example, example_binary_logits, example_span_logits, n_best_siz
     
         if (toklen - 1) == tokid and active:
             nl2ll = example.newline2longline[cur_line[0]]
+
             cur_line.append(tokid + 1)
             cur_line_dict = { "ranges" :cur_line , "tokens" : tokens[cur_line[0]:cur_line[1]], "score_dict": cur_dict,
              "url": example.url, "newline2longline":nl2ll, "htmltext": example.htmltext,
@@ -261,6 +262,7 @@ def score_logits(example, example_binary_logits, example_span_logits, n_best_siz
         elif tokens[tokid + 1] == "[newline]" and active:
             if len(cur_line) > 0:
                 nl2ll = example.newline2longline[cur_line[0]]
+
                 cur_line.append(tokid + 1)
                 cur_line_dict = { "ranges" :cur_line , "tokens" : tokens[cur_line[0]:cur_line[1]],"score_dict": cur_dict,
                   "url": example.url, "newline2longline":nl2ll, "htmltext": example.htmltext,
@@ -324,7 +326,7 @@ def score_logits(example, example_binary_logits, example_span_logits, n_best_siz
     return  newlinelist, span_type_list
 
 
-def do_ranking(score_list, score_threshold= None, con_threshold = None,  sep_type="self_con", top_k = 100, max_continuations= 20, max_headline = 15, headline_finding_range= 30, headline_before =False, headline_after =False):
+def do_ranking(score_list, score_threshold= None, con_threshold = None,  sep_type="self_con", top_k = 100, max_continuations= 20, max_headline = 15, headline_finding_range= 30, headline_before =False, headline_after =True):
     """ Takes in a list of tuples (newlinestartlist, newlinelist, span_type_list), returns list of para groups with scores  """
 
     #(newlinelist, spanslist) 
@@ -480,7 +482,8 @@ def do_ranking(score_list, score_threshold= None, con_threshold = None,  sep_typ
                 original_ranges.append(newlinelist[tokid]["ranges"][1])
             new_original_ranges = [original_ranges[0] + exid10k, original_ranges[-1] + exid10k]
 
-
+            if conversion_list == []:
+                continue
             para_group = {"exid": exid, "exid_list": [exid], "nid": nid, "main_counter": main_counter,
             "span_range":span_range, "cur_span_score_list": cur_span_score_list, "average_score": average_score,
             "max_score": max_score, "token_list":token_list , "look_forward": look_forward, "look_back": look_back ,
@@ -637,7 +640,7 @@ def do_ranking(score_list, score_threshold= None, con_threshold = None,  sep_typ
     # print(len(para_groups))
 
 
-    print("\n\n\n\n\n\n\n\nNow only the top 10 results:\n\n")
+    #print("\n\n\n\n\n\n\n\nNow only the top 10 results:\n\n")
 
     para_groups.sort(key= lambda x : x["max_score"], reverse= True)
     
@@ -665,17 +668,19 @@ def do_ranking(score_list, score_threshold= None, con_threshold = None,  sep_typ
     # fix not properly opened or closed tags
 
     # find out in which longline the para group starts and ends
-    for parag in para_groups:
-
+    for paragid ,parag in enumerate(para_groups):
+        corrcounter = 0
         for lline in parag["newline2longline"]:
             if lline["longline"] != None:
                 parag["startline"] = lline["longline"]
+                corrcounter +=1
                 break
         for lline in reversed(parag["newline2longline"]):
             if lline["longline"] != None:
                 parag["endline"] = lline["longline"]
+                corrcounter +=1
                 break
-        
+
         
 
     opentags = ["<table>", "<td>","<ol>", "<ul>", "<li>"]
@@ -760,7 +765,10 @@ def do_ranking(score_list, score_threshold= None, con_threshold = None,  sep_typ
                 if word == "[linkend]":
                     linktext = splitline[wordid+1]
                     if linktext[0] == "(":
-                        updated_line[link_word_id] = f"<a href='{linktext[1:-1]}'>"
+                        try:
+                            updated_line[link_word_id] = f"<a href='{linktext[1:-1]}'>"
+                        except:
+                            import pdb; pdb.set_trace()
                         word = "</a>"
                         deletenext = True
                     
@@ -828,7 +836,7 @@ def do_ranking(score_list, score_threshold= None, con_threshold = None,  sep_typ
         parag["newhtml"] = "".join(linelist)
     # {"longline": article["line2line"][shortlinecounter],
     #                                      "current_shortline":shortlinecounter }
-    import pdb; pdb.set_trace()
+
     return para_groups
 
 
@@ -938,7 +946,7 @@ class QBert():
         parser.add_argument("--dataset_path", type=str, default="", help="Path or url of the dataset. If empty download from S3.")
         parser.add_argument("--dataset_cache", type=str, default='./dataset_cache', help="Path or url of the dataset cache")
         # parser.add_argument("--model_checkpoint", type=str, default="logfiles/metamodel", help="Path, url or short name of the model")
-        parser.add_argument("--model_checkpoint", type=str, default="logfiles/v1_3class", help="Path, url or short name of the model")
+        parser.add_argument("--model_checkpoint", type=str, default="logfiles/d4_a", help="Path, url or short name of the model")
         #"logfiles\v1_3class"
         parser.add_argument("--max_history", type=int, default=2, help="Number of previous utterances to keep in history")
         parser.add_argument("--batch_size", type=int, default=32, help="batch size for prediction")
@@ -1171,100 +1179,119 @@ class QBert():
                 #     show_list.append(answer_dict)
                 # else:
                 #     print("skipped, too low score")
-                atext = decode(self.tokenizer, result["token_list"])
-
-                atext = atext.split("[newline]")
-                listactive = False
-                newat = []
-                for at in atext:
-                    at = "".join(["[newline]",at])
-                    if "[Paragraph]" in at:
-                        at += "<br>"
-                    if "[H1Start]" in at:
-                        at = at.replace("[H1Start]", "<h1>")
-                        at += "</h1>"
-                    if "[H2Start]" in at:
-
-                        at += "</h2>"
-                        at = at.replace("[H2Start]", "<h2>")
-                    if "[H3Start]" in at:
-                        at += "</h3>"
-                        at = at.replace("[H3Start]", "<h3>")
-                    if "[H4Start]" in at:
-                        at += "</h4>"
-                        at = at.replace("[H4Start]", "<h4>")
-                    if "[H5Start]" in at:
-                        at += "</h5>"
-                        at = at.replace("[H5Start]", "<h5>")
-
-                    if "[UnorderedList=1]" in at:
-                        at = at.replace('[UnorderedList=1]', "<li>")
 
 
-                    if "[UnorderedList=2]" in at:
-                        at = at.replace('[UnorderedList=2]', "<li>")
 
 
-                    if "[UnorderedList=3]" in at:
-                        at = at.replace('[UnorderedList=3]', "<li>")
+
+                # atext = decode(self.tokenizer, result["token_list"])
+
+                # atext = atext.split("[newline]")
+                # listactive = False
+                # newat = []
+                # for at in atext:
+                #     at = "".join(["[newline]",at])
+                #     if "[Paragraph]" in at:
+                #         at += "<br>"
+                #     if "[H1Start]" in at:
+                #         at = at.replace("[H1Start]", "<h1>")
+                #         at += "</h1>"
+                #     if "[H2Start]" in at:
+
+                #         at += "</h2>"
+                #         at = at.replace("[H2Start]", "<h2>")
+                #     if "[H3Start]" in at:
+                #         at += "</h3>"
+                #         at = at.replace("[H3Start]", "<h3>")
+                #     if "[H4Start]" in at:
+                #         at += "</h4>"
+                #         at = at.replace("[H4Start]", "<h4>")
+                #     if "[H5Start]" in at:
+                #         at += "</h5>"
+                #         at = at.replace("[H5Start]", "<h5>")
+
+                #     if "[UnorderedList=1]" in at:
+                #         at = at.replace('[UnorderedList=1]', "<li>")
 
 
-                    if "[UnorderedList=4]" in at:
-                        at = at.replace('[UnorderedList=4]', "<li>")
+                #     if "[UnorderedList=2]" in at:
+                #         at = at.replace('[UnorderedList=2]', "<li>")
 
 
-                    if "[UnorderedList=5]" in at:
-                        at = at.replace('[UnorderedList=5]', "<li>")
+                #     if "[UnorderedList=3]" in at:
+                #         at = at.replace('[UnorderedList=3]', "<li>")
+
+
+                #     if "[UnorderedList=4]" in at:
+                #         at = at.replace('[UnorderedList=4]', "<li>")
+
+
+                #     if "[UnorderedList=5]" in at:
+                #         at = at.replace('[UnorderedList=5]', "<li>")
                     
 
 
 
-                    if "[UnorderedListEnd=1]" in at:
-                        at = at.replace('[UnorderedListEnd=1]', "</li>")
+                #     if "[UnorderedListEnd=1]" in at:
+                #         at = at.replace('[UnorderedListEnd=1]', "</li>")
 
 
-                    if "[UnorderedListEnd=2]" in at:
-                        at = at.replace('[UnorderedListEnd=2]', "</li>")
+                #     if "[UnorderedListEnd=2]" in at:
+                #         at = at.replace('[UnorderedListEnd=2]', "</li>")
 
 
-                    if "[UnorderedListEnd=3]" in at:
-                        at = at.replace('[UnorderedListEnd=3]', "</li>")
+                #     if "[UnorderedListEnd=3]" in at:
+                #         at = at.replace('[UnorderedListEnd=3]', "</li>")
 
 
-                    if "[UnorderedListEnd=4]" in at:
-                        at = at.replace('[UnorderedListEnd=4]', "</li>")
+                #     if "[UnorderedListEnd=4]" in at:
+                #         at = at.replace('[UnorderedListEnd=4]', "</li>")
 
 
-                    if "[UnorderedListEnd=5]" in at:
-                        at = at.replace('[UnorderedListEnd=5]', "</li>")
+                #     if "[UnorderedListEnd=5]" in at:
+                #         at = at.replace('[UnorderedListEnd=5]', "</li>")
                     
-                    htags = ["h1", "h2", "h3", "h4", "h5"]
-                    htagsend = ["/h1", "/h2", "/h3", "/h4", "/h5"]
+                #     htags = ["h1", "h2", "h3", "h4", "h5"]
+                #     htagsend = ["/h1", "/h2", "/h3", "/h4", "/h5"]
 
-                    for htag in htags:
-                        at = at.replace(htag, "h6")
-                    for htag in htagsend:
-                        at = at.replace(htag, "/h6")
+                #     for htag in htags:
+                #         at = at.replace(htag, "h6")
+                #     for htag in htagsend:
+                #         at = at.replace(htag, "/h6")
 
-                    # listtags = ["OrderedList"]
+                #     # listtags = ["OrderedList"]
                     
-                    # if "[OrderedList] 1." in at:
-                    #     at = at.replace('[OrderedList] 1.', "</li>")
+                #     # if "[OrderedList] 1." in at:
+                #     #     at = at.replace('[OrderedList] 1.', "</li>")
 
-                    if "[OrderedList]" in at:
-                        at = at.replace('[OrderedList]', "")
-                    if "[OrderedListEnd]" in at:
-                        at = at.replace('[OrderedListEnd]', "")
+                #     if "[OrderedList]" in at:
+                #         at = at.replace('[OrderedList]', "")
+                #     if "[OrderedListEnd]" in at:
+                #         at = at.replace('[OrderedListEnd]', "")
 
-                    newat.append(at)
-                atext = newat
-                atext = "".join(atext)
-                #atext = atext.replace('[Paragraph]', "<p>")
-                atext = atext.replace('[newline]', "<br>").replace('[Paragraph]', "")
+                #     newat.append(at)
+                # atext = newat
+                # atext = "".join(atext)
+                # #atext = atext.replace('[Paragraph]', "<p>")
+                # atext = atext.replace('[newline]', "<br>").replace('[Paragraph]', "")
 
 
 
-                answer_dict["long"] = atext
+                # answer_dict["long"] = atext
+                # answer_dict["short"] = decode(self.tokenizer, result["headline"])
+                # answer_dict["url"] = result["url"]
+                text = result["newhtml"]
+                hh = "h6"
+                text = text.replace("h1", hh)
+                text = text.replace("h2", hh)
+                text = text.replace("h3", hh)
+                text = text.replace("h4", hh)
+                text = text.replace("h5", hh)
+
+                
+                #text = text.replace("<img ", "<img align='right' ")
+
+                answer_dict["long"] = text
                 answer_dict["short"] = decode(self.tokenizer, result["headline"])
                 answer_dict["url"] = result["url"]
 

@@ -61,7 +61,12 @@ segment_tokens = ["[segment=00]" , "[segment=01]" , "[segment=02]" ,
         "[segment=27]" , "[segment=28]" , "[segment=29]" , "[segment=30]" , "[segment=xx]"]
 
 
-headline_tokens = ["[h1start]" , "[h2start]" , "[h3start]" , "[h4start]" , "[h5start]" , "[h6start]"]
+headline_tokens = ["[h1]",
+"[h2]",
+"[h3]",
+"[h4]",
+"[h5]",
+"[h6]",]
 
 # stopper = ["[Newline]" , "[UNK]" , "[SEP]" , "[Q]" , "[CLS]" , "[WebLinkStart]" , "[LocalLinkStart]" , "[RelativeLinkStart]" ,
 #     "[WebLinkEnd]" , "[LocalLinkEnd]" , "[RelativeLinkEnd]" , "[VideoStart]" , "[VideoEnd]" , "[TitleStart]" , 

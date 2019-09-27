@@ -733,7 +733,7 @@ def main():
 
 
 
-                important_keys = ["secondary_relevance", "self_con", "topic_words"]
+                important_keys = ["self_con","secondary_relevance", "topic_words"]
 
                 sum_of_scores = 0.0
                 for ikd, ik in enumerate(important_keys):
