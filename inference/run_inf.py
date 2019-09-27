@@ -687,7 +687,7 @@ def do_ranking(score_list, score_threshold= None, con_threshold = None,  sep_typ
     closetags = ["</table>","</td>", "</ol>","</ul>", "</li>"]
     headtags = ["[h1]","[h2]","[h3]","[h4]","[h5]","[h6]"]
 
-    for parag in para_groups:
+    for paragid, parag in enumerate(para_groups):
         htmltext = parag["htmltext"]
         startline = parag["startline"]
         endline = parag["endline"]
@@ -695,6 +695,12 @@ def do_ranking(score_list, score_threshold= None, con_threshold = None,  sep_typ
         opendict = defaultdict(int)
         startdict = defaultdict(int)
         text = htmltext[startline: endline +1]
+        if text == []:
+            del para_groups[paragid]
+            print( " para deleted")
+            continue
+
+        
         #closedict = defaultdict(int)
         for lline in text:            
             # check for unopened and unclosed tags and change them
@@ -733,6 +739,7 @@ def do_ranking(score_list, score_threshold= None, con_threshold = None,  sep_typ
             add_to_end = []
             imagestart = False
             deletenext = False
+            linkstarted = False
             splitline = lline.split()
             for wordid, word in enumerate(splitline):
                 changing = False
@@ -759,22 +766,25 @@ def do_ranking(score_list, score_threshold= None, con_threshold = None,  sep_typ
 
                 # link
                 if word == "[linkstart]":
-
+                    linkstarted = True
                     link_word_id = wordid
 
                 if word == "[linkend]":
                     linktext = splitline[wordid+1]
-                    if linktext[0] == "(":
-                        try:
-                            updated_line[link_word_id] = f"<a href='{linktext[1:-1]}'>"
-                        except:
-                            import pdb; pdb.set_trace()
-                        word = "</a>"
-                        deletenext = True
-                    
-                    else:
-                        updated_line[link_word_id] = ""
+                    if not linkstarted:
                         word = ""
+                        deletenext = True
+                    else:
+                        linkstarted = False
+                        if linktext[0] == "(":
+                            updated_line[link_word_id] = f"<a href='{linktext[1:-1]}'>"
+
+                            word = "</a>"
+                            deletenext = True
+                        
+                        else:
+                            updated_line[link_word_id] = ""
+                            word = ""
 
                 # image link
                 if word == "[imagestart]":
@@ -820,7 +830,9 @@ def do_ranking(score_list, score_threshold= None, con_threshold = None,  sep_typ
                 
                 updated_line.append(word)
 
-
+            if linkstarted:
+                updated_line[link_word_id] = ""
+                linkstarted = False
             if not changing:
                 brlist = ["<br>"]
                 brlist.extend(updated_line)
@@ -1280,6 +1292,11 @@ class QBert():
                 # answer_dict["long"] = atext
                 # answer_dict["short"] = decode(self.tokenizer, result["headline"])
                 # answer_dict["url"] = result["url"]
+                
+                if not "newhtml" in result:
+                    print("skipped one final para group")
+                    continue
+
                 text = result["newhtml"]
                 hh = "h6"
                 text = text.replace("h1", hh)
@@ -1288,7 +1305,7 @@ class QBert():
                 text = text.replace("h4", hh)
                 text = text.replace("h5", hh)
 
-                
+
                 #text = text.replace("<img ", "<img align='right' ")
 
                 answer_dict["long"] = text
