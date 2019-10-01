@@ -5,9 +5,10 @@
 
 
 testurl = "https://dev.to/navonf/web-scraping-efficiently-1ba5"
+urls = ['https://en.wikipedia.org/wiki/President_of_the_United_States']
 binurl = 'http://httpbin.org/get'
 
-urls = ['https://en.wikipedia.org/wiki/President_of_the_United_States', 'https://en.wikipedia.org/wiki/President_of_Germany', 'https://en.wikipedia.org/wiki/List_of_presidents_of_India', 'https://www.jagranjosh.com/general-knowledge/list-of-all-presidents-of-india-from1947-to-2017-with-tenure-1500293855-1', 'https://www.usa.gov/presidents', 'https://www.un.org/securitycouncil/content/presidency', 'https://www.president.gov.ua/en/', 'https://europa.eu/european-union/about-eu/presidents_en', 'https://www.fatf-gafi.org/about/fatfpresidency/']
+#urls = ['https://en.wikipedia.org/wiki/President_of_the_United_States', 'https://en.wikipedia.org/wiki/President_of_Germany', 'https://en.wikipedia.org/wiki/List_of_presidents_of_India', 'https://www.jagranjosh.com/general-knowledge/list-of-all-presidents-of-india-from1947-to-2017-with-tenure-1500293855-1', 'https://www.usa.gov/presidents', 'https://www.un.org/securitycouncil/content/presidency', 'https://www.president.gov.ua/en/', 'https://europa.eu/european-union/about-eu/presidents_en', 'https://www.fatf-gafi.org/about/fatfpresidency/']
 # async def _main():
 #     t0 = time.time()
 #     rs = []

@@ -34,10 +34,29 @@ import requests
 def fastdownload(urls, timeout):
     
     def exception_handler(request, exception):
-        pass
+        return None
     rs = (grequests.get(u, timeout=timeout) for u in urls)
+
     resp = grequests.map(rs, exception_handler=exception_handler)
-    return [(rt.text, rt.url)  for rt in resp if rt != None]
+    returnlist = [(rt.text, rt.url)  for rt in resp if rt != None]
+    return returnlist
+
+def slowdownload(urls, timeout):
+    
+    def exception_handler(request, exception):
+        return None
+    finished_list = []
+    
+    for url in urls:
+        sstime = time.time()
+        try:
+            r = requests.get(url, timeout=timeout)
+            finished_list.append((r.text, r.url))
+        except:
+            pass
+        fstime = time.time() - sstime
+        print(fstime)
+    return finished_list
 
 
 def artdownload(url):
@@ -147,7 +166,7 @@ class Searcher():
 
         
 
-    def searchandsplit(self, query, timeout = 1.0):
+    def searchandsplit(self, query, timeout = 1.0:
 
 
         start_time = time.time()
@@ -208,7 +227,7 @@ class Searcher():
 
         # iterator = future.result()
         print(urllist)
-        htmltext = fastdownload(urllist, timeout)
+        htmltext = fastdownload(urllist, timeout = timeout)
         print(f"Downloaded {len(htmltext)} from {self.a_number} possible urls")
 
 

@@ -17,6 +17,7 @@ def spans2newlinelabel(spans, labels, newline_pos, tok2newline, activelist, acti
         for span in spans:
             if span["label"] == label:
                 tokenrange = tok2newline[span["token_start"]: span["token_end"] + 1]
+                tokenrange = list(range(min(tokenrange), max(tokenrange) + 1))
                 label_list[label].extend(tokenrange)
 
     
