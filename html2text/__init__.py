@@ -842,7 +842,7 @@ class HTML2Text(html.parser.HTMLParser):
 
             if self.abbr_list and force == "end":
                 for abbr, definition in self.abbr_list.items():
-                    self.out("  *[" + abbr + "]: " + definition + "\n")
+                    self.out("  *ERROR[" + abbr + "]: " + definition + "\n")
 
             self.p_p = 0
             self.out(data)

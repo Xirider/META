@@ -132,6 +132,21 @@ if __name__ == "__main__":
 
 
 
+    from gevent import monkey
+    def stub(*args, **kwargs):  # pylint: disable=unused-argument
+        pass
+    monkey.patch_all = stub
+    import grequests
+    import requests
+    def fastdownload(urls, timeout):
+    
+        def exception_handler(request, exception):
+            pass
+        rs = (grequests.get(u, timeout=timeout) for u in urls)
+        resp = grequests.map(rs, exception_handler=exception_handler)
+        return [(rt.text, rt.url)  for rt in resp if rt != None]
+
+
     #ll = ['https://addapinch.com/the-best-chocolate-cake-recipe-ever//', 'https://thestayathomechef.com/the-most-amazing-chocolate-cake/', 'https://www.allrecipes.com/recipe/17981/one-bowl-chocolate-cake-iii/', 'https://www.bbc.co.uk/food/recipes/easy_chocolate_cake_31070', 'https://www.bbcgoodfood.com/recipes/easy-chocolate-cake', 'https://www.lifeloveandsugar.com/best-chocolate-cake/', 'https://www.lifeloveandsugar.com/easy-moist-chocolate-cake/', 'https://foodess.com/moist-chocolate-cake/']
 
 
@@ -141,17 +156,20 @@ if __name__ == "__main__":
 
 
     ll = ['https://twistedsifter.com/2012/04/15-of-the-largest-animals-in-the-world/', 'https://en.wikipedia.org/wiki/Largest_organisms', 'https://awesomeocean.com/guest-columns/15-of-the-largest-sea-animals-in-the-world/', 'https://twistedsifter.com/2012/04/15-of-the-largest-animals-in-the-world/', 'https://www.thoughtco.com/largest-living-sea-creatures-2291904', 'https://www.thoughtco.com/what-is-the-biggest-animal-in-the-ocean-2291995', 'https://www.worldatlas.com/articles/the-biggest-animals-in-the-ocean.html', 'https://britishseafishing.co.uk/what-is-the-largest-animal-in-the-sea/', 'https://animals.howstuffworks.com/animal-facts/question687.htm']
-
+    #ll = ["https://twistedsifter.com/2012/04/15-of-the-largest-animals-in-the-world/"]
     #url = "http://www.foodnetwork.co.uk/recipes/salted-caramel-cheesecake-squares.html"
 
     #url = "https://en.wikipedia.org/wiki/British_National_(Overseas)"
     #rl = "https://stackoverflow.com/questions/29721994/python-array-subtraction-loops-back-to-high-number-instead-of-giving-negative-va?noredirect=1&lq=1"
     #url = "http://camendesign.com/code/video_for_everybody/test.html"
     #url = "https://en.wikipedia.org/wiki/Metacritic"
-    for url in ll:
+    import pathlib
+    htmllist = fastdownload(ll, timeout=10)
+    print("downloading finished")
+    for html, url in htmllist:
 
-        html = get_html(url)
-        import pathlib
+        # html = get_html(url)
+        
         # main_path = pathlib.Path.cwd().parent
         # model_checkpoint = "logfiles/v1_3class"
         # model_checkpoint =  main_path / model_checkpoint
