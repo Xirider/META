@@ -799,7 +799,7 @@ def do_ranking(score_list, score_threshold= None, con_threshold = None,  sep_typ
                     if nextword != "[imageend]":
                         deletenext = True
 
-                if word == "[imageend]":
+                if word == "[imageend]" and imagestart:
                     linktext = splitline[wordid+1]
                     imagestart = False
                     if linktext[0] == "(":
@@ -809,13 +809,15 @@ def do_ranking(score_list, score_threshold= None, con_threshold = None,  sep_typ
                             updated_line[image_word_id] = ""
                         word = ""
                         deletenext = True
-                        
+
                     
                     else:
                         updated_line[image_word_id] = ""
                         word = ""                
 
-
+                elif word == "[imageend]":
+                    word = ""
+                    deletenext = True
 
 
                 # unordered list
@@ -834,7 +836,9 @@ def do_ranking(score_list, score_threshold= None, con_threshold = None,  sep_typ
                     word = "</code>"
                 
                 updated_line.append(word)
-
+            if imagestart:
+                updated_line[image_word_id] = ""
+                imagestart = False
             if linkstarted:
                 updated_line[link_word_id] = ""
                 linkstarted = False
