@@ -76,7 +76,11 @@ def create_token_line_map(longtext, shorttext):
         while True:
             # if curll == 295:
             #     import pdb; pdb.set_trace()
-            curiter = next(longiter)
+            try:
+                curiter = next(longiter)
+            except:
+                print("curiter error, as lines don't match up")
+                import pdb; pdb.set_trace()
 
             curll += 1
 
@@ -132,10 +136,13 @@ if __name__ == "__main__":
 
 
     #ll = ['https://stackoverflow.com/questions/1732438/how-do-i-run-all-python-unit-tests-in-a-directory']
-    ll = ['https://realpython.com/python-testing/', 'https://realpython.com/python-testing/', 'https://devguide.python.org/runtests/', 'https://docs.python.org/2/library/unittest.html', 'https://docs.python.org/3/library/unittest.html', 'https://docs.python-guide.org/writing/tests/', 'https://stackoverflow.com/questions/1732438/how-do-i-run-all-python-unit-tests-in-a-directory', 'https://pythontesting.net/framework/unittest/unittest-introduction/', 'https://jeffknupp.com/blog/2013/12/09/improve-your-python-understanding-unit-testing/', 'https://www.fullstackpython.com/testing.html']
+    #ll = ['https://realpython.com/python-testing/', 'https://realpython.com/python-testing/', 'https://devguide.python.org/runtests/', 'https://docs.python.org/2/library/unittest.html', 'https://docs.python.org/3/library/unittest.html', 'https://docs.python-guide.org/writing/tests/', 'https://stackoverflow.com/questions/1732438/how-do-i-run-all-python-unit-tests-in-a-directory', 'https://pythontesting.net/framework/unittest/unittest-introduction/', 'https://jeffknupp.com/blog/2013/12/09/improve-your-python-understanding-unit-testing/', 'https://www.fullstackpython.com/testing.html']
     #ll = ['https://thestayathomechef.com/the-most-amazing-chocolate-cake/']
 
-    url = "http://www.foodnetwork.co.uk/recipes/salted-caramel-cheesecake-squares.html"
+
+    ll = ['https://twistedsifter.com/2012/04/15-of-the-largest-animals-in-the-world/', 'https://en.wikipedia.org/wiki/Largest_organisms', 'https://awesomeocean.com/guest-columns/15-of-the-largest-sea-animals-in-the-world/', 'https://twistedsifter.com/2012/04/15-of-the-largest-animals-in-the-world/', 'https://www.thoughtco.com/largest-living-sea-creatures-2291904', 'https://www.thoughtco.com/what-is-the-biggest-animal-in-the-ocean-2291995', 'https://www.worldatlas.com/articles/the-biggest-animals-in-the-ocean.html', 'https://britishseafishing.co.uk/what-is-the-largest-animal-in-the-sea/', 'https://animals.howstuffworks.com/animal-facts/question687.htm']
+
+    #url = "http://www.foodnetwork.co.uk/recipes/salted-caramel-cheesecake-squares.html"
 
     #url = "https://en.wikipedia.org/wiki/British_National_(Overseas)"
     #rl = "https://stackoverflow.com/questions/29721994/python-array-subtraction-loops-back-to-high-number-instead-of-giving-negative-va?noredirect=1&lq=1"
@@ -154,7 +161,17 @@ if __name__ == "__main__":
         #from html2text import HTML2Text
         import time
         start = time.time()
-        textdict = single_html2text(html, url)
+
+        try:
+            textdict = single_html2text(html, url)
+            print(url)
+            print("worked")
+        except:
+
+            print(url)
+            print("didnt work")
+            import pdb; pdb.set_trace()
+
 
         finished = time.time() - start
         
@@ -166,8 +183,8 @@ if __name__ == "__main__":
     import pyperclip
     pyperclip.copy(text)
 
-    print(text)
-    print(finished)
+    # print(text)
+    # print(finished)
 
 
 
