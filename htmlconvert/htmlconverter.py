@@ -29,7 +29,8 @@ def create_converter_settings(long_version, url):
     t.ignore_emphasis = True
     t.mark_code = True
     t.wrap_list_items = False
-    
+    t.wrap_links = True
+    t.inline_links = True
     if long_version:
         t.bypass_tables = True
         t.wrap_links = True
@@ -65,17 +66,21 @@ def create_token_line_map(longtext, shorttext):
             #print("skipped")
             line2line.append(None)
             continue
-
+        
         # print("shortid: " + str(sid) + " longid: "+ str(curll))
         # print(" ".join(shortline))
 
-
+        
+            
 
         while True:
+            # if curll == 295:
+            #     import pdb; pdb.set_trace()
             curiter = next(longiter)
+
             curll += 1
 
-
+            # print(" ".join(curiter))
             # if loops > 8:
             # # if curll == 90:
             #     import pdb; pdb.set_trace()
@@ -121,31 +126,43 @@ def single_html2text(html, url):
 
 if __name__ == "__main__":
 
-    url = "https://www.trustedreviews.com/best/ultrabook-3440182"
+
+
+    #ll = ['https://addapinch.com/the-best-chocolate-cake-recipe-ever//', 'https://thestayathomechef.com/the-most-amazing-chocolate-cake/', 'https://www.allrecipes.com/recipe/17981/one-bowl-chocolate-cake-iii/', 'https://www.bbc.co.uk/food/recipes/easy_chocolate_cake_31070', 'https://www.bbcgoodfood.com/recipes/easy-chocolate-cake', 'https://www.lifeloveandsugar.com/best-chocolate-cake/', 'https://www.lifeloveandsugar.com/easy-moist-chocolate-cake/', 'https://foodess.com/moist-chocolate-cake/']
+
+
+    #ll = ['https://stackoverflow.com/questions/1732438/how-do-i-run-all-python-unit-tests-in-a-directory']
+    ll = ['https://realpython.com/python-testing/', 'https://realpython.com/python-testing/', 'https://devguide.python.org/runtests/', 'https://docs.python.org/2/library/unittest.html', 'https://docs.python.org/3/library/unittest.html', 'https://docs.python-guide.org/writing/tests/', 'https://stackoverflow.com/questions/1732438/how-do-i-run-all-python-unit-tests-in-a-directory', 'https://pythontesting.net/framework/unittest/unittest-introduction/', 'https://jeffknupp.com/blog/2013/12/09/improve-your-python-understanding-unit-testing/', 'https://www.fullstackpython.com/testing.html']
+    #ll = ['https://thestayathomechef.com/the-most-amazing-chocolate-cake/']
+
+    url = "http://www.foodnetwork.co.uk/recipes/salted-caramel-cheesecake-squares.html"
 
     #url = "https://en.wikipedia.org/wiki/British_National_(Overseas)"
     #rl = "https://stackoverflow.com/questions/29721994/python-array-subtraction-loops-back-to-high-number-instead-of-giving-negative-va?noredirect=1&lq=1"
     #url = "http://camendesign.com/code/video_for_everybody/test.html"
     #url = "https://en.wikipedia.org/wiki/Metacritic"
-    html = get_html(url)
-    import pathlib
-    # main_path = pathlib.Path.cwd().parent
-    # model_checkpoint = "logfiles/v1_3class"
-    # model_checkpoint =  main_path / model_checkpoint
-    # tokenizer = BertTokenizer.from_pretrained(model_checkpoint, never_split = stopper)
+    for url in ll:
 
-    #html = "<table> <tr> <th> Application deadlines for registration as a British National (Overseas)[37] </th></tr> <tr> <td> Year of birth </td> <td> Registration deadline </td></tr> <tr> <td> 1967 to 1971 </td> <td> 30 October 1993 </td></tr> <tr> <td> 1962 to 1966 </td> <td> 31 March 1994 </td></tr> <tr> <td> 1957 to 1961 </td> <td> 31 August 1994 </td></tr> <tr> <td> 1947 to 1956 </td> <td> 28 February 1995 </td></tr> <tr> <td> Prior to 1947 </td> <td> 30 June 1995 </td></tr> <tr> <td> 1972 to 1976 </td> <td> 31 October 1995 </td></tr> <tr> <td> 1977 to 1981 </td> <td> 30 March 1996 </td></tr> <tr> <td> 1982 to 1986 </td> <td> 29 June 1996 </td></tr> <tr> <td> 1987 to 1991 </td> <td> 30 September 1996 </td></tr> <tr> <td> 1992 to 1995 </td> <td> 31 December 1996 </td></tr> <tr> <td> 1996 </td> <td> 31 March 1997 </td></tr> <tr> <td> 1 January to 30 June 1997 </td> <td> 30 September 1997 </td></tr></table> "
-    #from html2text import HTML2Text
-    import time
-    start = time.time()
-    textdict = single_html2text(html, url)
-    finished = time.time() - start
-    
-    text = textdict["text"]
-    #import pdb; pdb.set_trace()
-    #text = " [newline] ".join(text)
-    #text = text.replace(" [newline] ", "\n")
-    text = text.replace(" [newline] ", "\n[newline] ")
+        html = get_html(url)
+        import pathlib
+        # main_path = pathlib.Path.cwd().parent
+        # model_checkpoint = "logfiles/v1_3class"
+        # model_checkpoint =  main_path / model_checkpoint
+        # tokenizer = BertTokenizer.from_pretrained(model_checkpoint, never_split = stopper)
+
+        #html = "<table> <tr> <th> Application deadlines for registration as a British National (Overseas)[37] </th></tr> <tr> <td> Year of birth </td> <td> Registration deadline </td></tr> <tr> <td> 1967 to 1971 </td> <td> 30 October 1993 </td></tr> <tr> <td> 1962 to 1966 </td> <td> 31 March 1994 </td></tr> <tr> <td> 1957 to 1961 </td> <td> 31 August 1994 </td></tr> <tr> <td> 1947 to 1956 </td> <td> 28 February 1995 </td></tr> <tr> <td> Prior to 1947 </td> <td> 30 June 1995 </td></tr> <tr> <td> 1972 to 1976 </td> <td> 31 October 1995 </td></tr> <tr> <td> 1977 to 1981 </td> <td> 30 March 1996 </td></tr> <tr> <td> 1982 to 1986 </td> <td> 29 June 1996 </td></tr> <tr> <td> 1987 to 1991 </td> <td> 30 September 1996 </td></tr> <tr> <td> 1992 to 1995 </td> <td> 31 December 1996 </td></tr> <tr> <td> 1996 </td> <td> 31 March 1997 </td></tr> <tr> <td> 1 January to 30 June 1997 </td> <td> 30 September 1997 </td></tr></table> "
+        #from html2text import HTML2Text
+        import time
+        start = time.time()
+        textdict = single_html2text(html, url)
+
+        finished = time.time() - start
+        
+        text = textdict["text"]
+        #import pdb; pdb.set_trace()
+        #text = " [newline] ".join(text)
+        #text = text.replace(" [newline] ", "\n")
+        text = text.replace(" [newline] ", "\n[newline] ")
     import pyperclip
     pyperclip.copy(text)
 

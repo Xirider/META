@@ -2,26 +2,42 @@ import time
 
 
 from googlesearch import search
-import requests
+
 
 from nltk import sent_tokenize
-
+import concurrent.futures
 from newspaper import Article, news_pool
 
-from concurrent.futures import TimeoutError
-from pebble import ProcessPool, ProcessExpired, ThreadPool
-from nqdata import url_to_nq_inputlist, url_to_cleanedtext
+# from concurrent.futures import TimeoutError
+# from pebble import ProcessPool, ProcessExpired, ThreadPool
+
+from nqdata import url_to_nq_inputlist, url_to_cleanedtext, html_to_cleanedtext
 
 from newscrape import get_html
 from inscriptis_p import get_text
 
 from lib.google_search_results import GoogleSearchResults
 
+
+
+from gevent import monkey
+def stub(*args, **kwargs):  # pylint: disable=unused-argument
+    pass
+monkey.patch_all = stub
+import grequests
+import requests
 # def webscraper(url):
 #     html = get_html(url)
 #     text = get_text(html)
 #     return {"text": text, "url": url}
 
+def fastdownload(urls, timeout):
+    
+    def exception_handler(request, exception):
+        pass
+    rs = (grequests.get(u, timeout=timeout) for u in urls)
+    resp = grequests.map(rs, exception_handler=exception_handler)
+    return [(rt.text, rt.url)  for rt in resp if rt != None]
 
 
 def artdownload(url):
@@ -93,11 +109,11 @@ def zenapi(query):
         ('gl', 'DE')
     )
 
-    try:
-        response = requests.get('https://app.zenserp.com/api/v2/search', headers=headers, params=params)
-        results = response.json()
-    except:
-        raise Exception("Response error during request error")
+
+    response = requests.get('https://app.zenserp.com/api/v2/search', headers=headers, params=params)
+    results = response.json()
+    # except:
+    #     raise Exception("Response error during request error")
     try:
         urllist = [ x["url"] for x in results["organic"] if "title" in x]
     except:
@@ -115,10 +131,12 @@ class Searcher():
         
         if use_nq_scraper:
             self.scrape_function = url_to_nq_inputlist
+            raise Exception("currently not supported")
         elif use_webscraper:
             self.scrape_function = url_to_cleanedtext
         else:
             self.scrape_function = artdownload
+            raise Exception("currently not supported")
         self.use_api = use_api
         self.api_type= api_type
         if api_type == "zenapi":
@@ -127,9 +145,9 @@ class Searcher():
             self.searchfunction = serpapi
         self.a_number = a_number
 
+        
 
-
-    def searchandsplit(self, query, timeout = 1.5):
+    def searchandsplit(self, query, timeout = 1.0):
 
 
         start_time = time.time()
@@ -183,28 +201,49 @@ class Searcher():
         urllist = urllist[0:self.a_number]
 
         # finishedmap = self.pool.map(self.scrape_function, urllist, timeout=timeout)
-        with ProcessPool() as pool:
-            future = pool.map(self.scrape_function, urllist, timeout=timeout)
+
+        # with ProcessPool() as pool:
+        #     future = pool.map(self.scrape_function, urllist, timeout=timeout)
 
 
-        iterator = future.result()
+        # iterator = future.result()
+        print(urllist)
+        htmltext = fastdownload(urllist, timeout)
+        print(f"Downloaded {len(htmltext)} from {self.a_number} possible urls")
 
 
 
-        downloadtime = time.time() - lasttime
-        print(f"Map  finished after {downloadtime} seconds")
 
-        timeoutcounter = 0
-        for i in range(self.a_number):
-            try:
-                #shorttime = time.time()
-                result = next(iterator)
-                articlelist.append(result)
-                timeoutcounter += 1
-                #printtime = time.time() - shorttime
-                #print(f"iter finished after {printtime} seconds")
-            except:
-                pass
+        downloadingtime = time.time() - lasttime
+        print(f"Downloading  finished after {downloadingtime} seconds")
+        
+        # with concurrent.futures.ThreadPoolExecutor() as executor:
+        #     articlelist = executor.map(html_to_cleanedtext, htmltext)
+
+        articlelist = []
+        for htmlt in htmltext:
+            singlestart = time.time()
+            article = html_to_cleanedtext(htmlt)
+            articlelist.append(article)
+
+
+
+
+
+        preprocessingtime = time.time() - lasttime
+        print(f"Processing  finished after {preprocessingtime} seconds")
+
+        # timeoutcounter = 0
+        # for i in range(self.a_number):
+        #     try:
+        #         #shorttime = time.time()
+        #         result = next(iterator)
+        #         articlelist.append(result)
+        #         timeoutcounter += 1
+        #         #printtime = time.time() - shorttime
+        #         #print(f"iter finished after {printtime} seconds")
+        #     except:
+        #         pass
 
         #articlelist = list(iterator)
             # except StopIteration:
@@ -216,11 +255,12 @@ class Searcher():
             # except Exception as error:
             #     print("function raised %s" % error)
             #     print(error.traceback)  # Python's traceback of remote process 
-        print("No timeouts in this many cases")           
-        print(timeoutcounter)
 
-        downloadtime = time.time() - lasttime
-        print(f"map + List gathering finished after {downloadtime} seconds")
+        # print("No timeouts in this many cases")           
+        # print(timeoutcounter)
+
+        # downloadtime = time.time() - lasttime
+        # print(f"map + List gathering finished after {downloadtime} seconds")
         # for url in urllist:
         #     #print(url)
         #     print("adding url to article object")
@@ -300,10 +340,10 @@ if __name__ == "__main__":
 
     searcher = Searcher(use_webscraper = True, use_api=True)
 
-    ulist = searcher.searchandsplit("what is the reason of my life")
+    ulist = searcher.searchandsplit("last cake")
 
 
-    print(ulist)
+    #print(ulist)
 
 
 

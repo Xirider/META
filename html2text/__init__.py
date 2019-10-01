@@ -146,6 +146,11 @@ class HTML2Text(html.parser.HTMLParser):
         self.pbr()
         self.o("", force="end")
 
+        #
+        
+
+        
+
         outtext = "".join(self.outtextlist)
 
         if self.unicode_snob:
@@ -248,7 +253,7 @@ class HTML2Text(html.parser.HTMLParser):
                 self.o(self.strong_mark)
                 self.drop_white_space += 1
             if fixed:
-                self.o("`")
+                self.o("")
                 self.drop_white_space += 1
                 self.code = True
         else:
@@ -451,7 +456,7 @@ class HTML2Text(html.parser.HTMLParser):
             #title = ' "{}"'.format(title) if title.strip() else ""
             self.o(" [linkend] ({url}) ".format(url=escape_md(url)))
 
-        if tag == "a" and not self.ignore_links:
+        if tag == "a":
             self.o(" ")
             if start:
                 
@@ -466,7 +471,8 @@ class HTML2Text(html.parser.HTMLParser):
                     self.empty_link = True
                     if self.protect_links:
                         attrs["href"] = "<" + attrs["href"] + ">"
-                    self.o(" [linkstart] ")
+                    if not self.ignore_links:
+                        self.o(" [linkstart] ")
                 else:
                     
                     self.astack.append(None)
@@ -489,9 +495,14 @@ class HTML2Text(html.parser.HTMLParser):
                                 title = a["title"] if a["title"] else ""
                                 title = escape_md(title)
                             except KeyError:
-                                link_url(self, a["href"], "")
+                                if not self.ignore_links:
+                                    link_url(self, a["href"], "")
+                                else:
+                                    self.o("")
                             else:
+                                
                                 link_url(self, a["href"], title)
+
                             
                         else:
                             
@@ -504,8 +515,8 @@ class HTML2Text(html.parser.HTMLParser):
                                 a["outcount"] = self.outcount
                                 self.a.append(a)
                             self.o("][" + str(a["count"]) + " [linkend] ")
-        if tag == "a" and self.ignore_links:
-            self.o(" ")
+        # if tag == "a" and self.ignore_links:
+        #     self.o(" ")
         if tag == "img" and start and not self.ignore_images:
             if "src" in attrs:
                 if not self.images_to_alt:
@@ -581,6 +592,9 @@ class HTML2Text(html.parser.HTMLParser):
             if start:
                 if self.long_version:
                     self.o(" <{}> ".format(tag))
+                else:
+                    #### Warning!
+                    self.o("\n")
                 if self.google_doc:
                     list_style = google_list_style(tag_style)
                 else:
@@ -604,6 +618,8 @@ class HTML2Text(html.parser.HTMLParser):
             if start:
                 if self.long_version:
                     self.o(" <" + tag + "> ")
+                # else:
+                #     self.o("")
 
 
                 if self.list:
@@ -631,6 +647,9 @@ class HTML2Text(html.parser.HTMLParser):
             else:
                 if self.long_version:
                     self.o(" </{}> ".format(tag))
+                else:
+                    self.o(" ")
+                
 
         if tag in ["table", "tr", "td", "th"]:
             if self.ignore_tables:
@@ -721,6 +740,7 @@ class HTML2Text(html.parser.HTMLParser):
         """
         Deal with indentation and whitespace
         """
+
         if self.abbr_data is not None:
             self.abbr_data += data
 
@@ -926,13 +946,14 @@ class HTML2Text(html.parser.HTMLParser):
             return text
 
         result = ""
+
         newlines = 0
         # I cannot think of a better solution for now.
         # To avoid the non-wrap behaviour for entire paras
         # because of the presence of a link in it
         if not self.wrap_links:
             self.inline_links = False
-        for para in text.split("\n"):
+        for pid, para in enumerate(text.split("\n")):
             if len(para) > 0:
                 if not skipwrap(para, self.wrap_links, self.wrap_list_items):
                     indent = ""
@@ -960,6 +981,7 @@ class HTML2Text(html.parser.HTMLParser):
                     else:
                         result += "\n\n"
                         newlines = 2
+
                 else:
                     # Warning for the tempted!!!
                     # Be aware that obvious replacement of this with
@@ -968,6 +990,7 @@ class HTML2Text(html.parser.HTMLParser):
                     if not config.RE_SPACE.match(para):
                         result += para + "\n"
                         newlines = 1
+
             else:
                 if newlines < 2:
                     result += "\n"

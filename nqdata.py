@@ -42,6 +42,13 @@ def url_to_cleanedtext(url):
   returndict = single_html2text(html, url)
   return returndict
 
+def html_to_cleanedtext(singlehtmltext):
+
+  returndict = single_html2text(singlehtmltext[0], singlehtmltext[1])
+  return returndict
+
+
+
 
 def build_input_batch(articlelist, question, tokenizer, batch_size, onlyone=False, webdata =False, **kwargs):
   """ Take in list of prepared articles and a question , convert to batches of tensor inputs """
