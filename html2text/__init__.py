@@ -957,14 +957,14 @@ class HTML2Text(html.parser.HTMLParser):
             if len(para) > 0:
                 if not skipwrap(para, self.wrap_links, self.wrap_list_items):
                     indent = ""
-                    if para.startswith("  " + self.ul_item_mark):
-                        # list item continuation: add a double indent to the
-                        # new lines
-                        indent = "    "
-                    elif para.startswith("> "):
-                        # blockquote continuation: add the greater than symbol
-                        # to the new lines
-                        indent = "> "
+                    # if para.startswith("  " + self.ul_item_mark):
+                    #     # list item continuation: add a double indent to the
+                    #     # new lines
+                    #     indent = "    "
+                    # elif para.startswith("> "):
+                    #     # blockquote continuation: add the greater than symbol
+                    #     # to the new lines
+                    #     indent = "> "
                     wrapped = wrap(
                         para,
                         self.body_width,
