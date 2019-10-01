@@ -791,8 +791,13 @@ def do_ranking(score_list, score_threshold= None, con_threshold = None,  sep_typ
                     imagestart = True
                     image_word_id = wordid
 
-                if imagestart and splitline[wordid+1] != "[imageend]":
-                    deletenext = True
+                if imagestart:
+                    try:
+                        nextword = splitline[wordid+1]
+                    except:
+                        nextword = ""
+                    if nextword != "[imageend]":
+                        deletenext = True
 
                 if word == "[imageend]":
                     linktext = splitline[wordid+1]
