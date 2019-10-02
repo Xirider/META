@@ -975,7 +975,7 @@ class QBert():
         parser.add_argument("--dataset_path", type=str, default="", help="Path or url of the dataset. If empty download from S3.")
         parser.add_argument("--dataset_cache", type=str, default='./dataset_cache', help="Path or url of the dataset cache")
         # parser.add_argument("--model_checkpoint", type=str, default="logfiles/metamodel", help="Path, url or short name of the model")
-        parser.add_argument("--model_checkpoint", type=str, default="logfiles/d4_b", help="Path, url or short name of the model")
+        parser.add_argument("--model_checkpoint", type=str, default="logfiles/d4_c", help="Path, url or short name of the model")
         #"logfiles\v1_3class"
         parser.add_argument("--max_history", type=int, default=2, help="Number of previous utterances to keep in history")
         parser.add_argument("--batch_size", type=int, default=32, help="batch size for prediction")
