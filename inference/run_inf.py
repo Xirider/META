@@ -992,7 +992,7 @@ class QBert():
         parser.add_argument("--more_than_one", action='store_true', help= "")
         parser.add_argument("--use_cached_calcs", action='store_true', help= "")
         parser.add_argument("--no_inference", action='store_true', help= "")
-        parser.add_argument("--scoring", type=str, default = "max", help="Device (cuda or cpu)")
+        parser.add_argument("--scoring", type=str, default = "both", help="Device (cuda or cpu)")
         self.args = parser.parse_args()
         
 
