@@ -15,6 +15,11 @@
 # multi_labels_threshold = [[0.0,0.0,0.0], [0.0,0.0,0.0], [0.0,0.0,0.0]]
 
 #binary_labels_threshold = [ 0.7455308377058024 ,0.10269304974964337,0.0, 0.0,0.0, 0.0,0.0, 0.0,0.0, 0.0, 0.0]
-binary_labels_threshold = [ 0.85 ,0.03,0.0, 0.0,0.0, 0.0,0.0, 0.0,0.0, 0.0, 0.0]
+# binary_labels_threshold = [ 0.85 ,0.03,0.0, 0.0,0.0, 0.0,0.0, 0.0,0.0, 0.0, 0.0]
+# span_labels_threshold = [0.0, 0.0]
+# multi_labels_threshold = [[0.0,0.0,0.0], [0.0,0.0,0.0], [0.0,0.0,0.0]]
+
+
+binary_labels_threshold = [ 0.5 ,0.002191,0.0, 0.0,0.0, 0.0,0.0, 0.0,0.0, 0.0, 0.0]
 span_labels_threshold = [0.0, 0.0]
 multi_labels_threshold = [[0.0,0.0,0.0], [0.0,0.0,0.0], [0.0,0.0,0.0]]

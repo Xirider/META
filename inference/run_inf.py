@@ -135,7 +135,7 @@ def get_best_indexes(logits, n_best_size):
 
 
 
-def compute_best_predictions(prediction_list, stopper, topk = 5,threshold = None, span_threshold = None, con_threshold=None):
+def compute_best_predictions(prediction_list, stopper, topk = 5,threshold = None, span_threshold = None, con_threshold=None, scoring =None):
     funcstart = time.time()
     """ takes in list of predictions, creates list of prediction spans, returns the best span for the top spans """
     #articles = defaultdict(list)
@@ -184,7 +184,7 @@ def compute_best_predictions(prediction_list, stopper, topk = 5,threshold = None
         loopfin = time.time() - loopstart
         print(f"single batch best answer getting time {loopfin}")
     print("finished putting examples into lists")
-    ranked_list = do_ranking(score_list, score_threshold=threshold, con_threshold=con_threshold)
+    ranked_list = do_ranking(score_list, score_threshold=threshold, con_threshold=con_threshold, scoring=scoring)
     
     finaltime = time.time() - funcstart
     print(f"Processing finished of all batches before cutting them out {finaltime}")
@@ -326,7 +326,7 @@ def score_logits(example, example_binary_logits, example_span_logits, n_best_siz
     return  newlinelist, span_type_list
 
 
-def do_ranking(score_list, score_threshold= None, con_threshold = None,  sep_type="self_con", top_k = 100, max_continuations= 20, max_headline = 15, headline_finding_range= 30, headline_before =False, headline_after =True):
+def do_ranking(score_list, score_threshold= None, con_threshold = None,  sep_type="self_con", top_k = 100, max_continuations= 20, max_headline = 15, headline_finding_range= 30, headline_before =False, headline_after =True, scoring = "max"):
     """ Takes in a list of tuples (newlinestartlist, newlinelist, span_type_list), returns list of para groups with scores  """
 
     #(newlinelist, spanslist) 
@@ -641,8 +641,16 @@ def do_ranking(score_list, score_threshold= None, con_threshold = None,  sep_typ
 
 
     #print("\n\n\n\n\n\n\n\nNow only the top 10 results:\n\n")
-
-    para_groups.sort(key= lambda x : x["max_score"], reverse= True)
+    if scoring == "max":
+        para_groups.sort(key= lambda x : x["max_score"], reverse= True)
+    elif scoring == "average":
+        para_groups.sort(key= lambda x : sum(x["cur_span_score_list"]) / len(x["cur_span_score_list"]) * min([1, (len(x["cur_span_score_list"])/7) + 0.25] ), reverse= True)
+    elif scoring == "both":
+        para_groups.sort(key= lambda x : ((sum(x["cur_span_score_list"]) / len(x["cur_span_score_list"])) + x["max_score"]) * min([1, (len(x["cur_span_score_list"])/7) + 0.25] ), reverse= True)
+    elif scoring == "twothirds":
+        para_groups.sort(key= lambda x : (sum(x["cur_span_score_list"]) / len(x["cur_span_score_list"]) * min([1, (len(x["cur_span_score_list"])/7) + 0.25]) +  sum(x["cur_span_score_list"]) ), reverse= True)
+    else:
+        raise Exception("need scoring type as arg parameter")
     
     # for i, p in enumerate(para_groups[:10]):
     #     print("\n\n")
@@ -967,7 +975,7 @@ class QBert():
         parser.add_argument("--dataset_path", type=str, default="", help="Path or url of the dataset. If empty download from S3.")
         parser.add_argument("--dataset_cache", type=str, default='./dataset_cache', help="Path or url of the dataset cache")
         # parser.add_argument("--model_checkpoint", type=str, default="logfiles/metamodel", help="Path, url or short name of the model")
-        parser.add_argument("--model_checkpoint", type=str, default="logfiles/d4_a", help="Path, url or short name of the model")
+        parser.add_argument("--model_checkpoint", type=str, default="logfiles/d4_b", help="Path, url or short name of the model")
         #"logfiles\v1_3class"
         parser.add_argument("--max_history", type=int, default=2, help="Number of previous utterances to keep in history")
         parser.add_argument("--batch_size", type=int, default=32, help="batch size for prediction")
@@ -984,6 +992,7 @@ class QBert():
         parser.add_argument("--more_than_one", action='store_true', help= "")
         parser.add_argument("--use_cached_calcs", action='store_true', help= "")
         parser.add_argument("--no_inference", action='store_true', help= "")
+        parser.add_argument("--scoring", type=str, default = "both", help="Device (cuda or cpu)")
         self.args = parser.parse_args()
         
 
@@ -1105,7 +1114,7 @@ class QBert():
 
         number_computed_paras = len(prediction_list) * self.args.batch_size
         cbs = time.time()
-        top_results = compute_best_predictions(prediction_list, topk = topresults, stopper = stopper, threshold=self.threshold, span_threshold = self.span_threshold, con_threshold=self.con_threshold)
+        top_results = compute_best_predictions(prediction_list, topk = topresults, stopper = stopper, threshold=self.threshold, span_threshold = self.span_threshold, con_threshold=self.con_threshold, scoring=self.args.scoring)
         finaltime = time.time() - cbs
         print(f"computing best preds finished after {finaltime}")
 

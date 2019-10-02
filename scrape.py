@@ -166,7 +166,7 @@ class Searcher():
 
         
 
-    def searchandsplit(self, query, timeout = 1.0:
+    def searchandsplit(self, query, timeout = 1.0):
 
 
         start_time = time.time()
