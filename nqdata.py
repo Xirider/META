@@ -285,15 +285,15 @@ def convert_single_example(article, question, tokenizer, article_id, max_query_l
             nlncounter += 1
             # add tok2longline conversion for all active newlines
             # skip over the first newlinecounter as it is not included
-            if nlncounter > 1:
+            if nlncounter > 0:
 
                 newline2longline[tokid] = {"longline": article["line2line"][shortlinecounter],
                                          "current_shortline":shortlinecounter }
                 shortlinecounter += 1
             
-            else:
-                newline2longline[tokid] = {"longline": None,
-                                         "current_shortline":None}
+            # else:
+            #     newline2longline[tokid] = {"longline": None,
+            #                              "current_shortline":None}
 
 
     inactive_tokens = []

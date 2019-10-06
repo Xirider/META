@@ -135,7 +135,7 @@ def get_best_indexes(logits, n_best_size):
 
 
 
-def compute_best_predictions(prediction_list, stopper, topk = 5,threshold = None, span_threshold = None, con_threshold=None, scoring =None):
+def compute_best_predictions(prediction_list, stopper, topk = 10,threshold = None, span_threshold = None, con_threshold=None, scoring =None, debug_mode=False):
     funcstart = time.time()
     """ takes in list of predictions, creates list of prediction spans, returns the best span for the top spans """
     #articles = defaultdict(list)
@@ -183,6 +183,14 @@ def compute_best_predictions(prediction_list, stopper, topk = 5,threshold = None
             score_list.append((newlinelist, spanslist))
         loopfin = time.time() - loopstart
         print(f"single batch best answer getting time {loopfin}")
+    if debug_mode:
+        for ex in score_list[0:20]:
+            print("\n\n New url start")
+            print(ex[0][0]["url"])
+            for nl in ex[0]:
+                print(f'L: {nl["ranges"][0]} - {nl["ranges"][1]} CON SCORE: {nl["score_dict"][0]} , RELEVANCE SCORE: {nl["score_dict"][1]}\n')
+                print(" ".join(nl["tokens"]))
+
     print("finished putting examples into lists")
     ranked_list = do_ranking(score_list, score_threshold=threshold, con_threshold=con_threshold, scoring=scoring)
     
@@ -248,7 +256,7 @@ def score_logits(example, example_binary_logits, example_span_logits, n_best_siz
     
         if (toklen - 1) == tokid and active:
             nl2ll = example.newline2longline[cur_line[0]]
-
+            # import pdb; pdb.set_trace()
             cur_line.append(tokid + 1)
             cur_line_dict = { "ranges" :cur_line , "tokens" : tokens[cur_line[0]:cur_line[1]], "score_dict": cur_dict,
              "url": example.url, "newline2longline":nl2ll, "htmltext": example.htmltext,
@@ -323,10 +331,13 @@ def score_logits(example, example_binary_logits, example_span_logits, n_best_siz
 
         span_type_list.append(spanslist)
     
+
+
+
     return  newlinelist, span_type_list
 
 
-def do_ranking(score_list, score_threshold= None, con_threshold = None,  sep_type="self_con", top_k = 100, max_continuations= 20, max_headline = 15, headline_finding_range= 30, headline_before =False, headline_after =True, scoring = "max"):
+def do_ranking(score_list, score_threshold= None, con_threshold = None,  sep_type="self_con", top_k = 100, max_continuations= 50, max_headline = 15, headline_finding_range= 30, headline_before =False, headline_after =True, scoring = "max", fusing = False):
     """ Takes in a list of tuples (newlinestartlist, newlinelist, span_type_list), returns list of para groups with scores  """
 
     #(newlinelist, spanslist) 
@@ -431,7 +442,7 @@ def do_ranking(score_list, score_threshold= None, con_threshold = None,  sep_typ
                 condition = True
                 look_back = False
                 look_forward = False
-                if nid == 0:
+                if nid == 0 and con_score < con_threshold:
                     look_back = True
 
                 while condition:
@@ -474,6 +485,8 @@ def do_ranking(score_list, score_threshold= None, con_threshold = None,  sep_typ
             conversion_list = []
             original_ranges = []
             for tokid in span_tokids:
+
+                
                 anl2ll = newlinelist[tokid]["newline2longline"]
                 if anl2ll["longline"] != None:
                     conversion_list.append(anl2ll)
@@ -649,6 +662,8 @@ def do_ranking(score_list, score_threshold= None, con_threshold = None,  sep_typ
         para_groups.sort(key= lambda x : ((sum(x["cur_span_score_list"]) / len(x["cur_span_score_list"])) + x["max_score"]) * min([1, (len(x["cur_span_score_list"])/7) + 0.25] ), reverse= True)
     elif scoring == "twothirds":
         para_groups.sort(key= lambda x : (sum(x["cur_span_score_list"]) / len(x["cur_span_score_list"]) * min([1, (len(x["cur_span_score_list"])/7) + 0.25]) +  sum(x["cur_span_score_list"]) ), reverse= True)
+    elif scoring == "none":
+        pass
     else:
         raise Exception("need scoring type as arg parameter")
     
@@ -688,7 +703,7 @@ def do_ranking(score_list, score_threshold= None, con_threshold = None,  sep_typ
                 parag["endline"] = lline["longline"]
                 corrcounter +=1
                 break
-
+        
         
 
     opentags = ["<table>", "<td>","<ol>", "<ul>", "<li>"]
@@ -1071,7 +1086,7 @@ class QBert():
 
         query = raw_text
         toplist =[]
-        topresults = 5
+        topresults = 20
         # topmcs= [0.01] * topresults
         # threshold = 0.01
         prediction_list = []
@@ -1165,8 +1180,11 @@ class QBert():
 
                 print(tokenstring)
                 print("\n")
+                print("NEHTML VERSION:\n")
+                textf = result["newhtml"]
+                print(textf)
                 print(p["url"])
-
+                # import pdb; pdb.set_trace()
 
             finaltime = time.time() - start_time
             print(f"Total Time: {finaltime}")
