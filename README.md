@@ -10,6 +10,7 @@ Note that you need at least one V100 GPU for inference deployment (about $4 per 
 ## Setup
 
 To run these scripts you need to install these libraries: Ignite, Prodigy (Labeling software, you also need to get a license for it), Pytorch, Tensorboard, tqdm
+
 For training you also need a GPU with at least 8 GB VRAM.
 
 ### Training data preparation
