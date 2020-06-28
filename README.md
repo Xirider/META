@@ -13,10 +13,10 @@ To run these scripts you need to install these libraries: Ignite, Prodigy (Label
 
 ### Training data preparation
 
-#### download examples and make them rdy for annotation
+#### download examples and make them rdy for annotation (requires a google search history file in the main directory named "savedhistory.html" to sample realistic search queries)
 python create_ex_new.py --download --num_q 200
 
-#### create new database
+#### create new label database for prodigy
 python -m prodigy dataset d3_11 "v1" --author meta
 
 #### label a certain database with a type and a labelid
