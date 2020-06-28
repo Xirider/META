@@ -10,16 +10,17 @@ Note that you need at least one V100 GPU for inference deployment (about $4 per 
 ## Setup
 
 To run these scripts you need to install these libraries: Ignite, Prodigy (Labeling software, you also need to get a license for it), Pytorch, Tensorboard, tqdm
+For training you also need a GPU with at least 8 GB VRAM.
 
 ### Training data preparation
 
-#### download examples and make them rdy for annotation (requires a google search history file in the main directory named "savedhistory.html" to sample realistic search queries)
+#### download examples and make them ready for annotation (requires a google search history file in the main directory named "savedhistory.html" to sample realistic search queries)
 python create_ex_new.py --download --num_q 200
 
 #### create new label database for prodigy
 python -m prodigy dataset d3_11 "v1" --author meta
 
-#### label a certain database with a type and a labelid
+#### label a certain database with a type (span or binary) and a labelid
 python -m prodigy manual d3_11 span 0 -F prodlabel.py
 
 #### delete old merged database (after an error)
